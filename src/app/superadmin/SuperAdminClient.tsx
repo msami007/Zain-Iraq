@@ -87,7 +87,6 @@ export default function SuperAdminClient({
       } else {
         setOrgSuccess(`Organization "${data.name}" created successfully!`);
         setTenants([data, ...tenants]);
-        // Update user form tenant selection if it was empty
         if (!userTenantId) {
           setUserTenantId(data.id);
         }
@@ -127,7 +126,6 @@ export default function SuperAdminClient({
         setUserError(data.error || "Failed to create user");
       } else {
         setUserSuccess(`User "${data.email}" created successfully!`);
-        // Append tenant details to user object for table display
         const selectedTenant = tenants.find((t) => t.id === userTenantId);
         const newUser: User = {
           ...data,
@@ -150,111 +148,112 @@ export default function SuperAdminClient({
   };
 
   return (
-    <div className="space-y-12">
-      {/* Overview Cards */}
+    <div className="space-y-10">
+      {/* Overview Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 backdrop-blur-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Total Organizations
           </div>
-          <div className="mt-2 text-3xl font-bold text-white">{tenants.length}</div>
+          <div className="mt-2 text-3xl font-extrabold text-zinc-950">{tenants.length}</div>
         </div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 backdrop-blur-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Total Users
           </div>
-          <div className="mt-2 text-3xl font-bold text-white">{users.length}</div>
+          <div className="mt-2 text-3xl font-extrabold text-zinc-950">{users.length}</div>
         </div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-6 backdrop-blur-sm">
-          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Audit Coverage
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+            Audit Enforced
           </div>
-          <div className="mt-2 text-3xl font-bold text-purple-400 font-mono">100%</div>
+          <div className="mt-2 text-3xl font-extrabold text-zinc-950 font-mono">100%</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Organization Section */}
-        <div className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
-          <h2 className="text-lg font-bold text-white">Create Organization (Tenant)</h2>
+        {/* Organization Creation Card */}
+        <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-extrabold text-zinc-950 uppercase tracking-wide border-b border-zinc-100 pb-3">
+            Add Organization (Tenant)
+          </h2>
           
           {orgError && (
-            <div className="rounded-lg border border-red-500/20 bg-red-950/20 p-3 text-xs text-red-400">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-750">
               {orgError}
             </div>
           )}
           {orgSuccess && (
-            <div className="rounded-lg border border-green-500/20 bg-green-950/20 p-3 text-xs text-green-400">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-xs font-semibold text-green-750">
               {orgSuccess}
             </div>
           )}
 
           <form onSubmit={handleOrgSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-zinc-400">Org Name</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Org Name</label>
               <input
                 type="text"
                 required
                 value={orgName}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-950 focus:border-zinc-950 focus:bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950 transition-all"
                 placeholder="e.g. OODI Iraq"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-400">Slug (Auto-generated)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Slug (Auto-generated)</label>
               <input
                 type="text"
                 required
                 value={orgSlug}
                 onChange={(e) => setOrgSlug(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-950 focus:border-zinc-950 focus:bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950 transition-all"
                 placeholder="e.g. oodi-iraq"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-400">Branding Primary Color</label>
-              <div className="mt-1 flex items-center gap-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Branding Primary Color</label>
+              <div className="mt-2 flex items-center gap-3">
                 <input
                   type="color"
                   value={orgColor}
                   onChange={(e) => setOrgColor(e.target.value)}
-                  className="h-8 w-12 cursor-pointer rounded border-0 bg-transparent"
+                  className="h-8 w-12 cursor-pointer rounded border border-zinc-200 bg-transparent"
                 />
-                <span className="text-xs font-mono text-zinc-400">{orgColor}</span>
+                <span className="text-xs font-mono text-zinc-500">{orgColor}</span>
               </div>
             </div>
             <button
               type="submit"
               disabled={orgLoading}
-              className="w-full rounded-lg bg-purple-600 py-2.5 text-sm font-semibold text-white hover:bg-purple-500 disabled:opacity-50 transition-colors"
+              className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors"
             >
               {orgLoading ? "Creating..." : "Create Organization"}
             </button>
           </form>
 
           {/* Org List */}
-          <div className="pt-6 border-t border-zinc-900">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-4">
+          <div className="pt-6 border-t border-zinc-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-4">
               Current Organizations
             </h3>
-            <div className="max-h-60 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
               {tenants.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-900 bg-zinc-900/30 p-3"
+                  className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3 shadow-xs hover:border-zinc-300 transition-all"
                 >
                   <div>
-                    <div className="font-semibold text-sm text-white">{t.name}</div>
-                    <div className="text-xs text-zinc-500 font-mono">/{t.slug}</div>
+                    <div className="font-bold text-sm text-zinc-950">{t.name}</div>
+                    <div className="text-xs text-zinc-400 font-mono">/{t.slug}</div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span
-                      className="h-3 w-3 rounded-full border border-black/25"
+                      className="h-3 w-3 rounded-full border border-black/10 shadow-xs"
                       style={{ backgroundColor: t.branding?.primaryColor || "#ccc" }}
-                      title="Primary Color"
                     />
-                    <span className="rounded bg-green-500/10 px-2 py-0.5 text-xs text-green-400">
+                    <span className="rounded bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 border border-green-200 uppercase">
                       {t.status}
                     </span>
                   </div>
@@ -264,17 +263,19 @@ export default function SuperAdminClient({
           </div>
         </div>
 
-        {/* User Section */}
-        <div className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
-          <h2 className="text-lg font-bold text-white">Invite / Create User</h2>
+        {/* User Account Invite Card */}
+        <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-extrabold text-zinc-950 uppercase tracking-wide border-b border-zinc-100 pb-3">
+            Create User Account
+          </h2>
 
           {userError && (
-            <div className="rounded-lg border border-red-500/20 bg-red-950/20 p-3 text-xs text-red-400">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-750">
               {userError}
             </div>
           )}
           {userSuccess && (
-            <div className="rounded-lg border border-green-500/20 bg-green-950/20 p-3 text-xs text-green-400">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-xs font-semibold text-green-750">
               {userSuccess}
             </div>
           )}
@@ -282,24 +283,24 @@ export default function SuperAdminClient({
           <form onSubmit={handleUserSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-400">Full Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Full Name</label>
                 <input
                   type="text"
                   required
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-950 focus:border-zinc-950 focus:bg-white focus:outline-none"
                   placeholder="e.g. John Doe"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-zinc-400">Email Address</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Email Address</label>
                 <input
                   type="email"
                   required
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-950 focus:border-zinc-950 focus:bg-white focus:outline-none"
                   placeholder="e.g. john@zain.com"
                 />
               </div>
@@ -307,22 +308,22 @@ export default function SuperAdminClient({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-400">Password</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Password</label>
                 <input
                   type="password"
                   required
                   value={userPassword}
                   onChange={(e) => setUserPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-950 focus:border-zinc-950 focus:bg-white focus:outline-none"
                   placeholder="••••••••"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-zinc-400">Assigned Org (Tenant)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Assigned Org</label>
                 <select
                   value={userTenantId}
                   onChange={(e) => setUserTenantId(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                  className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-950 focus:border-zinc-950 focus:bg-white focus:outline-none"
                 >
                   {tenants.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -334,17 +335,17 @@ export default function SuperAdminClient({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-400">Role Tier</label>
-              <div className="mt-2 flex gap-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Role Scope</label>
+              <div className="mt-2.5 flex gap-5">
                 {["Agent", "Admin", "SuperAdmin"].map((role) => (
-                  <label key={role} className="flex items-center gap-2 cursor-pointer text-sm text-zinc-300">
+                  <label key={role} className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-zinc-700">
                     <input
                       type="radio"
                       name="role"
                       value={role}
                       checked={userRole === role}
                       onChange={() => setUserRole(role)}
-                      className="accent-purple-500"
+                      className="accent-zinc-950"
                     />
                     {role}
                   </label>
@@ -355,7 +356,7 @@ export default function SuperAdminClient({
             <button
               type="submit"
               disabled={userLoading}
-              className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+              className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors"
             >
               {userLoading ? "Creating..." : "Create User"}
             </button>
@@ -363,13 +364,15 @@ export default function SuperAdminClient({
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-white mb-6">User Accounts & Scopes</h2>
+      {/* Users Scope Table */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <h2 className="text-base font-extrabold text-zinc-950 uppercase tracking-wide border-b border-zinc-100 pb-4 mb-4">
+          User Accounts & Permissions
+        </h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-zinc-300">
+          <table className="w-full text-left text-sm text-zinc-750">
             <thead>
-              <tr className="border-b border-zinc-800 text-zinc-400 text-xs font-semibold uppercase tracking-wider">
+              <tr className="border-b border-zinc-200 text-zinc-400 text-xs font-bold uppercase tracking-wider">
                 <th className="py-3 px-4">Name</th>
                 <th className="py-3 px-4">Email</th>
                 <th className="py-3 px-4">Organization</th>
@@ -381,40 +384,40 @@ export default function SuperAdminClient({
               {users.map((u) => (
                 <tr
                   key={u.id}
-                  className={`border-b border-zinc-900 hover:bg-zinc-900/10 ${
-                    u.id === currentUserId ? "bg-purple-900/5" : ""
+                  className={`border-b border-zinc-100 hover:bg-zinc-50/40 transition-colors ${
+                    u.id === currentUserId ? "bg-zinc-50/70" : ""
                   }`}
                 >
-                  <td className="py-3.5 px-4 font-medium text-white flex items-center gap-2">
+                  <td className="py-3.5 px-4 font-bold text-zinc-900 flex items-center gap-2">
                     {u.name}
                     {u.id === currentUserId && (
-                      <span className="rounded bg-purple-500/10 px-2 py-0.5 text-[10px] text-purple-400 font-semibold">
+                      <span className="rounded bg-zinc-950 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wider">
                         You
                       </span>
                     )}
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-xs">{u.email}</td>
+                  <td className="py-3.5 px-4 font-mono text-xs text-zinc-500">{u.email}</td>
                   <td className="py-3.5 px-4">
-                    <span className="text-white font-medium">
+                    <span className="text-zinc-900 font-semibold">
                       {u.tenant?.name || "Unknown Tenant"}
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
                     <span
-                      className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                      className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                         u.role === "SuperAdmin"
-                          ? "bg-purple-500/15 text-purple-400"
+                          ? "bg-zinc-950 text-white border-zinc-950"
                           : u.role === "Admin"
-                          ? "bg-blue-500/15 text-blue-400"
-                          : "bg-zinc-500/15 text-zinc-400"
+                          ? "bg-zinc-50 text-zinc-900 border-zinc-300"
+                          : "bg-white text-zinc-500 border-zinc-200"
                       }`}
                     >
                       {u.role}
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
-                    <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                       {u.status}
                     </span>
                   </td>

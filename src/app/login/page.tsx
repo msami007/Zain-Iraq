@@ -38,16 +38,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-radial from-zinc-900 to-black px-4 py-12 text-zinc-100 font-sans">
-      {/* Background visual element */}
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,rgba(142,36,170,0.15),transparent_45%)]" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_bottom_left,rgba(255,214,0,0.08),transparent_45%)]" />
-
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/60 p-8 shadow-2xl backdrop-blur-xl transition-all hover:border-zinc-700/50">
+    <div className="relative flex min-h-screen items-center justify-center bg-white px-4 py-12 text-zinc-900 font-sans overflow-hidden">
+      {/* Premium subtle grid background */}
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] bg-[size:20px_20px]" />
+      
+      <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-2xl shadow-zinc-200/60 transition-all duration-300 hover:border-zinc-300">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-600/10 text-purple-400">
+          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-zinc-950 text-white shadow-md">
             <svg
-              className="h-6 w-6"
+              className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -56,23 +55,23 @@ export default function LoginPage() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={2.5}
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">
+          <h2 className="text-xl font-bold tracking-tight text-zinc-950">
             Zain & OODI Portal
           </h2>
-          <p className="mt-2 text-sm text-zinc-400">
-            Knowledge Base System Onboarding
+          <p className="mt-1.5 text-xs font-medium text-zinc-550">
+            Knowledge Base Onboarding Dashboard
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-500/20 bg-red-950/20 p-4 text-sm text-red-400">
+          <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
             <svg
-              className="mt-0.5 h-5 w-5 shrink-0"
+              className="mt-0.5 h-4.5 w-4.5 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -89,11 +88,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label
               htmlFor="email"
-              className="block text-xs font-semibold uppercase tracking-wider text-zinc-400"
+              className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500"
             >
               Email Address
             </label>
@@ -104,7 +103,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 block w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder-zinc-500 focus:border-purple-500 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="mt-2 block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-950 focus:bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950 transition-all"
               placeholder="e.g. Salman@zain.com"
             />
           </div>
@@ -112,7 +111,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-xs font-semibold uppercase tracking-wider text-zinc-400"
+              className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500"
             >
               Password
             </label>
@@ -123,7 +122,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-2 block w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder-zinc-500 focus:border-purple-500 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="mt-2 block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-950 focus:bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950 transition-all"
               placeholder="••••••••"
             />
           </div>
@@ -131,17 +130,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/20 hover:from-purple-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 transition-all duration-200"
+            className="flex w-full items-center justify-center rounded-lg bg-zinc-950 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:opacity-55 transition-all duration-150"
           >
             {loading ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              <div className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
               "Sign In"
             )}
           </button>
         </form>
 
-        <div className="mt-8 text-center text-xs text-zinc-500 border-t border-zinc-900 pt-6">
+        <div className="mt-8 text-center text-[10px] font-medium text-zinc-400 border-t border-zinc-100 pt-6">
           <p>Super Admin: Salman@zain.com (password123)</p>
           <p className="mt-1">Agents: agent.oodi@oodi.com / agent1.zain@zain.com</p>
         </div>
