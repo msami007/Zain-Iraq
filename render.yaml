@@ -1,8 +1,9 @@
 services:
   - type: web
     name: zain-kb-app
-    env: docker
-    dockerfilePath: Dockerfile
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
     preDeployCommand: node node_modules/prisma/build/index.js migrate deploy
     envVars:
       - key: DATABASE_URL

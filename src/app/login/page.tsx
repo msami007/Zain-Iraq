@@ -11,6 +11,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const handleQuickLogin = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword("password123");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -140,9 +145,36 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 text-center text-[10px] font-medium text-zinc-400 border-t border-zinc-100 pt-6">
-          <p>Super Admin: Salman@zain.com (password123)</p>
-          <p className="mt-1">Agents: agent.oodi@oodi.com / agent1.zain@zain.com</p>
+        <div className="mt-8 border-t border-zinc-100 pt-6 text-center">
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">
+            Quick Demo Logins
+          </label>
+          <div className="flex flex-wrap gap-2 justify-center mb-4">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("Salman@zain.com")}
+              className="rounded bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 text-[10px] font-bold text-zinc-800 transition-colors border border-zinc-350"
+            >
+              Super Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("agent1.zain@zain.com")}
+              className="rounded bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 text-[10px] font-bold text-purple-700 transition-colors border border-purple-200"
+            >
+              Zain Agent
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("agent.oodi@oodi.com")}
+              className="rounded bg-yellow-50 hover:bg-yellow-100 px-2.5 py-1.5 text-[10px] font-bold text-yellow-800 transition-colors border border-yellow-200"
+            >
+              OODI Agent
+            </button>
+          </div>
+          <p className="text-[9px] font-semibold text-zinc-400">
+            Default Password: <span className="font-mono text-zinc-600">password123</span>
+          </p>
         </div>
       </div>
     </div>
