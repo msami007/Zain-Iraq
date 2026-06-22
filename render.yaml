@@ -2,7 +2,7 @@ services:
   - type: web
     name: zain-kb-app
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm run start
     preDeployCommand: node node_modules/prisma/build/index.js migrate deploy
     envVars:
