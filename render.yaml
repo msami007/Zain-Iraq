@@ -3,7 +3,7 @@ services:
     name: zain-kb-app
     env: docker
     dockerfilePath: Dockerfile
-    releaseCommand: npx prisma migrate deploy
+    preDeployCommand: npx prisma migrate deploy
     envVars:
       - key: DATABASE_URL
         fromDatabase:
