@@ -1,0 +1,454 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TenantStatus {
+  Active
+  Disabled
+}
+
+enum UserRole {
+  Agent
+  Admin
+  SuperAdmin
+}
+
+enum UserStatus {
+  Unverified
+  Active
+  Disabled
+}
+
+enum ArticleStatus {
+  Draft
+  InReview
+  Approved
+  Published
+  Archived
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum Language {
+  ar
+  en
+}
+
+enum Channel {
+  default
+  agent
+  chatbot
+  whatsapp
+}
+
+enum GapStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+enum CaseStatus {
+  waiting
+  active
+  resolved
+  abandoned
+}
+
+enum AnnouncementType {
+  banner
+  ticker
+  broadcast
+}
+
+model Tenant {
+  id         String       @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String       @unique
+  status     TenantStatus @default(Active)
+  branding   Json?        @db.JsonB
+  created_by String?      @db.Uuid
+  created_at DateTime     @default(now())
+
+  // Relations
+  users          User[]          @relation("TenantUsers")
+  creator        User?           @relation("TenantCreator", fields: [created_by], references: [id])
+  teams          Team[]
+  categories     Category[]
+  tags           Tag[]
+  articles       Article[]
+  knowledge_gaps KnowledgeGap[]
+  search_queries SearchQuery[]
+  audit_logs     AuditLog[]
+  announcements  Announcement[]
+  chat_cases     ChatCase[]
+  user_teams     UserTeam[]
+  article_tags   ArticleTag[]
+  article_teams  ArticleTeam[]
+  feedback       ArticleFeedback[]
+  guest_links    GuestLink[]
+
+  @@map("tenants")
+}
+
+model Team {
+  id        String @id @default(uuid()) @db.Uuid
+  tenant_id String @db.Uuid
+  name      String
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  user_teams    UserTeam[]
+  article_teams ArticleTeam[]
+
+  @@index([tenant_id])
+  @@map("teams")
+}
+
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  tenant_id     String     @db.Uuid
+  name          String
+  email         String
+  password_hash String
+  role          UserRole   @default(Agent)
+  status        UserStatus @default(Unverified)
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+
+  // Relations
+  tenant            Tenant                 @relation("TenantUsers", fields: [tenant_id], references: [id], onDelete: Restrict)
+  created_tenants   Tenant[]               @relation("TenantCreator")
+  user_teams        UserTeam[]
+  owned_articles    Article[]              @relation("ArticleOwner")
+  authored_articles Article[]              @relation("ArticleAuthor")
+  edited_versions   ArticleVersion[]       @relation("VersionEditor")
+  status_history    ArticleStatusHistory[] @relation("StatusActor")
+  reported_gaps     KnowledgeGap[]         @relation("GapReporter")
+  claimed_gaps      KnowledgeGap[]         @relation("GapClaimer")
+  created_links     GuestLink[]            @relation("LinkCreator")
+  assigned_cases    ChatCase[]             @relation("CaseAgent")
+  announcements     Announcement[]         @relation("AnnouncementCreator")
+  audit_logs        AuditLog[]             @relation("AuditActor")
+
+  @@unique([tenant_id, email])
+  @@index([tenant_id])
+  @@map("users")
+}
+
+model UserTeam {
+  user_id   String @db.Uuid
+  team_id   String @db.Uuid
+  tenant_id String @db.Uuid
+
+  // Relations
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, team_id])
+  @@index([tenant_id])
+  @@map("user_teams")
+}
+
+model Category {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenant_id String  @db.Uuid
+  name      String
+  slug      String
+  parent_id String? @db.Uuid
+
+  // Relations
+  tenant          Tenant     @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  parent          Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id], onDelete: Restrict)
+  subcategories   Category[] @relation("CategoryHierarchy")
+  articles        Article[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id])
+  @@map("categories")
+}
+
+model Tag {
+  id        String @id @default(uuid()) @db.Uuid
+  tenant_id String @db.Uuid
+  name      String
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  article_tags ArticleTag[]
+
+  @@index([tenant_id])
+  @@map("tags")
+}
+
+model Article {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenant_id          String        @db.Uuid
+  title              String
+  slug               String
+  category_id        String        @db.Uuid
+  language           Language      @default(en)
+  status             ArticleStatus @default(Draft)
+  visibility         Visibility    @default(PUBLIC)
+  owner_id           String        @db.Uuid
+  author_id          String        @db.Uuid
+  current_version_id String?       @db.Uuid
+  review_due         DateTime?     @db.Timestamp
+  created_at         DateTime      @default(now())
+  updated_at         DateTime      @updatedAt
+  published_at       DateTime?     @db.Timestamp
+
+  // Relations
+  tenant         Tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  category       Category               @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  owner          User                   @relation("ArticleOwner", fields: [owner_id], references: [id], onDelete: Restrict)
+  author         User                   @relation("ArticleAuthor", fields: [author_id], references: [id], onDelete: Restrict)
+  variants       ArticleVariant[]
+  versions       ArticleVersion[]
+  status_history ArticleStatusHistory[]
+  article_tags   ArticleTag[]
+  article_teams  ArticleTeam[]
+  feedback       ArticleFeedback[]
+  guest_links    GuestLink[]
+  resolving_gaps KnowledgeGap[]
+  resolving_cases ChatCase[]
+
+  @@unique([tenant_id, slug])
+  @@index([tenant_id, status])
+  @@index([tenant_id])
+  @@map("articles")
+}
+
+model ArticleTag {
+  article_id String @db.Uuid
+  tag_id     String @db.Uuid
+  tenant_id  String @db.Uuid
+
+  // Relations
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@id([article_id, tag_id])
+  @@index([tenant_id])
+  @@map("article_tags")
+}
+
+model ArticleTeam {
+  article_id String @db.Uuid
+  team_id    String @db.Uuid
+  tenant_id  String @db.Uuid
+
+  // Relations
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+  team    Team    @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@id([article_id, team_id])
+  @@index([tenant_id])
+  @@map("article_teams")
+}
+
+model ArticleVariant {
+  id                   String   @id @default(uuid()) @db.Uuid
+  article_id           String   @db.Uuid
+  channel              Channel  @default(default)
+  short_answer         String?  @db.Text
+  detailed_steps       String?  @db.Text
+  copy_ready_macro     String?  @db.Text
+  image_url            String?
+  video_link           String?
+  troubleshooting_flow Json?    @db.JsonB
+  updated_at           DateTime @updatedAt
+
+  // Relations
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+
+  @@unique([article_id, channel])
+  @@map("article_variants")
+}
+
+model ArticleVersion {
+  id         String   @id @default(uuid()) @db.Uuid
+  article_id String   @db.Uuid
+  version_no Int
+  body       String   @db.Text
+  editor_id  String   @db.Uuid
+  created_at DateTime @default(now())
+
+  // Relations
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+  editor  User    @relation("VersionEditor", fields: [editor_id], references: [id], onDelete: Restrict)
+
+  @@map("article_versions")
+}
+
+model ArticleStatusHistory {
+  id          String        @id @default(uuid()) @db.Uuid
+  article_id  String        @db.Uuid
+  from_status ArticleStatus
+  to_status   ArticleStatus
+  actor_id    String        @db.Uuid
+  comment     String?       @db.Text
+  created_at  DateTime      @default(now())
+
+  // Relations
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+  actor   User    @relation("StatusActor", fields: [actor_id], references: [id], onDelete: Restrict)
+
+  @@map("article_status_history")
+}
+
+model KnowledgeGap {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenant_id            String    @db.Uuid
+  query_text           String    @db.Text
+  language             Language  @default(en)
+  channel              Channel   @default(default)
+  status               GapStatus @default(NEW)
+  occurrences          Int       @default(1)
+  reported_by          String?   @db.Uuid
+  claimed_by           String?   @db.Uuid
+  resolving_article_id String?   @db.Uuid
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  // Relations
+  tenant            Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  reporter          User?    @relation("GapReporter", fields: [reported_by], references: [id], onDelete: Restrict)
+  claimer           User?    @relation("GapClaimer", fields: [claimed_by], references: [id], onDelete: Restrict)
+  resolving_article Article? @relation(fields: [resolving_article_id], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id, status])
+  @@index([tenant_id])
+  @@map("knowledge_gaps")
+}
+
+model ArticleFeedback {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenant_id   String   @db.Uuid
+  article_id  String   @db.Uuid
+  helpful     Boolean
+  channel     Channel  @default(default)
+  comment     String?  @db.Text
+  session_ref String?
+  created_at  DateTime @default(now())
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@map("article_feedback")
+}
+
+model GuestLink {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenant_id  String   @db.Uuid
+  article_id String   @db.Uuid
+  token      String   @unique
+  channel    Channel  @default(default)
+  created_by String   @db.Uuid
+  revoked    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  article Article @relation(fields: [article_id], references: [id], onDelete: Cascade)
+  creator User    @relation("LinkCreator", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id])
+  @@map("guest_links")
+}
+
+model SearchQuery {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenant_id       String   @db.Uuid
+  query_text      String   @db.Text
+  language        Language
+  channel         Channel
+  user_id         String?  @db.Uuid
+  results_count   Int
+  top_match_score Float
+  created_at      DateTime @default(now())
+
+  // Relations
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id, created_at])
+  @@index([tenant_id])
+  @@map("search_queries")
+}
+
+model ChatCase {
+  id                   String     @id @default(uuid()) @db.Uuid
+  tenant_id            String     @db.Uuid
+  customer_name        String
+  subject              String
+  query_text           String     @db.Text
+  status               CaseStatus @default(waiting)
+  priority             String
+  assigned_agent_id    String?    @db.Uuid
+  context              Json       @db.JsonB
+  resolving_article_id String?    @db.Uuid
+  wait_started_at      DateTime   @default(now())
+  resolved_at          DateTime?
+
+  // Relations
+  tenant            Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  agent             User?    @relation("CaseAgent", fields: [assigned_agent_id], references: [id], onDelete: Restrict)
+  resolving_article Article? @relation(fields: [resolving_article_id], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id])
+  @@map("chat_cases")
+}
+
+model Announcement {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenant_id  String           @db.Uuid
+  title      String
+  body       String           @db.Text
+  type       AnnouncementType @default(banner)
+  audience   String           @default("all")
+  team_id    String?          @db.Uuid
+  active     Boolean          @default(true)
+  starts_at  DateTime?        @db.Timestamp
+  ends_at    DateTime?        @db.Timestamp
+  created_by String           @db.Uuid
+  created_at DateTime         @default(now())
+
+  // Relations
+  tenant  Tenant @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  creator User   @relation("AnnouncementCreator", fields: [created_by], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id])
+  @@map("announcements")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenant_id    String   @db.Uuid
+  actor_id     String   @db.Uuid
+  action       String
+  target_type  String
+  target_id    String   @db.Uuid
+  target_label String
+  before       Json?    @db.JsonB
+  after        Json?    @db.JsonB
+  created_at   DateTime @default(now())
+
+  // Relations
+  tenant Tenant @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  actor  User   @relation("AuditActor", fields: [actor_id], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id])
+  @@map("audit_log")
+}

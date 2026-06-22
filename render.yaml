@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: zain-kb-app
+    env: docker
+    dockerfilePath: Dockerfile
+    releaseCommand: npx prisma migrate deploy
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zain-kb-db
+          property: connectionString
+      - fromGroup: zain-kb-secrets
+
+databases:
+  - name: zain-kb-db
+    plan: free

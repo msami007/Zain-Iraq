@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+.git
+Dockerfile
+render.yaml
+.env*
+.DS_Store
+README.md
+Zain_KB_Engineering_Blueprint.md
+*.log
