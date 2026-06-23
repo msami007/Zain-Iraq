@@ -238,6 +238,7 @@ export default function AdminDeskWorkspace({
   // Teams state and fetch
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [isTeamsDropdownOpen, setIsTeamsDropdownOpen] = useState(false);
 
   // Rejection modal states
   const [rejectionModalArticleId, setRejectionModalArticleId] = useState<string | null>(null);
