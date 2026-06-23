@@ -594,10 +594,39 @@ export default function AgentDeskWorkspace({
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [composerText, setComposerText] = useState("");
 
+  // One-click gap flag state — tracks the last query flagged so we can show confirmation
+  const [gapFlagging, setGapFlagging] = useState(false);
+  const [gapFlaggedQuery, setGapFlaggedQuery] = useState<string | null>(null);
+
+  const flagAsGap = async (queryText: string, channel = "agent") => {
+    const q = queryText.trim();
+    if (!q || gapFlagging) return;
+    setGapFlagging(true);
+    try {
+      const res = await fetch("/api/v1/gaps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query_text: q, language: "en", channel }),
+      });
+      if (res.ok) {
+        setGapFlaggedQuery(q);
+        toast("Flagged as knowledge gap — Admin queue notified.", "success");
+      } else {
+        const err = await res.json();
+        toast(err.error || "Failed to flag gap", "error");
+      }
+    } catch {
+      toast("Network error — could not flag gap.", "error");
+    } finally {
+      setGapFlagging(false);
+    }
+  };
+
   useEffect(() => {
     if (!resolutionCase) {
       setResolutionArticle(null);
       setComposerText("");
+      setGapFlaggedQuery(null);
       return;
     }
     const autoSearch = async () => {
@@ -617,8 +646,23 @@ export default function AgentDeskWorkspace({
           if (artRes.ok) {
             const artData = await artRes.json();
             setResolutionArticle({ ...artData, match_score: top.match_score });
+            // Seed composer with the best available agent-facing text so it's never blank
+            const agentVar = artData.variants?.find((v: any) => v.channel === "agent");
+            const defVar = artData.variants?.find((v: any) => v.channel === "default");
+            const seed =
+              agentVar?.copy_ready_macro ||
+              defVar?.copy_ready_macro ||
+              agentVar?.short_answer ||
+              defVar?.short_answer ||
+              "";
+            setComposerText(seed);
+            return;
           }
         }
+        // No article found — seed a polite holding reply so the composer is never blank
+        setComposerText(
+          `Dear ${resolutionCase.customer_name},\n\nThank you for contacting Zain support regarding: "${resolutionCase.subject}".\n\nWe have reviewed your query and our team is looking into this for you now. We will follow up shortly with a resolution.\n\nBest regards,\nZain Customer Support`
+        );
       } catch (e) {
         console.error(e);
       } finally {
@@ -750,18 +794,29 @@ export default function AgentDeskWorkspace({
                             {isUrgent ? `Urgent — ${waitMins} min wait` : `${waitMins} min wait`}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mb-5">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase text-zinc-400 block mb-0.5">Customer</span>
-                            <span className="text-sm font-bold text-zinc-950">{resolutionCase.customer_name}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-bold uppercase text-zinc-400 block mb-0.5">Channel</span>
-                            <span className="text-sm font-bold text-zinc-950 capitalize">
-                              {resolutionCase.context?.channel?.replace(/-/g, " ") || "Zain Web Chat"}
-                            </span>
-                          </div>
-                        </div>
+                        {(() => {
+                          const ctx = resolutionCase.context || {};
+                          const contextFields: { label: string; value: string }[] = [
+                            { label: "Customer", value: resolutionCase.customer_name },
+                            { label: "Channel", value: (ctx.channel || "Zain Web Chat").replace(/-/g, " ") },
+                            ...Object.entries(ctx)
+                              .filter(([k]) => k !== "channel")
+                              .map(([k, v]) => ({
+                                label: k.replace(/_/g, " "),
+                                value: String(v),
+                              })),
+                          ];
+                          return (
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-5">
+                              {contextFields.map(({ label, value }) => (
+                                <div key={label}>
+                                  <span className="text-[10px] font-bold uppercase text-zinc-400 block mb-0.5 capitalize">{label}</span>
+                                  <span className="text-xs font-bold text-zinc-950 capitalize">{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         <div className="border-l-4 border-red-400 bg-red-50/40 rounded-r-lg px-4 py-3">
                           <span className="text-[10px] font-bold uppercase text-red-500 block mb-1">Incoming Query</span>
                           <p className="text-xs text-zinc-800 font-medium leading-relaxed">"{resolutionCase.query_text}"</p>
@@ -777,7 +832,7 @@ export default function AgentDeskWorkspace({
                   <textarea
                     value={composerText}
                     onChange={(e) => setComposerText(e.target.value)}
-                    placeholder="Write a personalized response, or copy the AI recommended answer on the right..."
+                    placeholder="Loading recommended response..."
                     rows={6}
                     className="w-full rounded-lg border border-zinc-200 bg-white px-3.5 py-3 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none transition-all resize-none leading-relaxed"
                   />
@@ -967,6 +1022,32 @@ export default function AgentDeskWorkspace({
                     </svg>
                     <p className="text-xs text-zinc-400 font-semibold">No matching articles found.</p>
                     <p className="text-[11px] text-zinc-400">Use the Knowledge Base tab to search manually.</p>
+                  </div>
+                )}
+
+                {/* One-click gap flag — always shown after search completes */}
+                {!resolutionSearching && (
+                  <div className="border-t border-zinc-100 pt-4">
+                    {gapFlaggedQuery === resolutionCase.query_text.trim() ? (
+                      <p className="flex items-center gap-1.5 text-[10px] font-bold text-green-700">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Flagged as knowledge gap
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={gapFlagging}
+                        onClick={() => flagAsGap(resolutionCase.query_text)}
+                        className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                        </svg>
+                        {gapFlagging ? "Flagging…" : "Flag this query as a knowledge gap"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1337,7 +1418,7 @@ export default function AgentDeskWorkspace({
                 </form>
 
                 {chatSearched ? (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{chatKbResults.length} result{chatKbResults.length !== 1 ? "s" : ""}</p>
                     {chatKbResults.length === 0 ? (
                       <p className="text-[11px] text-zinc-400 italic py-2">No articles matched.</p>
@@ -1356,6 +1437,29 @@ export default function AgentDeskWorkspace({
                         ))}
                       </div>
                     )}
+                    {/* One-click gap flag */}
+                    <div className="border-t border-zinc-100 pt-2">
+                      {gapFlaggedQuery === chatKbQuery.trim() ? (
+                        <p className="flex items-center gap-1 text-[10px] font-bold text-green-700">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Flagged as gap
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={gapFlagging}
+                          onClick={() => flagAsGap(chatKbQuery)}
+                          className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                          </svg>
+                          {gapFlagging ? "Flagging…" : "Flag as gap"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-6">

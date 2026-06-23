@@ -142,9 +142,18 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         {/* Article Header Card */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xs space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="rounded bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-zinc-200">
-              {article.category?.name || "General"}
-            </span>
+            {article.category ? (
+              <Link
+                href={`/categories/${article.category.id}`}
+                className="rounded bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-zinc-200 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+              >
+                {article.category.name}
+              </Link>
+            ) : (
+              <span className="rounded bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-zinc-200">
+                General
+              </span>
+            )}
             <div className="flex items-center gap-2">
               {article.status !== ArticleStatus.Published && (
                 <span className="rounded bg-yellow-50 px-2 py-0.5 text-[10px] font-bold text-yellow-750 border border-yellow-200 uppercase">

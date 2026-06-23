@@ -171,16 +171,13 @@ export default function CustomerSearchWorkspace({
         {/* Categories Pills */}
         <div className="flex flex-wrap gap-2 justify-center">
           {activeCategories.map((c) => (
-            <button
+            <Link
               key={c.id}
-              onClick={() => {
-                setQuery(c.name);
-                triggerSearch(c.name);
-              }}
+              href={`/categories/${c.id}`}
               className="rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-650 hover:text-zinc-950 transition-colors shadow-2xs"
             >
               {c.name}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
@@ -232,16 +229,13 @@ export default function CustomerSearchWorkspace({
                 <h5 className="text-xs font-bold uppercase tracking-wider text-zinc-450">Try Browsing Categories:</h5>
                 <div className="flex flex-wrap gap-2">
                   {suggestedCategories.map((c) => (
-                    <button
+                    <Link
                       key={c.id}
-                      onClick={() => {
-                        setQuery(c.name);
-                        triggerSearch(c.name);
-                      }}
+                      href={`/categories/${c.id}`}
                       className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-zinc-950 transition-colors shadow-2xs"
                     >
                       {c.name}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
