@@ -26,9 +26,13 @@ function getDirectDatabaseUrl(url: string | undefined): string | undefined {
   return url;
 }
 
+const connectionString = getDirectDatabaseUrl(process.env.DATABASE_URL) || "postgresql://postgres:password@localhost:5432/zain_kb";
+const isLocalhost = connectionString.includes("localhost") || connectionString.includes("127.0.0.1");
+
 // Create a connection pool and initialize the driver adapter
 const pool = new pg.Pool({
-  connectionString: getDirectDatabaseUrl(process.env.DATABASE_URL) || "postgresql://postgres:password@localhost:5432/zain_kb",
+  connectionString,
+  ssl: isLocalhost ? undefined : { rejectUnauthorized: false },
 });
 const adapter = new PrismaPg(pool);
 

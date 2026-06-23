@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
+import { parseMarkdownToHtml } from "@/lib/markdown";
 
 type AgentCase = {
   id: string;
@@ -473,11 +474,16 @@ export default function AgentDeskWorkspace({
                         </div>
                       )}
 
-                      <div className="text-xs text-zinc-750 font-medium leading-relaxed max-h-[150px] overflow-y-auto whitespace-pre-wrap border-b border-zinc-100 pb-4">
-                        {previewArticle.variants?.find((v: any) => v.channel === "agent")?.detailed_steps || 
-                         previewArticle.variants?.find((v: any) => v.channel === "default")?.detailed_steps || 
-                         "No detailed content available."}
-                      </div>
+                      <div 
+                        className="text-xs text-zinc-750 font-medium leading-relaxed max-h-[150px] overflow-y-auto whitespace-pre-wrap border-b border-zinc-100 pb-4"
+                        dangerouslySetInnerHTML={{
+                          __html: parseMarkdownToHtml(
+                            previewArticle.variants?.find((v: any) => v.channel === "agent")?.detailed_steps || 
+                            previewArticle.variants?.find((v: any) => v.channel === "default")?.detailed_steps || 
+                            "No detailed content available."
+                          )
+                        }}
+                      />
 
                       {/* Copy-Ready Macro */}
                       {previewArticle.variants?.find((v: any) => v.channel === "agent")?.copy_ready_macro && (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArticleFeedbackForm from "@/components/ArticleFeedbackForm";
 import { ArticleStatus, Channel } from "@prisma/client";
+import { parseMarkdownToHtml } from "@/lib/markdown";
 
 type PageProps = {
   params: Promise<{
@@ -83,12 +84,11 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     );
   }
 
-  // Determine active variant channel
-  const selectedChannel = (channel || "default") as Channel;
-  
-  // Guard: Restrict agent variant to logged-in users only
+  // Guard: Guest users can only view the default Customer channel
   const showAgentChannel = user?.role === "Agent" || user?.role === "Admin" || user?.role === "SuperAdmin";
-  const activeChannel = (selectedChannel === "agent" && !showAgentChannel) ? "default" : selectedChannel;
+  const activeChannel = user 
+    ? (((channel === "agent" && !showAgentChannel) ? "default" : (channel || "default")) as Channel) 
+    : Channel.default;
 
   // Locate the variant content
   const activeVariant = article.variants.find((v) => v.channel === activeChannel);
@@ -149,51 +149,53 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           </div>
         </div>
 
-        {/* Channel Variants Selector Tabs */}
-        <div className="flex border-b border-zinc-200 gap-1 overflow-x-auto pb-px">
-          <Link
-            href={`/articles/${id}?channel=default${token ? `&token=${token}` : ""}`}
-            className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
-              activeChannel === "default"
-                ? "border-zinc-950 text-zinc-950"
-                : "border-transparent text-zinc-400 hover:text-zinc-650"
-            }`}
-          >
-            Customer View
-          </Link>
-          <Link
-            href={`/articles/${id}?channel=chatbot${token ? `&token=${token}` : ""}`}
-            className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
-              activeChannel === "chatbot"
-                ? "border-zinc-950 text-zinc-950"
-                : "border-transparent text-zinc-400 hover:text-zinc-650"
-            }`}
-          >
-            Chatbot Flow
-          </Link>
-          <Link
-            href={`/articles/${id}?channel=whatsapp${token ? `&token=${token}` : ""}`}
-            className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
-              activeChannel === "whatsapp"
-                ? "border-zinc-950 text-zinc-950"
-                : "border-transparent text-zinc-400 hover:text-zinc-650"
-            }`}
-          >
-            WhatsApp Variant
-          </Link>
-          {showAgentChannel && (
+        {/* Channel Variants Selector Tabs - Only show to logged-in staff */}
+        {user && (
+          <div className="flex border-b border-zinc-200 gap-1 overflow-x-auto pb-px">
             <Link
-              href={`/articles/${id}?channel=agent${token ? `&token=${token}` : ""}`}
+              href={`/articles/${id}?channel=default${token ? `&token=${token}` : ""}`}
               className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
-                activeChannel === "agent"
+                activeChannel === "default"
                   ? "border-zinc-950 text-zinc-950"
                   : "border-transparent text-zinc-400 hover:text-zinc-650"
               }`}
             >
-              Agent Desk 🔒
+              Customer View
             </Link>
-          )}
-        </div>
+            <Link
+              href={`/articles/${id}?channel=chatbot${token ? `&token=${token}` : ""}`}
+              className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                activeChannel === "chatbot"
+                  ? "border-zinc-950 text-zinc-950"
+                  : "border-transparent text-zinc-400 hover:text-zinc-650"
+              }`}
+            >
+              Chatbot Flow
+            </Link>
+            <Link
+              href={`/articles/${id}?channel=whatsapp${token ? `&token=${token}` : ""}`}
+              className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                activeChannel === "whatsapp"
+                  ? "border-zinc-950 text-zinc-950"
+                  : "border-transparent text-zinc-400 hover:text-zinc-650"
+              }`}
+            >
+              WhatsApp Variant
+            </Link>
+            {showAgentChannel && (
+              <Link
+                href={`/articles/${id}?channel=agent${token ? `&token=${token}` : ""}`}
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                  activeChannel === "agent"
+                    ? "border-zinc-950 text-zinc-950"
+                    : "border-transparent text-zinc-400 hover:text-zinc-650"
+                }`}
+              >
+                Agent Desk 🔒
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Article Body Content */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xs space-y-6 text-left">
@@ -211,9 +213,10 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </div>
           )}
 
-          <div className="prose prose-zinc max-w-none text-zinc-800 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-            {contentBody}
-          </div>
+          <div 
+            className="prose prose-zinc max-w-none text-zinc-800 text-sm leading-relaxed whitespace-pre-wrap font-medium"
+            dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(contentBody) }}
+          />
 
           {activeChannel === "agent" && macroText && (
             <div className="mt-8 border-t border-zinc-100 pt-6 space-y-3">

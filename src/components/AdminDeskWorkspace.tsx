@@ -496,6 +496,8 @@ export default function AdminDeskWorkspace({
     setIsCreating(true);
     setFormError("");
     setFormSuccess("");
+    setTransitionStatus("");
+    setTransitionComment("");
 
     setTitle("");
     setSlug("");
@@ -520,6 +522,8 @@ export default function AdminDeskWorkspace({
   const closeEditor = () => {
     setEditingArticle(null);
     setIsCreating(false);
+    setTransitionStatus("");
+    setTransitionComment("");
   };
 
   const handleSaveArticle = async (e: React.FormEvent) => {
@@ -566,12 +570,18 @@ export default function AdminDeskWorkspace({
         const created = await res.json();
         
         // Save variants inline (since POST creates a default variant, we update variants using PUT)
+        const putPayload: any = {
+          variants: variantsPayload,
+        };
+        if (transitionStatus) {
+          putPayload.status = transitionStatus;
+          putPayload.comment = transitionComment;
+        }
+
         const putRes = await fetch(`/api/v1/articles/${created.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            variants: variantsPayload,
-          }),
+          body: JSON.stringify(putPayload),
         });
 
         if (!putRes.ok) {
@@ -1247,14 +1257,14 @@ export default function AdminDeskWorkspace({
                 </div>
 
                 {/* Workflow status transition panel (only in edit mode) */}
-                {!isCreating && editingArticle && (
+                {(isCreating || editingArticle) && (
                   <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
                       Workflow Governance Operations
                     </h4>
 
                     {/* Separation of Duties Banner Alert */}
-                    {editingArticle.author_id === currentUserId && (
+                    {!isCreating && editingArticle && editingArticle.author_id === currentUserId && (
                       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex items-start gap-2.5">
                         <span className="text-base">⚠️</span>
                         <div>
@@ -1267,7 +1277,7 @@ export default function AdminDeskWorkspace({
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
-                          Current Status: <span className="text-zinc-800 font-extrabold uppercase">{editingArticle.status}</span>
+                          Current Status: <span className="text-zinc-800 font-extrabold uppercase">{isCreating ? "DRAFT" : editingArticle?.status}</span>
                         </label>
                         <select
                           value={transitionStatus}
@@ -1275,8 +1285,8 @@ export default function AdminDeskWorkspace({
                           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
                         >
                           <option value="">-- Change Status --</option>
-                          {getAllowedStatusTransitions(editingArticle.status).map((t) => {
-                            const isSelfAuthorRestrict = (t.status === "Approved" || t.status === "Published") && editingArticle.author_id === currentUserId;
+                          {getAllowedStatusTransitions(isCreating ? "Draft" : editingArticle?.status || "Draft").map((t) => {
+                            const isSelfAuthorRestrict = !isCreating && !!editingArticle && (t.status === "Approved" || t.status === "Published") && editingArticle.author_id === currentUserId;
                             return (
                               <option key={t.status} value={t.status} disabled={isSelfAuthorRestrict}>
                                 {t.label} {isSelfAuthorRestrict ? "(Restricted: Author)" : ""}
