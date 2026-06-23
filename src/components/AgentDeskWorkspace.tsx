@@ -485,7 +485,8 @@ export default function AgentDeskWorkspace({
 
                   {/* KB Search Tab */}
                   {workspaceTab === "kb" && (
-                  <div className="space-y-3">
+                  <div className="space-y-6">
+                    <div className="space-y-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Workspace Search</h4>
                     <form onSubmit={handleSearchKB} className="flex gap-2">
                       <input
@@ -503,7 +504,7 @@ export default function AgentDeskWorkspace({
                         Search KB
                       </button>
                     </form>
-                  </div>
+                    </div>
 
                   {/* Results List */}
                   {searched && (
