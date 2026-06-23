@@ -58,7 +58,7 @@ export default function SuperAdminClient({
   tenantName,
   signOutAction,
 }: SuperAdminClientProps) {
-  const [activeTab, setActiveTab] = useState<"orgs" | "users" | "articles" | "gaps">("orgs");
+  const [activeTab, setActiveTab] = useState<"orgs" | "users" | "articles" | "gaps" | "workflows">("orgs");
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -296,6 +296,26 @@ export default function SuperAdminClient({
                   </svg>
                   Gaps Queue
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("workflows")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "workflows" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <polyline points="17 1 21 5 17 9"/>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                  </svg>
+                  Workflows
+                  {initialArticles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length > 0 && (
+                    <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/20">
+                      {initialArticles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
           </nav>
@@ -348,6 +368,7 @@ export default function SuperAdminClient({
               {activeTab === "users" && "User Accounts & Permissions"}
               {activeTab === "articles" && "Articles Manager"}
               {activeTab === "gaps" && "Knowledge Gaps"}
+              {activeTab === "workflows" && "Workflows Queue"}
             </h2>
           </div>
           <div className="flex items-center gap-3">
@@ -714,6 +735,22 @@ export default function SuperAdminClient({
                 initialGaps={initialGaps}
                 hideSidebar={true}
                 overrideActiveTab="gaps"
+              />
+            </div>
+          )}
+
+          {activeTab === "workflows" && (
+            <div className="space-y-6">
+              <AdminDeskWorkspace
+                initialArticles={initialArticles}
+                categories={categories}
+                users={activeUsers}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                tenantId={tenantId}
+                initialGaps={initialGaps}
+                hideSidebar={true}
+                overrideActiveTab="workflows"
               />
             </div>
           )}

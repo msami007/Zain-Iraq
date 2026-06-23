@@ -72,7 +72,7 @@ type WorkspaceProps = {
   tenantName?: string;
   brandingColor?: string;
   hideSidebar?: boolean;
-  overrideActiveTab?: "articles" | "gaps" | "audit";
+  overrideActiveTab?: "articles" | "gaps" | "audit" | "workflows";
   signOutAction?: () => Promise<void>;
 };
 
@@ -148,7 +148,7 @@ export default function AdminDeskWorkspace({
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit">("articles");
+  const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows">("articles");
 
   // Articles Filter states
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
@@ -880,6 +880,22 @@ export default function AdminDeskWorkspace({
               >
                 <span>🔍</span> Gaps Queue
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("workflows");
+                  closeEditor();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "workflows" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                  }`}
+              >
+                <span>🔄</span> Workflows
+                {articles.filter(a => a.status === "InReview" || a.status === "Approved").length > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/20">
+                    {articles.filter(a => a.status === "InReview" || a.status === "Approved").length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -915,7 +931,7 @@ export default function AdminDeskWorkspace({
           <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-extrabold text-zinc-950 uppercase tracking-wide">
-                {currentTab === "articles" ? "Articles Manager" : "Gaps Queue"}
+                {currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : "Workflows"}
               </h2>
             </div>
             <div className="flex items-center gap-3">
@@ -2065,6 +2081,150 @@ export default function AdminDeskWorkspace({
                   </div>
                 </form>
               )}
+            </div>
+          )}
+
+          {/* WORKFLOWS REVIEW QUEUE */}
+          {currentTab === "workflows" && (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Article Workflows Queue</h3>
+                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Review and approve articles moving through the editorial pipeline.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
+                      IN REVIEW: {articles.filter(a => a.status === "InReview").length}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
+                      APPROVED: {articles.filter(a => a.status === "Approved").length}
+                    </span>
+                  </div>
+                </div>
+
+                {articles.filter(a => a.status === "InReview" || a.status === "Approved").length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="h-14 w-14 rounded-2xl bg-zinc-100 flex items-center justify-center mb-4">
+                      <span className="text-2xl">✅</span>
+                    </div>
+                    <p className="text-sm font-bold text-zinc-400">All clear!</p>
+                    <p className="text-xs text-zinc-350 font-medium mt-1">No articles are waiting for review or approval.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                      <thead>
+                        <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 uppercase text-[10px] font-bold">
+                          <th className="px-5 py-3.5">Article Title</th>
+                          <th className="px-5 py-3.5">Category</th>
+                          <th className="px-5 py-3.5">Author</th>
+                          <th className="px-5 py-3.5">Stage</th>
+                          <th className="px-5 py-3.5">Next Stage</th>
+                          <th className="px-5 py-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {articles
+                          .filter(a => a.status === "InReview" || a.status === "Approved")
+                          .map(art => {
+                            const isOwnArticle = art.author_id === currentUserId;
+                            const nextStatus = art.status === "InReview" ? "Approved" : "Published";
+                            const nextLabel = art.status === "InReview" ? "Approve" : "Publish";
+                            return (
+                              <tr key={art.id} className="hover:bg-zinc-50/60 transition-colors">
+                                <td className="px-5 py-4">
+                                  <div className="font-bold text-zinc-900 leading-tight">{art.title}</div>
+                                  <div className="text-[10px] text-zinc-400 font-mono mt-0.5">/{art.slug}</div>
+                                </td>
+                                <td className="px-5 py-4 text-zinc-500 font-medium">{art.category?.name || "—"}</td>
+                                <td className="px-5 py-4">
+                                  <div className="text-zinc-700 font-semibold">{art.author?.name || "Unknown"}</div>
+                                  <div className="text-[10px] text-zinc-400 font-mono">{art.author?.email}</div>
+                                </td>
+                                <td className="px-5 py-4">
+                                  {art.status === "InReview" ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
+                                      In Review
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
+                                      Approved
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-5 py-4">
+                                  <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-[10px] font-bold text-zinc-600">
+                                    ➔ {nextStatus}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-4 text-right space-x-2 whitespace-nowrap">
+                                  <Link
+                                    href={`/articles/${art.id}`}
+                                    target="_blank"
+                                    className="inline-flex items-center gap-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1.5 text-[10px] font-bold text-zinc-600 shadow-2xs"
+                                  >
+                                    View
+                                  </Link>
+                                  {isOwnArticle ? (
+                                    <span className="inline-flex items-center gap-1 rounded border border-red-100 bg-red-50 px-2.5 py-1.5 text-[10px] font-bold text-red-500 cursor-not-allowed" title="Separation of duties: You are the author and cannot approve your own article">
+                                      ⛔ Cannot Approve
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectStatusTransition(art.id, nextStatus)}
+                                      className="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 text-[10px] font-bold text-green-700 shadow-2xs transition-colors"
+                                    >
+                                      ✓ {nextLabel}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDirectStatusTransition(art.id, "Draft")}
+                                    className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-600 shadow-2xs transition-colors"
+                                  >
+                                    ✕ Reject
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Workflow Pipeline Legend */}
+              <div className="rounded-xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-4">Editorial Pipeline</h4>
+                <div className="flex items-center gap-0">
+                  {[
+                    { label: "Draft", color: "bg-zinc-200 text-zinc-600", active: false },
+                    { label: "In Review", color: "bg-blue-100 text-blue-700", active: true },
+                    { label: "Approved", color: "bg-amber-100 text-amber-700", active: true },
+                    { label: "Published", color: "bg-green-100 text-green-700", active: false },
+                    { label: "Archived", color: "bg-red-100 text-red-600", active: false },
+                  ].map((stage, i, arr) => (
+                    <div key={stage.label} className="flex items-center">
+                      <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border ${
+                        stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
+                      } ${stage.color}`}>
+                        {stage.active && <span className="mr-1">👁</span>}{stage.label}
+                      </div>
+                      {i < arr.length - 1 && (
+                        <span className="mx-2 text-zinc-300 font-bold text-sm">→</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-zinc-400 font-medium mt-3">Highlighted stages are currently visible in this Workflows queue. Approving an article automatically advances it to the next stage.</p>
+              </div>
             </div>
           )}
 
