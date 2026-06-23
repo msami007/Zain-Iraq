@@ -21,6 +21,10 @@ type AdminArticle = {
   author?: { id: string; name: string; email: string } | null;
   owner?: { id: string; name: string; email: string } | null;
   variants?: any[];
+  status_history?: any[];
+  article_teams?: { team: { id: string; name: string } }[];
+  created_at?: string;
+  published_at?: string | null;
 };
 
 type Category = {
@@ -148,7 +152,7 @@ export default function AdminDeskWorkspace({
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows">("articles");
+  const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows" | "analytics">("articles");
 
   // Articles Filter states
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
@@ -165,6 +169,7 @@ export default function AdminDeskWorkspace({
 
   // Article Editor state
   const [editingArticle, setEditingArticle] = useState<AdminArticle | null>(null);
+  const [fullArticleDetail, setFullArticleDetail] = useState<any | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
@@ -220,6 +225,80 @@ export default function AdminDeskWorkspace({
   const [guestLinks, setGuestLinks] = useState<any[]>([]);
   const [generatingLink, setGeneratingLink] = useState(false);
 
+  // Teams state and fetch
+  const [teams, setTeams] = useState<any[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+
+  // Rejection modal states
+  const [rejectionModalArticleId, setRejectionModalArticleId] = useState<string | null>(null);
+  const [rejectionModalComment, setRejectionModalComment] = useState("");
+
+  // Origin Gap tracking for creation
+  const [originGapId, setOriginGapId] = useState<string | null>(null);
+
+  // Date filtering state for Gaps
+  const [gapStartDate, setGapStartDate] = useState("");
+  const [gapEndDate, setGapEndDate] = useState("");
+
+  // Analytics states
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await fetch(`/api/v1/teams?tenant_id=${tenantId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setTeams(data);
+        }
+      } catch (err) {
+        console.error("Failed to load teams", err);
+      }
+    };
+    fetchTeams();
+  }, [tenantId]);
+
+  const fetchAnalytics = async () => {
+    setLoadingAnalytics(true);
+    try {
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsData(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch analytics:", e);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  const fetchFilteredGaps = async () => {
+    try {
+      let url = `/api/v1/gaps?status=${gapStatusFilter === "ALL" ? "" : gapStatusFilter}`;
+      if (gapStartDate) {
+        url += `&startDate=${gapStartDate}`;
+      }
+      if (gapEndDate) {
+        url += `&endDate=${gapEndDate}`;
+      }
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setGaps(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch gaps", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "gaps") {
+      fetchFilteredGaps();
+    }
+  }, [gapStatusFilter, gapStartDate, gapEndDate, activeTab]);
+
   // Compute filtered articles list based on status, category, and search text filters
   const filteredArticles = articles.filter((art) => {
     if (selectedStatusFilter !== "All") {
@@ -268,10 +347,12 @@ export default function AdminDeskWorkspace({
 
 
 
-  // Fetch Audit Logs when tab changes
+  // Fetch Audit Logs and Analytics when tab changes
   useEffect(() => {
     if (activeTab === "audit") {
       fetchAuditLogs();
+    } else if (activeTab === "analytics") {
+      fetchAnalytics();
     }
   }, [activeTab]);
 
@@ -302,14 +383,11 @@ export default function AdminDeskWorkspace({
 
   const fetchAuditLogs = async () => {
     try {
-      const res = await fetch("/api/v1/users"); // Wait, is there an audit endpoint? Let's check. 
-      // If we don't have a direct audit logs API, we can fetch from a mock or let it fail gracefully.
-      // Wait, let's create a quick API endpoint for audit logs if needed, or query them in a separate route.
-      // Let's check what audit_log table queries exist.
-      // For now, let's query the audit logs inside a dedicated API or let this fetch.
-      // Wait! Let's write a simple audit logs GET API or mock it if we don't have it.
-      // Actually, we can fetch audit logs via `/api/v1/users`? No, users returns users.
-      // Let's create `/api/v1/audit` route! That is extremely clean.
+      const res = await fetch(`/api/v1/audit?tenant_id=${tenantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -437,7 +515,7 @@ export default function AdminDeskWorkspace({
     }
   };
 
-  const handleDirectStatusTransition = async (articleId: string, targetStatus: string) => {
+  const handleDirectStatusTransition = async (articleId: string, targetStatus: string, customComment?: string) => {
     try {
       const art = articles.find(a => a.id === articleId);
       if (!art) return;
@@ -448,12 +526,18 @@ export default function AdminDeskWorkspace({
         return;
       }
 
+      if (targetStatus === "Draft" && !customComment) {
+        setRejectionModalArticleId(articleId);
+        setRejectionModalComment("");
+        return;
+      }
+
       const res = await fetch(`/api/v1/articles/${articleId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: targetStatus,
-          comment: `Direct status transition to ${targetStatus} from dashboard`,
+          comment: customComment || `Direct status transition to ${targetStatus} from dashboard`,
         }),
       });
 
@@ -465,6 +549,10 @@ export default function AdminDeskWorkspace({
       const updated = await res.json();
       setArticles(articles.map((a) => (a.id === updated.id ? updated : a)));
       alert(`Article transitioned to ${targetStatus} successfully.`);
+      
+      // Clear rejection modal if open
+      setRejectionModalArticleId(null);
+      setRejectionModalComment("");
     } catch (err: any) {
       alert(err.message);
     }
@@ -545,8 +633,9 @@ export default function AdminDeskWorkspace({
     }
   };
 
-  const openEditor = (article: AdminArticle) => {
+  const openEditor = async (article: AdminArticle) => {
     setEditingArticle(article);
+    setFullArticleDetail(null);
     setIsCreating(false);
     setFormError("");
     setFormSuccess("");
@@ -588,6 +677,22 @@ export default function AdminDeskWorkspace({
     setVWhatsappShort(wV?.short_answer || "");
     setVWhatsappDetailed(whatsappVal);
     setInitialWhatsappDetailed(whatsappVal);
+
+    // Load assigned teams
+    setSelectedTeams(article.article_teams?.map((at: any) => at.team.id) || []);
+
+    try {
+      const res = await fetch(`/api/v1/articles/${article.id}`);
+      if (res.ok) {
+        const fullDetail = await res.json();
+        setFullArticleDetail(fullDetail);
+        if (fullDetail.article_teams) {
+          setSelectedTeams(fullDetail.article_teams.map((at: any) => at.team.id));
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching article details:", e);
+    }
   };
 
   const openCreator = () => {
@@ -605,6 +710,7 @@ export default function AdminDeskWorkspace({
     setVisibility("PUBLIC");
     setOwnerId(currentUserId);
     setReviewDue("");
+    setSelectedTeams([]);
 
     setVDefaultShort("");
     setVDefaultDetailed("");
@@ -663,6 +769,7 @@ export default function AdminDeskWorkspace({
             owner_id: ownerId,
             review_due: reviewDue || null,
             bodyText: vDefaultDetailed,
+            team_ids: selectedTeams,
           }),
         });
 
@@ -676,6 +783,7 @@ export default function AdminDeskWorkspace({
         // Save variants inline (since POST creates a default variant, we update variants using PUT)
         const putPayload: any = {
           variants: variantsPayload,
+          team_ids: selectedTeams,
         };
         if (transitionStatus) {
           putPayload.status = transitionStatus;
@@ -696,6 +804,28 @@ export default function AdminDeskWorkspace({
         const finalArticle = await putRes.json();
         setArticles([finalArticle, ...articles]);
         setFormSuccess("Article created successfully!");
+
+        if (originGapId) {
+          try {
+            const resResolve = await fetch("/api/v1/gaps", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: originGapId,
+                status: "RESOLVED",
+                resolving_article_id: finalArticle.id,
+              }),
+            });
+            if (resResolve.ok) {
+              const updatedGap = await resResolve.json();
+              setGaps(gaps.map((g) => (g.id === originGapId ? updatedGap : g)));
+            }
+          } catch (e) {
+            console.error("Failed to automatically resolve gap:", e);
+          }
+          setOriginGapId(null);
+        }
+
         setTimeout(() => closeEditor(), 1000);
       } else if (editingArticle) {
         // Prepare PUT payload
@@ -708,6 +838,7 @@ export default function AdminDeskWorkspace({
           owner_id: ownerId,
           review_due: reviewDue || null,
           variants: variantsPayload,
+          team_ids: selectedTeams,
         };
 
         if (transitionStatus) {
@@ -805,6 +936,33 @@ export default function AdminDeskWorkspace({
     }
   };
 
+  const handleUnresolveGap = async (gapId: string) => {
+    try {
+      const res = await fetch("/api/v1/gaps", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: gapId, status: "IN_PROGRESS" }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to unresolve gap");
+      }
+      const updated = await res.json();
+      setGaps(gaps.map((g) => (g.id === gapId ? updated : g)));
+      alert("Gap unresolved/rolled back successfully!");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleCreateArticleFromGap = (gap: Gap) => {
+    openCreator();
+    setTitle(gap.query_text);
+    setSlug(gap.query_text.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"));
+    setOriginGapId(gap.id);
+    setActiveTab("articles");
+  };
+
   // Check if a specific variant is empty
   const isVariantEmpty = (channel: string) => {
     if (channel === "agent") return !vAgentDetailed && !vAgentShort;
@@ -896,6 +1054,28 @@ export default function AdminDeskWorkspace({
                   </span>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("audit");
+                  closeEditor();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "audit" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                  }`}
+              >
+                <span>📋</span> Audit Logs
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("analytics");
+                  closeEditor();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "analytics" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                  }`}
+              >
+                <span>📊</span> Analytics
+              </button>
             </div>
           </div>
 
@@ -910,11 +1090,7 @@ export default function AdminDeskWorkspace({
             <button
               type="button"
               onClick={async () => {
-                if (signOutAction) {
-                  await signOutAction();
-                } else {
-                  await signOut({ callbackUrl: "/login" });
-                }
+                await signOut({ callbackUrl: "/login" });
               }}
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
             >
@@ -931,7 +1107,7 @@ export default function AdminDeskWorkspace({
           <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-extrabold text-zinc-950 uppercase tracking-wide">
-                {currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : "Workflows"}
+                {currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : currentTab === "workflows" ? "Workflows" : currentTab === "audit" ? "Audit Logs" : "Analytics"}
               </h2>
             </div>
             <div className="flex items-center gap-3">
@@ -1301,6 +1477,69 @@ export default function AdminDeskWorkspace({
                       </div>
                     )}
 
+                    {/* Rejection Feedback Amber Alert Box */}
+                    {!isCreating && editingArticle && editingArticle.status === "Draft" && fullArticleDetail?.status_history && (
+                      (() => {
+                        const rejection = fullArticleDetail.status_history.find((h: any) => h.to_status === "Draft" && h.comment);
+                        if (rejection) {
+                          return (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-start gap-2.5 shadow-2xs">
+                              <span className="text-base">⚠️</span>
+                              <div className="space-y-1">
+                                <p className="font-bold">Rejection Feedback</p>
+                                <p className="italic font-semibold font-mono text-[11px] bg-white/60 p-2 rounded-md border border-amber-100">"{rejection.comment}"</p>
+                                <p className="text-[10px] text-amber-700/80">Rejected by <span className="font-bold">{rejection.actor?.name}</span> on {new Date(rejection.created_at).toLocaleString()}</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()
+                    )}
+
+                    {/* Governance Metadata Badge Bar / Info Box */}
+                    {!isCreating && editingArticle && (
+                      <div className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 space-y-3">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">
+                          Governance Metadata
+                        </h4>
+                        {fullArticleDetail ? (
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
+                            <div>
+                              <span className="text-[10px] text-zinc-450 block font-medium">Written By</span>
+                              <span className="font-semibold text-zinc-800">{fullArticleDetail.author?.name || "Unknown"}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-zinc-450 block font-medium">Approved By</span>
+                              <span className="font-semibold text-zinc-800">
+                                {fullArticleDetail.status_history?.find((h: any) => h.to_status === "Approved")?.actor?.name || 
+                                 (fullArticleDetail.status === "Published" ? fullArticleDetail.status_history?.find((h: any) => h.to_status === "Published")?.actor?.name : null) || 
+                                 "Pending Approval"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-zinc-450 block font-medium">Published By</span>
+                              <span className="font-semibold text-zinc-800">
+                                {fullArticleDetail.status_history?.find((h: any) => h.to_status === "Published")?.actor?.name || "Not Published"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-zinc-450 block font-medium">Created Date</span>
+                              <span className="font-semibold text-zinc-800">{new Date(fullArticleDetail.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-zinc-450 block font-medium">Published Date</span>
+                              <span className="font-semibold text-zinc-800">
+                                {fullArticleDetail.published_at ? new Date(fullArticleDetail.published_at).toLocaleDateString() : "Not Published"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-zinc-455 animate-pulse">Loading governance metadata...</div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Grid Inputs */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       <div className="space-y-2">
@@ -1365,6 +1604,31 @@ export default function AdminDeskWorkspace({
                           <option value="PRIVATE">Private (Internal only)</option>
                         </select>
                       </div>
+
+                      {visibility === "PRIVATE" && teams.length > 0 && (
+                        <div className="space-y-2 sm:col-span-3 border border-zinc-200 rounded-lg p-3 bg-zinc-50">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block mb-1.5">Assign to Teams</label>
+                          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                            {teams.map((team) => (
+                              <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTeams.includes(team.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedTeams([...selectedTeams, team.id]);
+                                    } else {
+                                      setSelectedTeams(selectedTeams.filter(id => id !== team.id));
+                                    }
+                                  }}
+                                  className="accent-zinc-955"
+                                />
+                                {team.name}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Review Due Date</label>
@@ -2231,20 +2495,49 @@ export default function AdminDeskWorkspace({
           {/* KNOWLEDGE GAPS QUEUE VIEW */}
           {currentTab === "gaps" && (
             <div className="space-y-6">
-              {/* Status selector */}
-              <div className="flex gap-2">
-                {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "DISMISSED"].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setGapStatusFilter(st)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs ${gapStatusFilter === st
-                        ? "bg-zinc-950 text-white border-zinc-950"
-                        : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
-                      }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+              {/* Status & Date range selectors */}
+              <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
+                <div className="flex flex-wrap gap-2">
+                  {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "DISMISSED"].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setGapStatusFilter(st)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs ${gapStatusFilter === st
+                          ? "bg-zinc-950 text-white border-zinc-950"
+                          : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                        }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-650">
+                  <span>From:</span>
+                  <input
+                    type="date"
+                    value={gapStartDate}
+                    onChange={(e) => setGapStartDate(e.target.value)}
+                    className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-800 focus:outline-hidden bg-white"
+                  />
+                  <span>To:</span>
+                  <input
+                    type="date"
+                    value={gapEndDate}
+                    onChange={(e) => setGapEndDate(e.target.value)}
+                    className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-800 focus:outline-hidden bg-white"
+                  />
+                  {(gapStartDate || gapEndDate) && (
+                    <button
+                      onClick={() => {
+                        setGapStartDate("");
+                        setGapEndDate("");
+                      }}
+                      className="text-red-500 hover:underline ml-1"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
@@ -2265,60 +2558,80 @@ export default function AdminDeskWorkspace({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-150">
-                      {gaps
-                        .filter((g) => gapStatusFilter === "ALL" || g.status === gapStatusFilter)
-                        .length === 0 ? (
+                      {gaps.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
                             No knowledge gaps found in this queue.
                           </td>
                         </tr>
                       ) : (
-                        gaps
-                          .filter((g) => gapStatusFilter === "ALL" || g.status === gapStatusFilter)
-                          .map((g) => (
-                            <tr key={g.id} className="hover:bg-zinc-50/50">
-                              <td className="p-4 font-bold text-zinc-950 italic">"{g.query_text}"</td>
-                              <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
-                              <td className="p-4">
-                                <span
-                                  className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
-                                      ? "bg-green-50 text-green-700 border-green-200"
-                                      : g.status === "NEW"
-                                        ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-amber-50 text-amber-700 border-amber-200"
-                                    }`}
-                                >
-                                  {g.status}
-                                </span>
-                              </td>
-                              <td className="p-4 text-zinc-500 font-medium">{g.reporter?.name || "Customer / Guest"}</td>
-                              <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
-                              <td className="p-4 text-right space-x-2">
-                                {g.status === "NEW" && (
+                        gaps.map((g) => (
+                          <tr key={g.id} className="hover:bg-zinc-50/50">
+                            <td className="p-4 font-bold text-zinc-955 italic">"{g.query_text}"</td>
+                            <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
+                            <td className="p-4">
+                              <span
+                                className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : g.status === "NEW"
+                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                                  }`}
+                              >
+                                {g.status}
+                              </span>
+                            </td>
+                            <td className="p-4 text-zinc-500 font-medium">{g.reporter?.name || "Customer / Guest"}</td>
+                            <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
+                            <td className="p-4 text-right space-x-2">
+                              {g.status === "NEW" && (
+                                <>
                                   <button
                                     onClick={() => handleClaimGap(g.id)}
-                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
                                   >
                                     Claim Gap
                                   </button>
-                                )}
-                                {g.status === "IN_PROGRESS" && (
+                                  <button
+                                    onClick={() => handleCreateArticleFromGap(g)}
+                                    className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
+                                  >
+                                    Create Article
+                                  </button>
+                                </>
+                              )}
+                              {g.status === "IN_PROGRESS" && (
+                                <>
                                   <button
                                     onClick={() => setResolvingGap(g)}
                                     className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
                                   >
                                     Resolve Gap
                                   </button>
-                                )}
-                                {g.status === "RESOLVED" && g.resolving_article && (
-                                  <span className="text-[10px] text-zinc-400 font-medium">
-                                    Resolved ➔ {g.resolving_article.title}
+                                  <button
+                                    onClick={() => handleCreateArticleFromGap(g)}
+                                    className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
+                                  >
+                                    Create Article
+                                  </button>
+                                </>
+                              )}
+                              {g.status === "RESOLVED" && (
+                                <div className="flex items-center justify-end gap-2 text-xs">
+                                  <span className="text-[10px] text-zinc-400 font-medium truncate max-w-40">
+                                    Resolved ➔ {g.resolving_article?.title || "Linked Article"}
                                   </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))
+                                  <button
+                                    onClick={() => handleUnresolveGap(g.id)}
+                                    className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
+                                  >
+                                    Rollback
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>
@@ -2327,13 +2640,184 @@ export default function AdminDeskWorkspace({
             </div>
           )}
 
+          {/* AUDIT LOGS VIEW */}
+          {currentTab === "audit" && (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                <div className="border-b border-zinc-200 bg-zinc-50/50 p-4 flex justify-between items-center">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">System Audit Logs</h3>
+                  <button
+                    type="button"
+                    onClick={fetchAuditLogs}
+                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                  >
+                    Refresh Logs
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                    <thead>
+                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                        <th className="p-4">Timestamp</th>
+                        <th className="p-4">Actor</th>
+                        <th className="p-4">Action</th>
+                        <th className="p-4">Target Type</th>
+                        <th className="p-4">Target Label</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-150">
+                      {auditLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-zinc-400 font-semibold">
+                            No audit logs recorded.
+                          </td>
+                        </tr>
+                      ) : (
+                        auditLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-zinc-50/50">
+                            <td className="p-4 text-zinc-500 font-mono">{new Date(log.created_at).toLocaleString()}</td>
+                            <td className="p-4 font-bold text-zinc-900">
+                              {log.actor?.name || "System"}{" "}
+                              <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
+                            </td>
+                            <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
+                            <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
+                            <td className="p-4 text-zinc-955 font-semibold">{log.target_label}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ANALYTICS VIEW */}
+          {currentTab === "analytics" && (
+            <div className="space-y-6">
+              {loadingAnalytics && !analyticsData ? (
+                <div className="text-center py-12 text-zinc-450 font-semibold animate-pulse">Loading analytics data...</div>
+              ) : !analyticsData ? (
+                <div className="text-center py-12 text-zinc-400 italic">No analytics data available.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total KB Views</span>
+                      <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">
+                        {analyticsData.topArticles.reduce((acc: number, curr: any) => acc + curr.views, 0)}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Macro Clicks</span>
+                      <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">
+                        {analyticsData.topArticles.reduce((acc: number, curr: any) => acc + curr.clicks, 0)}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Active Article Count</span>
+                      <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{articles.length}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                    <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">7-Day Access Trends</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                        <thead>
+                          <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                            <th className="p-4">Date</th>
+                            <th className="p-4">Article Views</th>
+                            <th className="p-4">Macro Clicks</th>
+                            <th className="p-4">Total Interactions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-150">
+                          {analyticsData.dailyTrend.map((t: any) => (
+                            <tr key={t.date} className="hover:bg-zinc-50/50">
+                              <td className="p-4 font-mono font-bold text-zinc-650">{t.date}</td>
+                              <td className="p-4 font-semibold text-zinc-800">{t.views} views</td>
+                              <td className="p-4 font-semibold text-zinc-800">{t.clicks} clicks</td>
+                              <td className="p-4 font-bold text-zinc-950">{t.views + t.clicks} interactions</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                      <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Performing Articles</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                          <thead>
+                            <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                              <th className="p-4">Article Title</th>
+                              <th className="p-4">Views</th>
+                              <th className="p-4">Clicks</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-150">
+                            {analyticsData.topArticles.map((a: any) => (
+                              <tr key={a.id} className="hover:bg-zinc-50/50">
+                                <td className="p-4 font-bold text-zinc-950 truncate max-w-xs">{a.label}</td>
+                                <td className="p-4 font-semibold text-zinc-600">{a.views}</td>
+                                <td className="p-4 font-semibold text-zinc-600">{a.clicks}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                      <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Agent Usage Ranking</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                          <thead>
+                            <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                              <th className="p-4">Agent Name</th>
+                              <th className="p-4">Views</th>
+                              <th className="p-4">Clicks</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-150">
+                            {analyticsData.topAgents.map((ag: any) => (
+                              <tr key={ag.id} className="hover:bg-zinc-50/50">
+                                <td className="p-4 font-bold text-zinc-950 truncate">
+                                  {ag.name}{" "}
+                                  <span className="text-[10px] text-zinc-400 font-normal">({ag.email})</span>
+                                </td>
+                                <td className="p-4 font-semibold text-zinc-600">{ag.views}</td>
+                                <td className="p-4 font-semibold text-zinc-600">{ag.clicks}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* RESOLUTION MODAL OVERLAY FOR GAPS */}
           {resolvingGap && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
               <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
                 <div>
-                  <h3 className="text-sm font-extrabold text-zinc-950">Resolve Knowledge Gap</h3>
-                  <p className="text-xs text-zinc-500 font-medium mt-1">
+                  <h3 className="text-sm font-extrabold text-zinc-955">Resolve Knowledge Gap</h3>
+                  <p className="text-xs text-zinc-500 font-semibold mt-1">
                     Link this search query gap to a published support article.
                   </p>
                 </div>
@@ -2371,7 +2855,7 @@ export default function AdminDeskWorkspace({
                         setResolvingGap(null);
                         setSelectedResolvingArticleId("");
                       }}
-                      className="rounded border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-600"
+                      className="rounded border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-650"
                     >
                       Cancel
                     </button>
@@ -2383,6 +2867,57 @@ export default function AdminDeskWorkspace({
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* REJECTION FEEDBACK INPUT MODAL OVERLAY */}
+          {rejectionModalArticleId && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
+              <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800">
+                    Rejection Feedback
+                  </h4>
+                  <p className="text-[10px] text-zinc-450 font-medium mt-1">
+                    Please provide a rejection reason/feedback. The author will see this feedback in order to revise and resubmit.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <textarea
+                    required
+                    rows={4}
+                    value={rejectionModalComment}
+                    onChange={(e) => setRejectionModalComment(e.target.value)}
+                    placeholder="e.g. Please clarify step 3, update the screenshots, check spelling..."
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-850 focus:outline-hidden"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-2 border-t border-zinc-150">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectionModalArticleId(null);
+                      setRejectionModalComment("");
+                    }}
+                    className="rounded border border-zinc-200 bg-white px-4 py-1.5 text-xs font-bold text-zinc-650"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!rejectionModalComment.trim()) {
+                        alert("Please enter a rejection comment.");
+                        return;
+                      }
+                      handleDirectStatusTransition(rejectionModalArticleId, "Draft", rejectionModalComment);
+                    }}
+                    className="rounded bg-red-650 hover:bg-red-750 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
+                  >
+                    Submit Rejection
+                  </button>
+                </div>
               </div>
             </div>
           )}

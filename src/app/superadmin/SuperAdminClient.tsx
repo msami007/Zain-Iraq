@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import AdminDeskWorkspace from "@/components/AdminDeskWorkspace";
 
@@ -25,6 +25,9 @@ interface User {
     name: string;
     slug: string;
   };
+  user_teams?: {
+    team: { id: string; name: string }
+  }[];
 }
 
 interface SuperAdminClientProps {
@@ -58,10 +61,27 @@ export default function SuperAdminClient({
   tenantName,
   signOutAction,
 }: SuperAdminClientProps) {
-  const [activeTab, setActiveTab] = useState<"orgs" | "users" | "articles" | "gaps" | "workflows">("orgs");
+  const [activeTab, setActiveTab] = useState<"orgs" | "users" | "teams" | "articles" | "gaps" | "workflows" | "audit">("orgs");
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+
+  // Teams state
+  const [teams, setTeams] = useState<any[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [teamTenantId, setTeamTenantId] = useState(initialTenants[0]?.id || "");
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamSuccess, setTeamSuccess] = useState<string | null>(null);
+  const [teamLoading, setTeamLoading] = useState(false);
+
+  // User creation teams state
+  const [userSelectedTeams, setUserSelectedTeams] = useState<string[]>([]);
+
+  // User team editing modal state
+  const [editingUserTeams, setEditingUserTeams] = useState<User | null>(null);
+  const [modalSelectedTeams, setModalSelectedTeams] = useState<string[]>([]);
+  const [modalSaving, setModalSaving] = useState(false);
 
   // Tenant form state
   const [orgName, setOrgName] = useState("");
@@ -80,6 +100,114 @@ export default function SuperAdminClient({
   const [userError, setUserError] = useState<string | null>(null);
   const [userSuccess, setUserSuccess] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(false);
+
+  // Fetch teams from api
+  const fetchTeams = async () => {
+    setLoadingTeams(true);
+    try {
+      const res = await fetch("/api/v1/teams");
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch teams:", err);
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeams();
+  }, [activeTab]);
+
+  // Handle Team Submit
+  const handleTeamSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTeamError(null);
+    setTeamSuccess(null);
+    setTeamLoading(true);
+
+    try {
+      const res = await fetch("/api/v1/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTeamName,
+          tenant_id: teamTenantId,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setTeamError(data.error || "Failed to create team");
+      } else {
+        setTeamSuccess(`Team "${data.name}" created successfully!`);
+        setNewTeamName("");
+        fetchTeams();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setTeamError("An unexpected error occurred.");
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  // Handle Delete Team
+  const handleDeleteTeam = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this team?")) return;
+    try {
+      const res = await fetch(`/api/v1/teams?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setTeams(prev => prev.filter(t => t.id !== id));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete team");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Open modal inline team editor
+  const openTeamEditorModal = (user: User) => {
+    setEditingUserTeams(user);
+    setModalSelectedTeams(user.user_teams?.map(ut => ut.team.id) || []);
+  };
+
+  // Save user teams inside modal
+  const handleSaveUserTeams = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserTeams) return;
+    setModalSaving(true);
+    try {
+      const res = await fetch(`/api/v1/users/${editingUserTeams.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          team_ids: modalSelectedTeams,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(prev => prev.map(u => u.id === editingUserTeams.id ? {
+          ...u,
+          user_teams: data.user_teams,
+        } : u));
+        setEditingUserTeams(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to save teams");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setModalSaving(false);
+    }
+  };
 
   // Handle Org Slug auto-generation
   const handleNameChange = (name: string) => {
@@ -142,6 +270,7 @@ export default function SuperAdminClient({
           password: userPassword,
           role: userRole,
           tenant_id: userTenantId,
+          team_ids: userSelectedTeams,
         }),
       });
 
@@ -162,6 +291,7 @@ export default function SuperAdminClient({
         setNewUserEmail("");
         setUserPassword("");
         setUserRole("Agent");
+        setUserSelectedTeams([]);
       }
     } catch (err: any) {
       console.error(err);
@@ -261,6 +391,21 @@ export default function SuperAdminClient({
                   </svg>
                   User Accounts
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("teams")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "teams" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Teams Manager
+                </button>
               </div>
             </div>
 
@@ -296,7 +441,7 @@ export default function SuperAdminClient({
                   </svg>
                   Gaps Queue
                 </button>
-                <button
+                 <button
                   type="button"
                   onClick={() => setActiveTab("workflows")}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
@@ -315,6 +460,19 @@ export default function SuperAdminClient({
                       {initialArticles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length}
                     </span>
                   )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("audit")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "audit" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                    <path d="M12 6v6l4 2"/>
+                  </svg>
+                  Audit Logs
                 </button>
               </div>
             </div>
@@ -341,11 +499,7 @@ export default function SuperAdminClient({
           <button
             type="button"
             onClick={async () => {
-              if (signOutAction) {
-                await signOutAction();
-              } else {
-                await signOut({ callbackUrl: `${window.location.origin}/login` });
-              }
+              await signOut({ callbackUrl: "/login" });
             }}
             className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/[0.13] px-3 py-2 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all"
           >
@@ -366,9 +520,11 @@ export default function SuperAdminClient({
             <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide text-left">
               {activeTab === "orgs" && "Organizations Control"}
               {activeTab === "users" && "User Accounts & Permissions"}
+              {activeTab === "teams" && "Teams Manager"}
               {activeTab === "articles" && "Articles Manager"}
               {activeTab === "gaps" && "Knowledge Gaps"}
               {activeTab === "workflows" && "Workflows Queue"}
+              {activeTab === "audit" && "Audit Logs View"}
             </h2>
           </div>
           <div className="flex items-center gap-3">
@@ -585,6 +741,30 @@ export default function SuperAdminClient({
                         ))}
                       </select>
                     </div>
+                    {teams.filter(t => t.tenant_id === userTenantId).length > 0 && (
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Assign to Teams</label>
+                        <div className="space-y-1.5 max-h-24 overflow-y-auto border border-zinc-200 rounded p-2.5 bg-zinc-50">
+                          {teams.filter(t => t.tenant_id === userTenantId).map((team) => (
+                            <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
+                              <input
+                                type="checkbox"
+                                checked={userSelectedTeams.includes(team.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setUserSelectedTeams([...userSelectedTeams, team.id]);
+                                  } else {
+                                    setUserSelectedTeams(userSelectedTeams.filter(id => id !== team.id));
+                                  }
+                                }}
+                                className="accent-zinc-955"
+                              />
+                              {team.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Role Scope</label>
                       <div className="mt-2.5 flex gap-4">
@@ -627,6 +807,7 @@ export default function SuperAdminClient({
                           <th className="py-3 px-4">Email</th>
                           <th className="py-3 px-4">Organization</th>
                           <th className="py-3 px-4">Role</th>
+                          <th className="py-3 px-4">Teams</th>
                           <th className="py-3 px-4">Status</th>
                         </tr>
                       </thead>
@@ -671,6 +852,28 @@ export default function SuperAdminClient({
                               )}
                             </td>
                             <td className="py-3.5 px-4">
+                              <div className="flex flex-wrap gap-1 items-center">
+                                {u.user_teams && u.user_teams.length > 0 ? (
+                                  u.user_teams.map((ut: any) => (
+                                    <span key={ut.team.id} className="rounded bg-zinc-150 border border-zinc-250 px-1.5 py-0.5 text-[9px] font-bold text-zinc-750">
+                                      {ut.team.name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[10px] text-zinc-400 font-semibold italic">No Teams</span>
+                                )}
+                                {u.id !== currentUserId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openTeamEditorModal(u)}
+                                    className="ml-2 text-zinc-550 hover:text-zinc-950 text-[10px] font-bold underline transition-colors"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
                               {u.id === currentUserId ? (
                                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700">
                                   <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
@@ -701,6 +904,137 @@ export default function SuperAdminClient({
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "teams" && (
+            <div className="space-y-8">
+              {/* Stats card */}
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
+                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Total Teams Created</div>
+                  <div className="mt-2 text-3xl font-extrabold text-zinc-955">{teams.length}</div>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
+                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Lines of Business Isolation</div>
+                  <div className="mt-2 text-sm font-bold text-zinc-800 flex items-center gap-2">
+                    🔒 Team-based article visibility active
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                {/* Team Creation Form */}
+                <div className="lg:col-span-1 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
+                  <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
+                    Add Team
+                  </h2>
+                  
+                  {teamError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-750">
+                      {teamError}
+                    </div>
+                  )}
+                  {teamSuccess && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-xs font-semibold text-green-750">
+                      {teamSuccess}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleTeamSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Team Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={newTeamName}
+                        onChange={(e) => setNewTeamName(e.target.value)}
+                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
+                        placeholder="e.g. Zain Care Team"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Assigned Organization</label>
+                      <select
+                        value={teamTenantId}
+                        onChange={(e) => setTeamTenantId(e.target.value)}
+                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
+                      >
+                        {tenants.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} (/{t.slug})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={teamLoading}
+                      className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors"
+                    >
+                      {teamLoading ? "Creating..." : "Create Team"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Team List Table */}
+                <div className="lg:col-span-2 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
+                  <h3 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
+                    Active Teams
+                  </h3>
+                  <div className="overflow-x-auto">
+                    {loadingTeams ? (
+                      <div className="text-center text-xs text-zinc-500 py-8 font-semibold animate-pulse">Loading teams...</div>
+                    ) : teams.length === 0 ? (
+                      <div className="text-center text-xs text-zinc-400 py-8 font-semibold italic">No teams configured yet.</div>
+                    ) : (
+                      <table className="w-full text-left text-sm text-zinc-750">
+                        <thead>
+                          <tr className="border-b border-zinc-200 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                            <th className="py-3 px-4">Name</th>
+                            <th className="py-3 px-4">Organization</th>
+                            <th className="py-3 px-4">Members</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teams.map((t) => {
+                            const teamTenantName = tenants.find(ten => ten.id === t.tenant_id)?.name || "Unknown Tenant";
+                            return (
+                              <tr key={t.id} className="border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors">
+                                <td className="py-3.5 px-4 font-bold text-zinc-955">{t.name}</td>
+                                <td className="py-3.5 px-4 font-semibold text-zinc-600">{teamTenantName}</td>
+                                <td className="py-3.5 px-4">
+                                  <div className="flex flex-wrap gap-1 max-w-[240px]">
+                                    {t.user_teams && t.user_teams.length > 0 ? (
+                                      t.user_teams.map((ut: any) => (
+                                        <span key={ut.user_id} className="rounded bg-zinc-100 border border-zinc-250 px-1.5 py-0.5 text-[9px] font-bold text-zinc-750" title={ut.user.email}>
+                                          {ut.user.name} ({ut.user.role})
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-[10px] text-zinc-400 font-semibold italic">No Members</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteTeam(t.id)}
+                                    className="rounded border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1 text-[10px] font-bold text-red-600 transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               </div>
@@ -754,8 +1088,84 @@ export default function SuperAdminClient({
               />
             </div>
           )}
+
+          {activeTab === "audit" && (
+            <div className="space-y-6">
+              <AdminDeskWorkspace
+                initialArticles={initialArticles}
+                categories={categories}
+                users={activeUsers}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                tenantId={tenantId}
+                initialGaps={initialGaps}
+                hideSidebar={true}
+                overrideActiveTab="audit"
+              />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* User Team Editor Popover Modal */}
+      {editingUserTeams && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-955">Manage Teams for {editingUserTeams.name}</h3>
+              <p className="text-xs text-zinc-500 font-semibold mt-1">
+                Assign or revoke lines of business team memberships.
+              </p>
+            </div>
+            
+            <form onSubmit={handleSaveUserTeams} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Select Assigned Teams</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-zinc-200 rounded-lg p-3 bg-zinc-50">
+                  {teams.filter(t => t.tenant_id === editingUserTeams.tenant_id).length === 0 ? (
+                    <div className="text-xs text-zinc-400 font-semibold italic">No teams exist for this organization.</div>
+                  ) : (
+                    teams.filter(t => t.tenant_id === editingUserTeams.tenant_id).map((t) => (
+                      <label key={t.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
+                        <input
+                          type="checkbox"
+                          checked={modalSelectedTeams.includes(t.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setModalSelectedTeams([...modalSelectedTeams, t.id]);
+                            } else {
+                              setModalSelectedTeams(modalSelectedTeams.filter(id => id !== t.id));
+                            }
+                          }}
+                          className="accent-zinc-955"
+                        />
+                        {t.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingUserTeams(null)}
+                  className="rounded border border-zinc-250 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-650"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalSaving}
+                  className="rounded bg-zinc-955 hover:bg-zinc-800 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
+                >
+                  {modalSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

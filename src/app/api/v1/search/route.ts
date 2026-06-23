@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getTenantDb, prisma } from "@/lib/db";
-import { Language, Channel, GapStatus } from "@prisma/client";
+import { Language, Channel, GapStatus, Visibility } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +39,30 @@ export async function POST(req: NextRequest) {
     // Authenticated users (Agent/Admin/SuperAdmin) can search all statuses, guests see Published only
     const searchStatus = session?.user?.role ? undefined : "Published";
 
+    // Team access filter
+    let teamFilter: any = {};
+    if (!session || !session.user) {
+      teamFilter = { visibility: Visibility.PUBLIC };
+    } else if (session.user.role !== "SuperAdmin") {
+      const userTeams = await prisma.userTeam.findMany({
+        where: { user_id: session.user.id }
+      });
+      const teamIds = userTeams.map(ut => ut.team_id);
+      teamFilter = {
+        OR: [
+          { visibility: Visibility.PUBLIC },
+          {
+            visibility: Visibility.PRIVATE,
+            article_teams: {
+              some: {
+                team_id: { in: teamIds }
+              }
+            }
+          }
+        ]
+      };
+    }
+
     const cleanQuery = query.trim();
     const words = cleanQuery.split(/\s+/).filter((w) => w.length > 1);
 
@@ -61,6 +85,7 @@ export async function POST(req: NextRequest) {
       language: mappedLanguage,
       status: searchStatus ? (searchStatus as any) : undefined,
       OR: searchConditions,
+      ...teamFilter,
     };
 
     // Apply search filters

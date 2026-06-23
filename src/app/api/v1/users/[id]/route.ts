@@ -23,7 +23,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { status, role } = body;
+    const { status, role, team_ids } = body;
 
     const updateData: Partial<{ status: UserStatus; role: UserRole }> = {};
 
@@ -41,37 +41,85 @@ export async function PATCH(
       updateData.role = role as UserRole;
     }
 
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-    }
-
-    const before = await prisma.user.findUnique({ where: { id } });
+    const before = await prisma.user.findUnique({ 
+      where: { id },
+      include: {
+        user_teams: { select: { team_id: true } }
+      }
+    });
     if (!before) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const updated = await prisma.user.update({
+    // Run updates in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      let updated: any = before;
+      if (Object.keys(updateData).length > 0) {
+        updated = await tx.user.update({
+          where: { id },
+          data: updateData,
+        });
+      }
+
+      if (team_ids !== undefined && Array.isArray(team_ids)) {
+        // Clear existing mappings
+        await tx.userTeam.deleteMany({
+          where: { user_id: id }
+        });
+
+        if (team_ids.length > 0) {
+          await tx.userTeam.createMany({
+            data: team_ids.map((tid: string) => ({
+              user_id: id,
+              team_id: tid,
+              tenant_id: before.tenant_id,
+            })),
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    const updatedWithTeams = await prisma.user.findUnique({
       where: { id },
-      data: updateData,
+      include: {
+        user_teams: {
+          select: {
+            team: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
     });
 
     await prisma.auditLog.create({
       data: {
         tenant_id: session.user.tenant_id,
         actor_id: session.user.id,
-        action: status !== undefined ? "Update User Status" : "Update User Role",
+        action: "Update User Account",
         target_type: "User",
-        target_id: updated.id,
-        target_label: updated.email,
-        before: { role: before.role, status: before.status } as any,
-        after: { role: updated.role, status: updated.status } as any,
+        target_id: result.id,
+        target_label: result.email,
+        before: { 
+          role: before.role, 
+          status: before.status, 
+          teams: before.user_teams.map(ut => ut.team_id) 
+        } as any,
+        after: { 
+          role: result.role, 
+          status: result.status, 
+          teams: updatedWithTeams?.user_teams.map(ut => ut.team.id) || [] 
+        } as any,
       },
     });
 
     return NextResponse.json({
-      id: updated.id,
-      role: updated.role,
-      status: updated.status,
+      id: result.id,
+      role: result.role,
+      status: result.status,
+      user_teams: updatedWithTeams?.user_teams || [],
     });
   } catch (error: any) {
     console.error("PATCH User Error:", error);

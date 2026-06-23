@@ -46,6 +46,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           orderBy: { created_at: "desc" },
           include: { actor: { select: { id: true, name: true } } },
         },
+        article_teams: {
+          select: {
+            team: {
+              select: { id: true, name: true }
+            }
+          }
+        }
       },
     });
 
@@ -56,6 +63,24 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // Role restriction check for guests
     if (!session && article.status !== ArticleStatus.Published) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Team access filter: PRIVATE visibility
+    if (article.visibility === Visibility.PRIVATE) {
+      if (!session || !session.user) {
+        return NextResponse.json({ error: "Unauthorized: Private article" }, { status: 401 });
+      }
+      if (session.user.role !== "SuperAdmin") {
+        const userTeams = await prisma.userTeam.findMany({
+          where: { user_id: session.user.id }
+        });
+        const userTeamIds = userTeams.map(ut => ut.team_id);
+        const articleTeamIds = article.article_teams.map(at => at.team.id);
+        const hasAccess = articleTeamIds.some(tid => userTeamIds.includes(tid));
+        if (!hasAccess) {
+          return NextResponse.json({ error: "Forbidden: You do not belong to the teams assigned to this article" }, { status: 403 });
+        }
+      }
     }
 
     return NextResponse.json(article);
@@ -105,7 +130,31 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       status: targetStatus, // New workflow status
       comment,
       variants, // Array of variant updates: [{ channel: "agent", detailed_steps: "..." }]
+      team_ids,
     } = body;
+
+    // Enforce Admin restrictions on teams
+    if (role === "Admin") {
+      const userTeams = await prisma.userTeam.findMany({
+        where: { user_id: userId }
+      });
+      const userTeamIds = userTeams.map(ut => ut.team_id);
+
+      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
+        const invalidTeams = team_ids.filter(tid => !userTeamIds.includes(tid));
+        if (invalidTeams.length > 0) {
+          return NextResponse.json(
+            { error: "Forbidden: Admins can only assign articles to teams they belong to." },
+            { status: 403 }
+          );
+        }
+      } else if (visibility === Visibility.PRIVATE) {
+        return NextResponse.json(
+          { error: "Private articles must be explicitly assigned to at least one of your teams." },
+          { status: 400 }
+        );
+      }
+    }
 
     const beforeState = { ...currentArticle };
 
@@ -178,20 +227,40 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     // Prepare update data
     const formattedSlug = slug ? slug.toLowerCase().replace(/[^a-z0-9-]/g, "-") : undefined;
 
-    // Update the Article
-    const updatedArticle = await db.article.update({
-      where: { id },
-      data: {
-        title: title || undefined,
-        slug: formattedSlug || undefined,
-        category_id: category_id || undefined,
-        language: language || undefined,
-        owner_id: owner_id || undefined,
-        review_due: review_due ? new Date(review_due) : undefined,
-        visibility: visibility || undefined,
-        status: finalStatus,
-        published_at: publishedAt,
-      },
+    // Update Article and team mappings inside a transaction
+    const updatedArticle = await db.$transaction(async (tx) => {
+      const art = await tx.article.update({
+        where: { id },
+        data: {
+          title: title || undefined,
+          slug: formattedSlug || undefined,
+          category_id: category_id || undefined,
+          language: language || undefined,
+          owner_id: owner_id || undefined,
+          review_due: review_due ? new Date(review_due) : undefined,
+          visibility: visibility || undefined,
+          status: finalStatus,
+          published_at: publishedAt,
+        },
+      });
+
+      if (team_ids !== undefined && Array.isArray(team_ids)) {
+        await tx.articleTeam.deleteMany({
+          where: { article_id: id }
+        });
+
+        if (team_ids.length > 0) {
+          await tx.articleTeam.createMany({
+            data: team_ids.map((tid: string) => ({
+              article_id: id,
+              team_id: tid,
+              tenant_id: tenantId,
+            })),
+          });
+        }
+      }
+
+      return art;
     });
 
     // Handle inline variants updates (Agent/Chatbot/WhatsApp)

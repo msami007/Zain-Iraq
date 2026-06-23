@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, password, role: targetRole, tenant_id: targetTenantId } = body;
+    const { name, email, password, role: targetRole, tenant_id: targetTenantId, team_ids } = body;
 
     if (!name || !email || !password || !targetRole) {
       return NextResponse.json({ error: "Name, Email, Password, and Role are required" }, { status: 400 });
@@ -81,15 +81,42 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = bcrypt.hashSync(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        tenant_id: finalTenantId,
-        name,
-        email,
-        password_hash: passwordHash,
-        role: targetRole as UserRole,
-        status: UserStatus.Active, // Active immediately for testability
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          tenant_id: finalTenantId,
+          name,
+          email,
+          password_hash: passwordHash,
+          role: targetRole as UserRole,
+          status: UserStatus.Active, // Active immediately for testability
+        },
+      });
+
+      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
+        await tx.userTeam.createMany({
+          data: team_ids.map((tid: string) => ({
+            user_id: u.id,
+            team_id: tid,
+            tenant_id: finalTenantId,
+          })),
+        });
+      }
+
+      return u;
+    });
+
+    const userWithTeams = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        user_teams: {
+          select: {
+            team: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
     });
 
     // Write audit log entry
@@ -101,7 +128,12 @@ export async function POST(req: NextRequest) {
         target_type: "User",
         target_id: user.id,
         target_label: `User Created: ${user.email} (${user.role})`,
-        after: { id: user.id, email: user.email, role: user.role } as any,
+        after: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          teams: userWithTeams?.user_teams.map(ut => ut.team.id) || []
+        } as any,
       },
     });
 
@@ -112,6 +144,7 @@ export async function POST(req: NextRequest) {
       role: user.role,
       tenant_id: user.tenant_id,
       status: user.status,
+      user_teams: userWithTeams?.user_teams || [],
     }, { status: 201 });
   } catch (error: any) {
     console.error("POST User Error:", error);

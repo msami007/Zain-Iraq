@@ -21,10 +21,23 @@ export async function GET(req: NextRequest) {
     const db = getTenantDb(tenantId);
     const searchParams = req.nextUrl.searchParams;
     const statusFilter = searchParams.get("status") as GapStatus | null;
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+
+    const dateFilter: any = {};
+    if (startDateParam) {
+      dateFilter.gte = new Date(startDateParam);
+    }
+    if (endDateParam) {
+      const end = new Date(endDateParam);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.lte = end;
+    }
 
     const gaps = await db.knowledgeGap.findMany({
       where: {
         status: statusFilter || undefined,
+        created_at: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       },
       include: {
         reporter: { select: { id: true, name: true, email: true } },
@@ -153,6 +166,8 @@ export async function PUT(req: NextRequest) {
           return NextResponse.json({ error: "Resolving article not found" }, { status: 404 });
         }
         updateData.resolving_article_id = resolving_article_id;
+      } else if (status === GapStatus.IN_PROGRESS || status === GapStatus.NEW) {
+        updateData.resolving_article_id = null;
       }
       updateData.status = status as GapStatus;
     }

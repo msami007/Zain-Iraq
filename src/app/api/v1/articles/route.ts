@@ -44,12 +44,37 @@ export async function GET(req: NextRequest) {
       statusClause = statusFilter;
     }
 
+    // Team access filter
+    let teamFilter: any = {};
+    if (!session || !userRole) {
+      teamFilter = { visibility: Visibility.PUBLIC };
+    } else if (userRole !== "SuperAdmin") {
+      const userTeams = await prisma.userTeam.findMany({
+        where: { user_id: session.user.id }
+      });
+      const teamIds = userTeams.map(ut => ut.team_id);
+      teamFilter = {
+        OR: [
+          { visibility: Visibility.PUBLIC },
+          {
+            visibility: Visibility.PRIVATE,
+            article_teams: {
+              some: {
+                team_id: { in: teamIds }
+              }
+            }
+          }
+        ]
+      };
+    }
+
     const articles = await db.article.findMany({
       where: {
         language: language || undefined,
         category_id: categoryId,
         author_id: authorId,
         status: statusClause,
+        ...teamFilter,
         OR: search
           ? [
               { title: { contains: search, mode: "insensitive" } },
@@ -62,6 +87,13 @@ export async function GET(req: NextRequest) {
         author: { select: { id: true, name: true, email: true } },
         owner: { select: { id: true, name: true, email: true } },
         variants: true,
+        article_teams: {
+          select: {
+            team: {
+              select: { id: true, name: true }
+            }
+          }
+        }
       },
       orderBy: { updated_at: "desc" },
     });
@@ -97,6 +129,7 @@ export async function POST(req: NextRequest) {
       owner_id,
       review_due,
       visibility,
+      team_ids,
     } = body;
 
     if (!title || !category_id || !bodyText) {
@@ -104,6 +137,29 @@ export async function POST(req: NextRequest) {
         { error: "Title, Category, and Body content are required" },
         { status: 400 }
       );
+    }
+
+    // Enforce Admin restrictions: Admin can only create articles for teams they belong to
+    if (role === "Admin") {
+      const userTeams = await prisma.userTeam.findMany({
+        where: { user_id: userId }
+      });
+      const userTeamIds = userTeams.map(ut => ut.team_id);
+
+      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
+        const invalidTeams = team_ids.filter(tid => !userTeamIds.includes(tid));
+        if (invalidTeams.length > 0) {
+          return NextResponse.json(
+            { error: "Forbidden: Admins can only assign articles to teams they belong to." },
+            { status: 403 }
+          );
+        }
+      } else if (visibility === Visibility.PRIVATE) {
+        return NextResponse.json(
+          { error: "Private articles must be explicitly assigned to at least one of your teams." },
+          { status: 400 }
+        );
+      }
     }
 
     const formattedSlug = slug
@@ -124,28 +180,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create the article in Draft status
-    const article = await db.article.create({
-      data: {
-        tenant_id: tenantId,
-        title,
-        slug: formattedSlug,
-        category_id,
-        language: language || Language.en,
-        status: ArticleStatus.Draft,
-        visibility: visibility || Visibility.PUBLIC,
-        author_id: userId,
-        owner_id: owner_id || userId,
-        review_due: review_due ? new Date(review_due) : null,
-      },
+    // Create article and team relations inside a transaction
+    const article = await db.$transaction(async (tx) => {
+      const art = await tx.article.create({
+        data: {
+          tenant_id: tenantId,
+          title,
+          slug: formattedSlug,
+          category_id,
+          language: language || Language.en,
+          status: ArticleStatus.Draft,
+          visibility: visibility || Visibility.PUBLIC,
+          author_id: userId,
+          owner_id: owner_id || userId,
+          review_due: review_due ? new Date(review_due) : null,
+        },
+      });
+
+      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
+        await tx.articleTeam.createMany({
+          data: team_ids.map((tid: string) => ({
+            article_id: art.id,
+            team_id: tid,
+            tenant_id: tenantId,
+          })),
+        });
+      }
+
+      return art;
     });
 
     // Create the default channel variant
-    const variant = await db.articleVariant.create({
+    await db.articleVariant.create({
       data: {
         article_id: article.id,
         channel: "default",
-        short_answer: bodyText.slice(0, 150), // simple short answer summary
+        short_answer: bodyText.slice(0, 150),
         detailed_steps: bodyText,
       },
     });

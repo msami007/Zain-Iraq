@@ -32,6 +32,13 @@ export default async function SuperAdminPage() {
           slug: true,
         },
       },
+      user_teams: {
+        select: {
+          team: {
+            select: { id: true, name: true }
+          }
+        }
+      }
     },
   });
 
@@ -55,6 +62,9 @@ export default async function SuperAdminPage() {
     status: u.status,
     created_at: u.created_at.toISOString(),
     tenant: u.tenant ? { name: u.tenant.name, slug: u.tenant.slug } : undefined,
+    user_teams: u.user_teams.map((ut) => ({
+      team: { id: ut.team.id, name: ut.team.name }
+    })),
   }));
 
   // Query content database for the Super Admin's tenant
