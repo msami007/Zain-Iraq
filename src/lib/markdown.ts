@@ -5,6 +5,18 @@
 export function parseMarkdownToHtml(markdown: string | null | undefined): string {
   if (!markdown) return "";
 
+  // If the content contains HTML tags, treat it as HTML and safely sanitize it
+  const isHtml = /<[a-z][\s\S]*>/i.test(markdown);
+  if (isHtml) {
+    let clean = markdown;
+    clean = clean.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+    clean = clean.replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, "");
+    clean = clean.replace(/\s+on\w+\s*=\s*(['"]).*?\1/gi, "");
+    clean = clean.replace(/\s+on\w+\s*=\s*[^"'\s>]+/gi, "");
+    clean = clean.replace(/href\s*=\s*(['"])javascript:.*?\1/gi, 'href="#"');
+    return clean;
+  }
+
   // 1. Escape HTML special characters to prevent XSS (allowing only safe tags like <u>)
   let html = markdown
     .replace(/&/g, "&amp;")
