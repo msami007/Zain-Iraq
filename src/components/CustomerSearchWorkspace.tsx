@@ -32,6 +32,9 @@ type SearchWorkspaceProps = {
   isLoggedIn: boolean;
   userRole?: string;
   userName?: string;
+  hideBrandSelector?: boolean;
+  pinnedArticleIds?: string[];
+  onTogglePin?: (articleId: string) => void;
 };
 
 export default function CustomerSearchWorkspace({
@@ -40,6 +43,9 @@ export default function CustomerSearchWorkspace({
   isLoggedIn,
   userRole,
   userName,
+  hideBrandSelector = false,
+  pinnedArticleIds = [],
+  onTogglePin,
 }: SearchWorkspaceProps) {
   const [selectedTenant, setSelectedTenant] = useState<Tenant>(tenants[0] || null);
   const [query, setQuery] = useState("");
@@ -116,29 +122,31 @@ export default function CustomerSearchWorkspace({
             Search or browse published support articles.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Select Brand:</span>
-          <div className="relative inline-block text-left">
-            <select
-              value={selectedTenant?.id}
-              onChange={(e) => {
-                const found = tenants.find((t) => t.id === e.target.value);
-                if (found) setSelectedTenant(found);
-              }}
-              className="rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-800 focus:outline-hidden transition-all shadow-xs cursor-pointer pr-8 appearance-none"
-              style={{ borderLeft: `4px solid ${brandingColor}` }}
-            >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-500">
-              ▼
+        {!hideBrandSelector && (
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Select Brand:</span>
+            <div className="relative inline-block text-left">
+              <select
+                value={selectedTenant?.id}
+                onChange={(e) => {
+                  const found = tenants.find((t) => t.id === e.target.value);
+                  if (found) setSelectedTenant(found);
+                }}
+                className="rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-800 focus:outline-hidden transition-all shadow-xs cursor-pointer pr-8 appearance-none"
+                style={{ borderLeft: `4px solid ${brandingColor}` }}
+              >
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-500">
+                ▼
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Main Search Panel */}
@@ -257,31 +265,52 @@ export default function CustomerSearchWorkspace({
         ) : (
           /* RESULTS FOUND STATE */
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((art) => (
-              <Link
-                key={art.article_id}
-                href={`/articles/${art.article_id}`}
-                className="group relative rounded-xl border border-zinc-200 bg-white p-6 shadow-sm transition-all duration-200 hover:border-zinc-350 hover:-translate-y-0.5 text-left flex flex-col justify-between"
-              >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="rounded bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-zinc-200">
-                      {art.category}
-                    </span>
-                    <span className="rounded bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 border border-green-200 uppercase">
-                      {art.status}
-                    </span>
+            {results.map((art) => {
+              const isPinned = pinnedArticleIds.includes(art.article_id);
+              return (
+                <div key={art.article_id} className="group rounded-xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:border-zinc-350 hover:-translate-y-0.5 flex flex-col">
+                  <Link
+                    href={`/articles/${art.article_id}`}
+                    className="block p-6 flex-1 text-left space-y-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-zinc-200">
+                        {art.category}
+                      </span>
+                      <span className="rounded bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 border border-green-200 uppercase">
+                        {art.status}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-zinc-950 group-hover:text-zinc-650 transition-colors line-clamp-2 leading-snug">
+                      {art.title}
+                    </h4>
+                  </Link>
+
+                  <div className="flex items-center justify-between px-6 py-3 border-t border-zinc-100 text-[10px] text-zinc-400 font-semibold font-mono">
+                    <span>Score: <strong className="text-zinc-800">{(art.match_score * 100).toFixed(0)}%</strong></span>
+                    {onTogglePin ? (
+                      <button
+                        type="button"
+                        onClick={() => onTogglePin(art.article_id)}
+                        title={isPinned ? "Unpin article" : "Pin for quick access"}
+                        className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[10px] font-bold transition-all not-font-mono ${
+                          isPinned
+                            ? "border-zinc-800 bg-zinc-900 text-white"
+                            : "border-zinc-200 bg-white text-zinc-400 hover:border-zinc-400 hover:text-zinc-700"
+                        }`}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill={isPinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+                        </svg>
+                        {isPinned ? "Pinned" : "Pin"}
+                      </button>
+                    ) : (
+                      <span>ID: {art.article_id.slice(0, 8)}</span>
+                    )}
                   </div>
-                  <h4 className="text-sm font-bold text-zinc-950 group-hover:text-zinc-650 transition-colors line-clamp-2 leading-snug">
-                    {art.title}
-                  </h4>
                 </div>
-                <div className="mt-6 flex items-center justify-between pt-3 border-t border-zinc-100 text-[10px] text-zinc-400 font-semibold font-mono">
-                  <span>Score: <strong className="text-zinc-800">{(art.match_score * 100).toFixed(0)}%</strong></span>
-                  <span>ID: {art.article_id.slice(0, 8)}</span>
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

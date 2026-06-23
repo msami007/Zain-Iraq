@@ -11,14 +11,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { tenant_id: tenantId, role } = session.user;
-
-    // Enforce permission matrix: only Admin/SuperAdmin can view gaps queue
-    if (role !== "Admin" && role !== "SuperAdmin") {
-      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
-    }
+    const { tenant_id: tenantId, role, id: userId } = session.user;
 
     const db = getTenantDb(tenantId);
+
+    // Agents can only see their own submitted gaps
+    if (role === "Agent") {
+      const gaps = await db.knowledgeGap.findMany({
+        where: { reported_by: userId },
+        include: {
+          reporter: { select: { id: true, name: true, email: true } },
+          claimer: { select: { id: true, name: true, email: true } },
+          resolving_article: { select: { id: true, title: true, slug: true } },
+        },
+        orderBy: { created_at: "desc" },
+      });
+      return NextResponse.json(gaps);
+    }
+
+    // Admin/SuperAdmin see the full tenant queue
+    if (role !== "Admin" && role !== "SuperAdmin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const searchParams = req.nextUrl.searchParams;
     const statusFilter = searchParams.get("status") as GapStatus | null;
     const startDateParam = searchParams.get("startDate");
@@ -64,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     const { tenant_id: tenantId, id: userId } = session.user;
     const body = await req.json();
-    const { query_text, language, channel } = body;
+    const { query_text, language, channel, occurrences } = body;
 
     if (!query_text || typeof query_text !== "string") {
       return NextResponse.json({ error: "Query text is required" }, { status: 400 });
@@ -73,6 +88,7 @@ export async function POST(req: NextRequest) {
     const db = getTenantDb(tenantId);
     const mappedLanguage = language === "ar" ? Language.ar : Language.en;
     const mappedChannel = channel ? (channel as Channel) : Channel.default;
+    const reportedOccurrences = Math.max(1, parseInt(occurrences) || 1);
 
     // Check if a gap with this query_text already exists and is not resolved/dismissed
     const existing = await db.knowledgeGap.findFirst({
@@ -84,10 +100,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (existing) {
-      // Increment occurrence count
+      // Add reported occurrences to the existing count
       const updated = await db.knowledgeGap.update({
         where: { id: existing.id },
-        data: { occurrences: existing.occurrences + 1 },
+        data: { occurrences: existing.occurrences + reportedOccurrences },
       });
       return NextResponse.json(updated);
     }
@@ -100,6 +116,7 @@ export async function POST(req: NextRequest) {
         language: mappedLanguage,
         channel: mappedChannel,
         status: GapStatus.NEW,
+        occurrences: reportedOccurrences,
         reported_by: userId,
       },
     });

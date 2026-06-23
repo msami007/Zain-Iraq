@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArticleFeedbackForm from "@/components/ArticleFeedbackForm";
+import CopyMacroButton from "./CopyMacroButton";
 import { ArticleStatus, Channel } from "@prisma/client";
 import { parseMarkdownToHtml } from "@/lib/markdown";
 
@@ -13,12 +14,13 @@ type PageProps = {
   searchParams: Promise<{
     token?: string;
     channel?: string;
+    view?: string;
   }>;
 };
 
 export default async function ArticleDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { token, channel } = await searchParams;
+  const { token, channel, view } = await searchParams;
 
   const session = await auth();
   const user = session?.user;
@@ -84,10 +86,11 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     );
   }
 
-  // Guard: Guest users can only view the default Customer channel
-  const showAgentChannel = user?.role === "Agent" || user?.role === "Admin" || user?.role === "SuperAdmin";
-  const activeChannel = user 
-    ? (((channel === "agent" && !showAgentChannel) ? "default" : (channel || "default")) as Channel) 
+  // Guest link access: token-based OR explicit ?view=guest — forces customer-only view regardless of login state
+  const isGuestLinkAccess = !!token || view === "guest";
+  const showAgentChannel = !isGuestLinkAccess && (user?.role === "Agent" || user?.role === "Admin" || user?.role === "SuperAdmin");
+  const activeChannel = (user && !isGuestLinkAccess)
+    ? (((channel === "agent" && !showAgentChannel) ? "default" : (channel || "default")) as Channel)
     : Channel.default;
 
   // Locate the variant content
@@ -112,7 +115,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           >
             ← Back to Home
           </Link>
-          {user && (
+          {user && !isGuestLinkAccess && (
             <span className="rounded-full bg-zinc-100 border border-zinc-200 px-3 py-1 text-[10px] font-bold text-zinc-650 uppercase tracking-wider">
               {user.role} Desk
             </span>
@@ -149,8 +152,8 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           </div>
         </div>
 
-        {/* Channel Variants Selector Tabs - Only show to logged-in staff */}
-        {user && (
+        {/* Channel Variants Selector Tabs - Only show to logged-in staff, never on guest-link access */}
+        {user && !isGuestLinkAccess && (
           <div className="flex border-b border-zinc-200 gap-1 overflow-x-auto pb-px">
             <Link
               href={`/articles/${id}?channel=default${token ? `&token=${token}` : ""}`}
@@ -222,15 +225,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             <div className="mt-8 border-t border-zinc-100 pt-6 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Response Macro</h4>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(macroText);
-                    alert("Macro copied to clipboard!");
-                  }}
-                  className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs transition-all"
-                >
-                  Copy Macro
-                </button>
+                <CopyMacroButton text={macroText} />
               </div>
               <pre className="rounded-lg bg-zinc-900 p-4 text-xs font-mono text-zinc-300 overflow-x-auto shadow-inner border border-zinc-850">
                 {macroText}
