@@ -149,6 +149,7 @@ export async function POST(req: NextRequest) {
       team_ids,
       workflow_route_id,
       tags,
+      origin_gap_id,
     } = body;
 
     if (!title || !category_id || !bodyText) {
@@ -268,6 +269,33 @@ export async function POST(req: NextRequest) {
               tag_id: tid,
               tenant_id: tenantId,
             })),
+          });
+        }
+      }
+
+      if (origin_gap_id) {
+        const existingGap = await tx.knowledgeGap.findUnique({
+          where: { id: origin_gap_id },
+        });
+        if (existingGap && existingGap.tenant_id === tenantId) {
+          await tx.knowledgeGap.update({
+            where: { id: origin_gap_id },
+            data: {
+              status: "RESOLVED",
+              resolving_article_id: art.id,
+            },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              tenant_id: tenantId,
+              actor_id: userId,
+              action: "Update Knowledge Gap",
+              target_type: "KnowledgeGap",
+              target_id: origin_gap_id,
+              target_label: `Gap Resolved via Article Creation: RESOLVED (${existingGap.query_text.slice(0, 30)})`,
+              after: { id: origin_gap_id, status: "RESOLVED", resolving_article_id: art.id } as any,
+            },
           });
         }
       }

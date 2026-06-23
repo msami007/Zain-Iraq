@@ -66,6 +66,31 @@ export default function SuperAdminClient({
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
+  // Lifted state for articles and gaps to sync between tabs in SuperAdmin view
+  const [articles, setArticles] = useState<any[]>(initialArticles);
+  const [gaps, setGaps] = useState<any[]>(initialGaps);
+  const [seededGapForRedirect, setSeededGapForRedirect] = useState<{ id: string; query_text: string } | null>(null);
+
+  const handleUpdateGapsState = (updatedGaps: any[]) => {
+    setGaps(updatedGaps);
+  };
+
+  const handleUpdateArticles = (updatedArticles: any[]) => {
+    setArticles(updatedArticles);
+  };
+
+  const handleRedirectToTab = (
+    tab: "articles" | "gaps" | "workflows" | "audit",
+    seededGap?: { id: string; query_text: string }
+  ) => {
+    if (seededGap) {
+      setSeededGapForRedirect(seededGap);
+    } else {
+      setSeededGapForRedirect(null);
+    }
+    setActiveTab(tab);
+  };
+
   // Teams state
   const [teams, setTeams] = useState<any[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -458,9 +483,9 @@ export default function SuperAdminClient({
                     <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
                   </svg>
                   Workflows
-                  {initialArticles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length > 0 && (
+                  {articles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length > 0 && (
                     <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/20">
-                      {initialArticles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length}
+                      {articles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length}
                     </span>
                   )}
                 </button>
@@ -1069,15 +1094,19 @@ export default function SuperAdminClient({
           {activeTab === "articles" && (
             <div className="space-y-6">
               <AdminDeskWorkspace
-                initialArticles={initialArticles}
+                initialArticles={articles}
                 categories={categories}
                 users={activeUsers}
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
                 tenantId={tenantId}
-                initialGaps={initialGaps}
+                initialGaps={gaps}
                 hideSidebar={true}
                 overrideActiveTab="articles"
+                onUpdateArticles={handleUpdateArticles}
+                onUpdateGapsState={handleUpdateGapsState}
+                seededGap={seededGapForRedirect}
+                onRedirectToTab={handleRedirectToTab}
               />
             </div>
           )}
@@ -1085,15 +1114,19 @@ export default function SuperAdminClient({
           {activeTab === "gaps" && (
             <div className="space-y-6">
               <AdminDeskWorkspace
-                initialArticles={initialArticles}
+                initialArticles={articles}
                 categories={categories}
                 users={activeUsers}
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
                 tenantId={tenantId}
-                initialGaps={initialGaps}
+                initialGaps={gaps}
                 hideSidebar={true}
                 overrideActiveTab="gaps"
+                onUpdateArticles={handleUpdateArticles}
+                onUpdateGapsState={handleUpdateGapsState}
+                seededGap={seededGapForRedirect}
+                onRedirectToTab={handleRedirectToTab}
               />
             </div>
           )}
@@ -1101,15 +1134,19 @@ export default function SuperAdminClient({
           {activeTab === "workflows" && (
             <div className="space-y-6">
               <AdminDeskWorkspace
-                initialArticles={initialArticles}
+                initialArticles={articles}
                 categories={categories}
                 users={activeUsers}
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
                 tenantId={tenantId}
-                initialGaps={initialGaps}
+                initialGaps={gaps}
                 hideSidebar={true}
                 overrideActiveTab="workflows"
+                onUpdateArticles={handleUpdateArticles}
+                onUpdateGapsState={handleUpdateGapsState}
+                seededGap={seededGapForRedirect}
+                onRedirectToTab={handleRedirectToTab}
               />
             </div>
           )}
@@ -1117,15 +1154,19 @@ export default function SuperAdminClient({
           {activeTab === "audit" && (
             <div className="space-y-6">
               <AdminDeskWorkspace
-                initialArticles={initialArticles}
+                initialArticles={articles}
                 categories={categories}
                 users={activeUsers}
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
                 tenantId={tenantId}
-                initialGaps={initialGaps}
+                initialGaps={gaps}
                 hideSidebar={true}
                 overrideActiveTab="audit"
+                onUpdateArticles={handleUpdateArticles}
+                onUpdateGapsState={handleUpdateGapsState}
+                seededGap={seededGapForRedirect}
+                onRedirectToTab={handleRedirectToTab}
               />
             </div>
           )}
