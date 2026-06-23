@@ -73,6 +73,7 @@ type WorkspaceProps = {
   brandingColor?: string;
   hideSidebar?: boolean;
   overrideActiveTab?: "articles" | "gaps" | "audit";
+  signOutAction?: () => Promise<void>;
 };
 
 const SAMPLE_TROUBLESHOOTING_FLOW = {
@@ -142,6 +143,7 @@ export default function AdminDeskWorkspace({
   brandingColor = "#09090B",
   hideSidebar = false,
   overrideActiveTab,
+  signOutAction,
 }: WorkspaceProps) {
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
@@ -789,13 +791,24 @@ export default function AdminDeskWorkspace({
                 {currentUserRole}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
-            >
-              Sign Out
-            </button>
+            {signOutAction ? (
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
+                >
+                  Sign Out
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
+              >
+                Sign Out
+              </button>
+            )}
           </div>
         </aside>
       )}
