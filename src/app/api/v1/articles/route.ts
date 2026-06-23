@@ -104,6 +104,13 @@ export async function GET(req: NextRequest) {
               select: { id: true, name: true }
             }
           }
+        },
+        article_tags: {
+          select: {
+            tag: {
+              select: { id: true, name: true }
+            }
+          }
         }
       },
       orderBy: { updated_at: "desc" },
@@ -141,6 +148,7 @@ export async function POST(req: NextRequest) {
       review_due,
       team_ids,
       workflow_route_id,
+      tags,
     } = body;
 
     if (!title || !category_id || !bodyText) {
@@ -228,6 +236,40 @@ export async function POST(req: NextRequest) {
             tenant_id: tenantId,
           })),
         });
+      }
+
+      if (tags && Array.isArray(tags) && tags.length > 0) {
+        const uniqueTags = Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)));
+        const tagIds: string[] = [];
+        
+        for (const tagName of uniqueTags) {
+          let tag = await tx.tag.findFirst({
+            where: {
+              tenant_id: tenantId,
+              name: { equals: tagName, mode: "insensitive" }
+            }
+          });
+          if (!tag) {
+            tag = await tx.tag.create({
+              data: {
+                tenant_id: tenantId,
+                name: tagName
+              }
+            });
+          }
+          tagIds.push(tag.id);
+        }
+
+        const uniqueTagIds = Array.from(new Set(tagIds));
+        if (uniqueTagIds.length > 0) {
+          await tx.articleTag.createMany({
+            data: uniqueTagIds.map((tid) => ({
+              article_id: art.id,
+              tag_id: tid,
+              tenant_id: tenantId,
+            })),
+          });
+        }
       }
 
       return art;

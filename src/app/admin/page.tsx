@@ -41,6 +41,11 @@ export default async function AdminPage() {
       author: { select: { id: true, name: true, email: true } },
       owner: { select: { id: true, name: true, email: true } },
       variants: true,
+      article_tags: {
+        include: {
+          tag: true,
+        },
+      },
     },
   });
 
@@ -91,6 +96,12 @@ export default async function AdminPage() {
       image_url: v.image_url,
       video_link: v.video_link,
       troubleshooting_flow: v.troubleshooting_flow || null,
+    })),
+    article_tags: a.article_tags.map((at) => ({
+      tag: {
+        id: at.tag.id,
+        name: at.tag.name,
+      },
     })),
   }));
 

@@ -63,6 +63,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
               select: { id: true, name: true }
             }
           }
+        },
+        article_tags: {
+          select: {
+            tag: {
+              select: { id: true, name: true }
+            }
+          }
         }
       },
     });
@@ -142,6 +149,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       variants, // Array of variant updates: [{ channel: "agent", detailed_steps: "..." }]
       team_ids,
       workflow_route_id,
+      tags,
     } = body;
 
     // Enforce mandatory team assignment for all roles if team_ids is updated
@@ -384,6 +392,44 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         }
       }
 
+      if (tags !== undefined && Array.isArray(tags)) {
+        await tx.articleTag.deleteMany({
+          where: { article_id: id }
+        });
+
+        const uniqueTags = Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)));
+        const tagIds: string[] = [];
+        
+        for (const tagName of uniqueTags) {
+          let tag = await tx.tag.findFirst({
+            where: {
+              tenant_id: tenantId,
+              name: { equals: tagName, mode: "insensitive" }
+            }
+          });
+          if (!tag) {
+            tag = await tx.tag.create({
+              data: {
+                tenant_id: tenantId,
+                name: tagName
+              }
+            });
+          }
+          tagIds.push(tag.id);
+        }
+
+        const uniqueTagIds = Array.from(new Set(tagIds));
+        if (uniqueTagIds.length > 0) {
+          await tx.articleTag.createMany({
+            data: uniqueTagIds.map((tid) => ({
+              article_id: id,
+              tag_id: tid,
+              tenant_id: tenantId,
+            })),
+          });
+        }
+      }
+
       return art;
     });
 
@@ -492,6 +538,13 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         article_teams: {
           select: {
             team: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        article_tags: {
+          select: {
+            tag: {
               select: { id: true, name: true }
             }
           }

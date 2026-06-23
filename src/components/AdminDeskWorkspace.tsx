@@ -23,6 +23,7 @@ type AdminArticle = {
   variants?: any[];
   status_history?: any[];
   article_teams?: { team: { id: string; name: string } }[];
+  article_tags?: { tag: { id: string; name: string } }[];
   created_at?: string;
   published_at?: string | null;
   workflow_route_id?: string | null;
@@ -239,6 +240,16 @@ export default function AdminDeskWorkspace({
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [isTeamsDropdownOpen, setIsTeamsDropdownOpen] = useState(false);
+
+  // Tags state
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+  // Category states
+  const [categoriesList, setCategoriesList] = useState<Category[]>(categories);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState("");
 
   // Rejection modal states
   const [rejectionModalArticleId, setRejectionModalArticleId] = useState<string | null>(null);
@@ -711,6 +722,7 @@ export default function AdminDeskWorkspace({
 
     // Load assigned teams and workflow route
     setSelectedTeams(article.article_teams?.map((at: any) => at.team.id) || []);
+    setTags(article.article_tags?.map((at: any) => at.tag.name) || []);
 
     try {
       const res = await fetch(`/api/v1/articles/${article.id}`);
@@ -719,6 +731,9 @@ export default function AdminDeskWorkspace({
         setFullArticleDetail(fullDetail);
         if (fullDetail.article_teams) {
           setSelectedTeams(fullDetail.article_teams.map((at: any) => at.team.id));
+        }
+        if (fullDetail.article_tags) {
+          setTags(fullDetail.article_tags.map((at: any) => at.tag.name));
         }
         if (fullDetail.workflow_route_id) {
           setSelectedWorkflowRouteId(fullDetail.workflow_route_id);
@@ -741,13 +756,15 @@ export default function AdminDeskWorkspace({
 
     setTitle("");
     setSlug("");
-    setCategoryId(categories[0]?.id || "");
+    setCategoryId(categoriesList[0]?.id || "");
     setLanguage("en");
     setVisibility("PUBLIC");
     setOwnerId(currentUserId);
     setReviewDue("");
     setSelectedTeams([]);
     setSelectedWorkflowRouteId("");
+    setTags([]);
+    setTagInput("");
 
     setVDefaultShort("");
     setVDefaultDetailed("");
@@ -772,6 +789,32 @@ export default function AdminDeskWorkspace({
     setTransitionComment("");
     setSelectedWorkflowRouteId("");
     setIsTeamsDropdownOpen(false);
+  };
+
+  const handleCreateCategory = async () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    setCategoryError("");
+    try {
+      const res = await fetch("/api/v1/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (res.ok) {
+        const newCat = await res.json();
+        setCategoriesList([...categoriesList, newCat]);
+        setCategoryId(newCat.id);
+        setIsAddingCategory(false);
+        setNewCategoryName("");
+      } else {
+        const err = await res.json();
+        setCategoryError(err.error || "Failed to create category");
+      }
+    } catch (e) {
+      console.error(e);
+      setCategoryError("Failed to create category due to connection error.");
+    }
   };
 
   const startNewWorkflow = () => {
@@ -877,6 +920,7 @@ export default function AdminDeskWorkspace({
             bodyText: vDefaultDetailed,
             team_ids: selectedTeams,
             workflow_route_id: selectedWorkflowRouteId || null,
+            tags: tags,
           }),
         });
 
@@ -892,6 +936,7 @@ export default function AdminDeskWorkspace({
           variants: variantsPayload,
           team_ids: selectedTeams,
           workflow_route_id: selectedWorkflowRouteId || null,
+          tags: tags,
         };
         if (transitionStatus) {
           putPayload.status = transitionStatus;
@@ -948,6 +993,7 @@ export default function AdminDeskWorkspace({
           variants: variantsPayload,
           team_ids: selectedTeams,
           workflow_route_id: selectedWorkflowRouteId || null,
+          tags: tags,
         };
 
         if (transitionStatus) {
@@ -1296,7 +1342,7 @@ export default function AdminDeskWorkspace({
                         className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 focus:outline-hidden cursor-pointer"
                       >
                         <option value="All Categories">All Categories</option>
-                        {categories.map((c) => (
+                        {categoriesList.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
                           </option>
@@ -1676,18 +1722,55 @@ export default function AdminDeskWorkspace({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Category</label>
-                        <select
-                          value={categoryId}
-                          onChange={(e) => setCategoryId(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                        >
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Category</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingCategory(!isAddingCategory);
+                              setNewCategoryName("");
+                              setCategoryError("");
+                            }}
+                            className="text-[10px] text-zinc-950 font-bold hover:underline cursor-pointer focus:outline-hidden"
+                          >
+                            {isAddingCategory ? "Cancel" : "+ Add New"}
+                          </button>
+                        </div>
+                        {isAddingCategory ? (
+                          <div className="space-y-1">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                placeholder="New category name..."
+                                className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleCreateCategory}
+                                className="rounded-lg bg-zinc-950 hover:bg-zinc-850 px-3 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+                              >
+                                Add
+                              </button>
+                            </div>
+                            {categoryError && (
+                              <p className="text-[10px] font-bold text-red-650 mt-1">{categoryError}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <select
+                            value={categoryId}
+                            onChange={(e) => setCategoryId(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
+                          >
+                            {categoriesList.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1762,6 +1845,48 @@ export default function AdminDeskWorkspace({
                           onChange={(e) => setReviewDue(e.target.value)}
                           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
                         />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Tags</label>
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const trimmed = tagInput.trim();
+                                if (trimmed && !tags.includes(trimmed)) {
+                                  setTags([...tags, trimmed]);
+                                }
+                                setTagInput("");
+                              }
+                            }}
+                            placeholder="Type tag and press Enter..."
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          />
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-800 text-[10px] font-semibold px-2 py-0.5 rounded border border-zinc-200"
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    onClick={() => setTags(tags.filter((t) => t !== tag))}
+                                    className="text-zinc-450 hover:text-zinc-650 font-bold ml-0.5 cursor-pointer focus:outline-hidden"
+                                  >
+                                    &times;
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
