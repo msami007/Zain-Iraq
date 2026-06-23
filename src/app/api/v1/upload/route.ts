@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { isR2Configured, uploadFileToR2 } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,21 +31,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 400 });
     }
 
-    // 3. Save file locally under public/uploads
+    // 3. Buffer file content
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadDir = join(process.cwd(), "public", "uploads");
-    
-    // Ensure upload directory exists
-    await mkdir(uploadDir, { recursive: true });
+    let fileUrl = "";
 
-    // Sanitize filename and prepend timestamp to prevent naming collisions
-    const sanitizedFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = join(uploadDir, sanitizedFileName);
+    // 4. Upload to R2 if configured, otherwise fallback to local public/uploads directory
+    if (isR2Configured()) {
+      fileUrl = await uploadFileToR2(buffer, file.name, file.type);
+    } else {
+      const uploadDir = join(process.cwd(), "public", "uploads");
+      
+      // Ensure upload directory exists
+      await mkdir(uploadDir, { recursive: true });
 
-    await writeFile(filePath, buffer);
-    const fileUrl = `/uploads/${sanitizedFileName}`;
+      // Sanitize filename and prepend timestamp to prevent naming collisions
+      const sanitizedFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+      const filePath = join(uploadDir, sanitizedFileName);
+
+      await writeFile(filePath, buffer);
+      fileUrl = `/uploads/${sanitizedFileName}`;
+    }
 
     return NextResponse.json({
       success: true,
