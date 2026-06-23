@@ -186,19 +186,19 @@ export default function AdminDeskWorkspace({
   const [transitionStatus, setTransitionStatus] = useState("");
   const [transitionComment, setTransitionComment] = useState("");
 
-  // Variant fields
-  const [vDefaultShort, setVDefaultShort] = useState("");
+  // Variant fields: short answers are used for summaries across channels
+  const [vDefaultShort, setVDefaultShort] = useState(""); // Default variant summary description
   const [vDefaultDetailed, setVDefaultDetailed] = useState("");
 
-  const [vAgentShort, setVAgentShort] = useState("");
+  const [vAgentShort, setVAgentShort] = useState(""); // Agent variant summary description
   const [vAgentDetailed, setVAgentDetailed] = useState("");
   const [vAgentMacro, setVAgentMacro] = useState("");
   const [vAgentFlow, setVAgentFlow] = useState("");
 
-  const [vChatbotShort, setVChatbotShort] = useState("");
+  const [vChatbotShort, setVChatbotShort] = useState(""); // Chatbot variant summary description
   const [vChatbotDetailed, setVChatbotDetailed] = useState("");
 
-  const [vWhatsappShort, setVWhatsappShort] = useState("");
+  const [vWhatsappShort, setVWhatsappShort] = useState(""); // WhatsApp variant summary description
   const [vWhatsappDetailed, setVWhatsappDetailed] = useState("");
 
   // Initial values for WYSIWYG editors (loaded once when editing article changes)
@@ -1541,6 +1541,7 @@ export default function AdminDeskWorkspace({
                             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
                             placeholder="Quick summary snippet..."
                           />
+                          <p className="text-[9px] text-zinc-400 font-semibold mt-0.5">Used for general search previews and fallback channels.</p>
                         </div>
                       )}
 
@@ -1556,6 +1557,7 @@ export default function AdminDeskWorkspace({
                                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
                                 placeholder="Agent specific summary..."
                               />
+                              <p className="text-[9px] text-zinc-400 font-semibold mt-0.5">Shown directly to agents in their active console.</p>
                             </div>
                             <div className="space-y-1.5 text-left">
                               <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Copy-ready Macro Response</label>
@@ -1581,6 +1583,7 @@ export default function AdminDeskWorkspace({
                             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
                             placeholder="Chatbot specific summary..."
                           />
+                          <p className="text-[9px] text-zinc-400 font-semibold mt-0.5">Used by the AI bot to answer user search queries.</p>
                         </div>
                       )}
 
@@ -1593,7 +1596,9 @@ export default function AdminDeskWorkspace({
                             onChange={(e) => setVWhatsappShort(e.target.value)}
                             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
                             placeholder="WhatsApp specific summary..."
-                          />                    </div>
+                          />
+                          <p className="text-[9px] text-zinc-400 font-semibold mt-0.5">Optimized text for WhatsApp channel delivery.</p>
+                        </div>
                       )}
 
                       {/* Redesigned Premium Editor Container */}
