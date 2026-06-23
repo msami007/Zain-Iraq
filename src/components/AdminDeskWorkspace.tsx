@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
 
 type AdminArticle = {
@@ -66,6 +67,12 @@ type WorkspaceProps = {
   currentUserRole: string;
   tenantId: string;
   initialGaps: Gap[];
+  userName?: string;
+  userEmail?: string;
+  tenantName?: string;
+  brandingColor?: string;
+  hideSidebar?: boolean;
+  overrideActiveTab?: "articles" | "gaps" | "audit";
 };
 
 const SAMPLE_TROUBLESHOOTING_FLOW = {
@@ -87,17 +94,23 @@ const SAMPLE_TROUBLESHOOTING_FLOW = {
     },
     node_invalid_sim: {
       text: "Clean the SIM copper chip with a dry soft cloth and re-insert. Did it resolve the issue?",
-      options: [
-        { text: "Yes, it works now", next: "resolve_clean" },
-        { text: "No, it still says Invalid SIM", next: "escalate_replace" }
-      ]
+      is_terminal: false,
+      yes_node: "node2",
+      no_node: "node3"
     },
-    resolve_clean: {
-      text: "Issue resolved by cleaning SIM card copper chip.",
-      is_terminal: true,
-      outcome: "resolve"
+    node2: {
+      text: "Is the SIM card physical or eSIM?",
+      is_terminal: false,
+      yes_node: "escalate_network",
+      no_node: "escalate_replace"
     },
-    resolve_carrier: {
+    node3: {
+      text: "Try restarting the device. Did it restore connectivity?",
+      is_terminal: false,
+      yes_node: "resolve_network",
+      no_node: "node2"
+    },
+    resolve_network: {
       text: "Issue resolved by enabling automatic network selection.",
       is_terminal: true,
       outcome: "resolve"
@@ -123,6 +136,12 @@ export default function AdminDeskWorkspace({
   currentUserRole,
   tenantId,
   initialGaps,
+  userName,
+  userEmail,
+  tenantName,
+  brandingColor = "#09090B",
+  hideSidebar = false,
+  overrideActiveTab,
 }: WorkspaceProps) {
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
@@ -707,36 +726,109 @@ export default function AdminDeskWorkspace({
     return [];
   };
 
-  return (
-    <div className="space-y-6 text-left">
-      {/* Sub-navigation bar */}
-      <div className="flex border-b border-zinc-200 gap-2 overflow-x-auto">
-        <button
-          onClick={() => {
-            setActiveTab("articles");
-            closeEditor();
-          }}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all ${
-            activeTab === "articles" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-          }`}
-        >
-          Articles Manager
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("gaps");
-            closeEditor();
-          }}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition-all ${
-            activeTab === "gaps" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-          }`}
-        >
-          Gaps Queue
-        </button>
-      </div>
+  const currentTab = overrideActiveTab || activeTab;
 
-      {/* ARTICLES MANAGER VIEW */}
-      {activeTab === "articles" && (
+  return (
+    <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full"}`}>
+      {/* Sidebar - only show if hideSidebar is false */}
+      {!hideSidebar && (
+        <aside className="w-64 flex-shrink-0 bg-zinc-950 text-zinc-400 flex flex-col justify-between py-6 px-4 border-r border-zinc-900 sticky top-0 h-screen">
+          <div className="space-y-6">
+            <div className="px-3 mb-6">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full border border-white/10 shadow-xs" style={{ backgroundColor: brandingColor }} />
+                <span className="font-extrabold text-sm text-white tracking-tight leading-none uppercase">{tenantName}</span>
+              </div>
+              <div className="text-[10px] font-bold text-zinc-500 mt-1.5 uppercase tracking-wider">Admin Workspace</div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 px-3 mb-2">Workspace</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("articles");
+                  closeEditor();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
+                  currentTab === "articles" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                }`}
+              >
+                <span>📂</span> Articles Manager
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("gaps");
+                  closeEditor();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
+                  currentTab === "gaps" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                }`}
+              >
+                <span>🔍</span> Gaps Queue
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-900 pt-4 px-2 space-y-4">
+            <div>
+              <div className="text-xs font-bold text-white truncate">{userName}</div>
+              <div className="text-[10px] text-zinc-500 font-mono truncate mt-0.5">{userEmail}</div>
+              <div className="mt-2 inline-flex rounded bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
+                {currentUserRole}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
+            >
+              Sign Out
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col ${hideSidebar ? "" : "h-screen overflow-hidden bg-zinc-50"}`}>
+        {/* Header Bar - only show if hideSidebar is false */}
+        {!hideSidebar && (
+          <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <h2 className="text-sm font-extrabold text-zinc-950 uppercase tracking-wide">
+                {currentTab === "articles" ? "Articles Manager" : "Gaps Queue"}
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
+                Tenant Key: <code className="ml-1.5 font-mono text-[9px] text-zinc-800">{tenantId}</code>
+              </span>
+            </div>
+          </header>
+        )}
+
+        {/* View Contents */}
+        <div className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8"}>
+          {/* Welcome Banner inside Content Panel for full-bleed Admin Workspace only */}
+          {!hideSidebar && currentTab === "articles" && !editingArticle && !isCreating && (
+            <div 
+              className="rounded-xl border border-zinc-200 border-l-4 bg-white p-6 shadow-sm mb-6"
+              style={{ borderLeftColor: brandingColor }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left">
+                <div>
+                  <h2 className="text-lg font-extrabold text-zinc-955 text-left">Welcome, {userName}!</h2>
+                  <p className="text-xs font-semibold text-zinc-500 mt-1">
+                    Manage articles, approve status changes, and resolve gaps for <strong className="text-zinc-850">{tenantName}</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ARTICLES MANAGER VIEW */}
+          {currentTab === "articles" && (
         <div className="space-y-6">
           {!editingArticle && !isCreating ? (
             /* Table list view matching the Mockup */
@@ -1555,7 +1647,7 @@ export default function AdminDeskWorkspace({
       )}
 
       {/* KNOWLEDGE GAPS QUEUE VIEW */}
-      {activeTab === "gaps" && (
+      {currentTab === "gaps" && (
         <div className="space-y-6">
           {/* Status selector */}
           <div className="flex gap-2">
@@ -1714,6 +1806,8 @@ export default function AdminDeskWorkspace({
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
