@@ -154,7 +154,7 @@ export default function AdminDeskWorkspace({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All Categories");
   const [searchKeyword, setSearchKeyword] = useState("");
-  
+
   // Guest Link Modal Manager overlay
   const [activeLinkManagerArticle, setActiveLinkManagerArticle] = useState<AdminArticle | null>(null);
 
@@ -181,7 +181,7 @@ export default function AdminDeskWorkspace({
   const [visibility, setVisibility] = useState("PUBLIC");
   const [ownerId, setOwnerId] = useState(currentUserId);
   const [reviewDue, setReviewDue] = useState("");
-  
+
   // Workflow fields
   const [transitionStatus, setTransitionStatus] = useState("");
   const [transitionComment, setTransitionComment] = useState("");
@@ -189,7 +189,7 @@ export default function AdminDeskWorkspace({
   // Variant fields
   const [vDefaultShort, setVDefaultShort] = useState("");
   const [vDefaultDetailed, setVDefaultDetailed] = useState("");
-  
+
   const [vAgentShort, setVAgentShort] = useState("");
   const [vAgentDetailed, setVAgentDetailed] = useState("");
   const [vAgentMacro, setVAgentMacro] = useState("");
@@ -365,7 +365,7 @@ export default function AdminDeskWorkspace({
     }
 
     const newText = text.substring(0, start) + replacement + text.substring(end);
-    
+
     if (channel === "default") setVDefaultDetailed(newText);
     else if (channel === "agent") setVAgentDetailed(newText);
     else if (channel === "chatbot") setVChatbotDetailed(newText);
@@ -460,7 +460,7 @@ export default function AdminDeskWorkspace({
     setIsCreating(false);
     setFormError("");
     setFormSuccess("");
-    
+
     setTitle(article.title);
     setSlug(article.slug);
     setCategoryId(article.category_id);
@@ -468,7 +468,7 @@ export default function AdminDeskWorkspace({
     setVisibility(article.visibility);
     setOwnerId(article.owner_id);
     setReviewDue(article.review_due ? new Date(article.review_due).toISOString().slice(0, 10) : "");
-    
+
     // Set transition status defaults
     setTransitionStatus("");
     setTransitionComment("");
@@ -570,7 +570,7 @@ export default function AdminDeskWorkspace({
         }
 
         const created = await res.json();
-        
+
         // Save variants inline (since POST creates a default variant, we update variants using PUT)
         const putPayload: any = {
           variants: variantsPayload,
@@ -762,9 +762,8 @@ export default function AdminDeskWorkspace({
                   setActiveTab("articles");
                   closeEditor();
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
-                  currentTab === "articles" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "articles" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                  }`}
               >
                 <span>📂</span> Articles Manager
               </button>
@@ -774,9 +773,8 @@ export default function AdminDeskWorkspace({
                   setActiveTab("gaps");
                   closeEditor();
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
-                  currentTab === "gaps" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "gaps" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                  }`}
               >
                 <span>🔍</span> Gaps Queue
               </button>
@@ -791,24 +789,19 @@ export default function AdminDeskWorkspace({
                 {currentUserRole}
               </div>
             </div>
-            {signOutAction ? (
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
-                >
-                  Sign Out
-                </button>
-              </form>
-            ) : (
-              <button
-                type="button"
-                onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
-                className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
-              >
-                Sign Out
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={async () => {
+                if (signOutAction) {
+                  await signOutAction();
+                } else {
+                  await signOut({ callbackUrl: "/login" });
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
+            >
+              Sign Out
+            </button>
           </div>
         </aside>
       )}
@@ -835,7 +828,7 @@ export default function AdminDeskWorkspace({
         <div className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8"}>
           {/* Welcome Banner inside Content Panel for full-bleed Admin Workspace only */}
           {!hideSidebar && currentTab === "articles" && !editingArticle && !isCreating && (
-            <div 
+            <div
               className="rounded-xl border border-zinc-200 border-l-4 bg-white p-6 shadow-sm mb-6"
               style={{ borderLeftColor: brandingColor }}
             >
@@ -852,122 +845,872 @@ export default function AdminDeskWorkspace({
 
           {/* ARTICLES MANAGER VIEW */}
           {currentTab === "articles" && (
-        <div className="space-y-6">
-          {!editingArticle && !isCreating ? (
-            /* Table list view matching the Mockup */
             <div className="space-y-6">
-              {/* Header Title and + New Article button */}
-              <div className="flex items-center justify-between">
-                <div className="text-left">
-                  <h2 className="text-xl font-extrabold text-zinc-950">All Articles</h2>
-                  <p className="text-xs text-zinc-500 font-medium mt-1">
-                    {filteredArticles.length} articles · {categories.length} categories · 2 languages
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={openCreator}
-                  className="rounded-lg bg-zinc-950 hover:bg-zinc-800 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-sm font-light">+</span> New Article
-                </button>
-              </div>
-
-              {/* Filters Toolbar Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200">
-                {/* Tabs */}
-                <div className="flex bg-zinc-200/60 p-1 rounded-lg gap-1 border border-zinc-200">
-                  {["All", "Published", "Drafts", "Pending", "Archived"].map((tab) => (
+              {!editingArticle && !isCreating ? (
+                /* Table list view matching the Mockup */
+                <div className="space-y-6">
+                  {/* Header Title and + New Article button */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-left">
+                      <h2 className="text-xl font-extrabold text-zinc-950">All Articles</h2>
+                      <p className="text-xs text-zinc-500 font-medium mt-1">
+                        {filteredArticles.length} articles · {categories.length} categories · 2 languages
+                      </p>
+                    </div>
                     <button
-                      key={tab}
                       type="button"
-                      onClick={() => setSelectedStatusFilter(tab)}
-                      className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
-                        selectedStatusFilter === tab
-                          ? "bg-white text-zinc-950 shadow-2xs"
-                          : "text-zinc-550 hover:text-zinc-900"
-                      }`}
+                      onClick={openCreator}
+                      className="rounded-lg bg-zinc-950 hover:bg-zinc-800 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition-all flex items-center gap-1.5"
                     >
-                      {tab}
+                      <span className="text-sm font-light">+</span> New Article
                     </button>
-                  ))}
-                </div>
+                  </div>
 
-                <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                  {/* Category Dropdown */}
-                  <select
-                    value={selectedCategoryFilter}
-                    onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                    className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 focus:outline-hidden cursor-pointer"
+                  {/* Filters Toolbar Row */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200">
+                    {/* Tabs */}
+                    <div className="flex bg-zinc-200/60 p-1 rounded-lg gap-1 border border-zinc-200">
+                      {["All", "Published", "Drafts", "Pending", "Archived"].map((tab) => (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setSelectedStatusFilter(tab)}
+                          className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${selectedStatusFilter === tab
+                              ? "bg-white text-zinc-950 shadow-2xs"
+                              : "text-zinc-550 hover:text-zinc-900"
+                            }`}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                      {/* Category Dropdown */}
+                      <select
+                        value={selectedCategoryFilter}
+                        onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="All Categories">All Categories</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Search Bar Input */}
+                      <input
+                        type="text"
+                        placeholder="Search titles or IDs..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        className="rounded-lg border border-zinc-200 bg-white px-3.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-400 focus:border-zinc-950 focus:outline-hidden transition-all shadow-2xs w-48 sm:w-60"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Articles Table */}
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                        <thead>
+                          <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-extrabold tracking-wider">
+                            <th className="p-4">ID</th>
+                            <th className="p-4">Title</th>
+                            <th className="p-4">Category</th>
+                            <th className="p-4">Lang</th>
+                            <th className="p-4">Status</th>
+                            <th className="p-4">Views</th>
+                            <th className="p-4">Updated</th>
+                            <th className="p-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-150">
+                          {filteredArticles.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-zinc-450 font-semibold">
+                                No articles found matching filters.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredArticles.map((art) => {
+                              // Simulated realistic views count based on ID characters
+                              const simulatedViews = Math.abs((art.id.charCodeAt(0) * 12 + art.id.charCodeAt(1)) % 1300);
+
+                              // Format date nicely: Jun 23
+                              const dateObj = new Date(art.updated_at);
+                              const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+                              return (
+                                <tr key={art.id} className="hover:bg-zinc-50/50">
+                                  <td className="p-4 font-mono text-[10px] text-zinc-400 font-semibold">{art.id.slice(0, 8)}</td>
+                                  <td className="p-4 font-extrabold text-zinc-950 text-left">
+                                    {art.title}
+                                  </td>
+                                  <td className="p-4">
+                                    <span className="rounded-full bg-zinc-50 border border-zinc-200 px-2.5 py-0.5 text-[9px] font-bold text-zinc-500 uppercase">
+                                      {art.category?.name || "General"}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 uppercase font-bold text-zinc-500">{art.language}</td>
+                                  <td className="p-4">
+                                    <span
+                                      className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${art.status === "Published"
+                                          ? "bg-green-50 text-green-700 border-green-200"
+                                          : art.status === "Draft"
+                                            ? "bg-zinc-100 text-zinc-650 border-zinc-200"
+                                            : art.status === "Archived"
+                                              ? "bg-red-50 text-red-700 border-red-200"
+                                              : "bg-amber-50 text-amber-700 border-amber-200" // Pending
+                                        }`}
+                                    >
+                                      {art.status === "InReview" || art.status === "Approved" ? "PENDING" : art.status.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 font-mono font-bold text-zinc-600">{simulatedViews.toLocaleString()}</td>
+                                  <td className="p-4 text-zinc-500 font-medium">{formattedDate}</td>
+                                  <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                                    <Link
+                                      href={`/articles/${art.id}`}
+                                      target="_blank"
+                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs inline-block"
+                                    >
+                                      View
+                                    </Link>
+
+                                    {art.status === "Published" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setActiveLinkManagerArticle(art)}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
+                                      >
+                                        Guest Link
+                                      </button>
+                                    )}
+
+                                    {(art.status === "InReview" || art.status === "Approved") && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDirectStatusTransition(art.id, art.status === "InReview" ? "Approved" : "Published")}
+                                        disabled={art.author_id === currentUserId}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-green-650 hover:bg-green-50 shadow-2xs disabled:opacity-50"
+                                      >
+                                        Approve
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditor(art)}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
+                                    >
+                                      Edit
+                                    </button>
+
+                                    {art.status !== "Archived" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDirectStatusTransition(art.id, "Archived")}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-red-650 hover:bg-red-50 shadow-2xs"
+                                      >
+                                        Archive
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Guest Link Modal Overlay from row action */}
+                  {activeLinkManagerArticle && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
+                      <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
+                        <div className="flex items-center justify-between border-b border-zinc-150 pb-2">
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
+                              Guest Shared Links: {activeLinkManagerArticle.title}
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setGeneratingLink(true);
+                              try {
+                                const res = await fetch(`/api/v1/articles/${activeLinkManagerArticle.id}/guest-links`, {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ channel: "default" }),
+                                });
+                                if (res.ok) {
+                                  const newLink = await res.json();
+                                  setGuestLinks([newLink, ...guestLinks]);
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              } finally {
+                                setGeneratingLink(false);
+                              }
+                            }}
+                            disabled={generatingLink}
+                            className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
+                          >
+                            {generatingLink ? "Generating..." : "Generate New Link"}
+                          </button>
+                        </div>
+
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {guestLinks.length === 0 ? (
+                            <p className="text-[10px] text-zinc-400 font-semibold italic p-4 text-center">No active guest links found.</p>
+                          ) : (
+                            guestLinks.map((link) => {
+                              const guestUrl = `${window.location.origin}/articles/${activeLinkManagerArticle.id}?token=${link.token}`;
+                              return (
+                                <div key={link.id} className="flex items-center justify-between gap-4 p-2 bg-zinc-50 border border-zinc-150 rounded-lg text-xs">
+                                  <div className="truncate flex-1">
+                                    <span className="text-[10px] font-mono text-zinc-600 select-all font-semibold block truncate">
+                                      {guestUrl}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {!link.revoked && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(guestUrl);
+                                          alert("Link copied!");
+                                        }}
+                                        className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-[9px] font-bold text-zinc-650"
+                                      >
+                                        Copy
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          const res = await fetch(`/api/v1/articles/${activeLinkManagerArticle.id}/guest-links`, {
+                                            method: "PUT",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ link_id: link.id, revoked: !link.revoked }),
+                                          });
+                                          if (res.ok) {
+                                            const updated = await res.json();
+                                            setGuestLinks(guestLinks.map((l) => (l.id === link.id ? updated : l)));
+                                          }
+                                        } catch (e) {
+                                          console.error(e);
+                                        }
+                                      }}
+                                      className={`rounded px-2 py-0.5 text-[9px] font-bold ${link.revoked ? "bg-zinc-950 text-white" : "border border-red-200 text-red-700"
+                                        }`}
+                                    >
+                                      {link.revoked ? "Restore" : "Revoke"}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <div className="flex justify-end pt-2 border-t border-zinc-150">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveLinkManagerArticle(null);
+                              setGuestLinks([]);
+                            }}
+                            className="rounded border border-zinc-200 bg-white px-4 py-1.5 text-xs font-bold text-zinc-650"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* EDITOR / CREATOR FORM VIEW */
+                <form onSubmit={handleSaveArticle} className="space-y-6">
+                  <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-6">
+                    <div className="flex items-center justify-between border-b border-zinc-150 pb-4">
+                      <h3 className="text-sm font-extrabold text-zinc-950">
+                        {isCreating ? "Create Support Article" : `Review & Edit: ${editingArticle?.title}`}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={closeEditor}
+                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3.5 py-2 text-xs font-bold text-zinc-600 shadow-xs"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={saving}
+                          className="rounded bg-zinc-950 hover:bg-zinc-800 px-4 py-2 text-xs font-bold text-white shadow-xs"
+                        >
+                          {saving ? "Saving..." : "Save Changes"}
+                        </button>
+                        {!isCreating && editingArticle && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteArticle(editingArticle.id)}
+                            className="rounded bg-red-650 hover:bg-red-750 px-3.5 py-2 text-xs font-bold text-white shadow-xs"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {formError && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800">
+                        {formError}
+                      </div>
+                    )}
+
+                    {formSuccess && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-xs font-semibold text-green-800">
+                        {formSuccess}
+                      </div>
+                    )}
+
+                    {/* Grid Inputs */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Title</label>
+                        <input
+                          type="text"
+                          required
+                          value={title}
+                          onChange={(e) => handleTitleChange(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          placeholder="e.g. SIM Card Setup"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Slug</label>
+                        <input
+                          type="text"
+                          required
+                          value={slug}
+                          onChange={(e) => setSlug(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          placeholder="sim-card-setup"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Category</label>
+                        <select
+                          value={categoryId}
+                          onChange={(e) => setCategoryId(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                        >
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Language</label>
+                        <select
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                        >
+                          <option value="en">English (EN)</option>
+                          <option value="ar">Arabic (AR)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Visibility</label>
+                        <select
+                          value={visibility}
+                          onChange={(e) => setVisibility(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                        >
+                          <option value="PUBLIC">Public (Guests can search)</option>
+                          <option value="PRIVATE">Private (Internal only)</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Review Due Date</label>
+                        <input
+                          type="date"
+                          value={reviewDue}
+                          onChange={(e) => setReviewDue(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Workflow status transition panel (only in edit mode) */}
+                    {(isCreating || editingArticle) && (
+                      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
+                          Workflow Governance Operations
+                        </h4>
+
+                        {/* Separation of Duties Banner Alert */}
+                        {!isCreating && editingArticle && editingArticle.author_id === currentUserId && (
+                          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex items-start gap-2.5">
+                            <span className="text-base">⚠️</span>
+                            <div>
+                              <p className="font-bold">Separation of Duties Restriction</p>
+                              <p className="mt-0.5 font-medium">You are the author of this article. The server enforces that a different Administrator must approve or publish this guide.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
+                              Current Status: <span className="text-zinc-800 font-extrabold uppercase">{isCreating ? "DRAFT" : editingArticle?.status}</span>
+                            </label>
+                            <select
+                              value={transitionStatus}
+                              onChange={(e) => setTransitionStatus(e.target.value)}
+                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
+                            >
+                              <option value="">-- Change Status --</option>
+                              {getAllowedStatusTransitions(isCreating ? "Draft" : editingArticle?.status || "Draft").map((t) => {
+                                const isSelfAuthorRestrict = !isCreating && !!editingArticle && (t.status === "Approved" || t.status === "Published") && editingArticle.author_id === currentUserId;
+                                return (
+                                  <option key={t.status} value={t.status} disabled={isSelfAuthorRestrict}>
+                                    {t.label} {isSelfAuthorRestrict ? "(Restricted: Author)" : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+
+                          <div className="space-y-2 sm:col-span-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
+                              Transition Notes / Rejection Comment
+                            </label>
+                            <input
+                              type="text"
+                              value={transitionComment}
+                              onChange={(e) => setTransitionComment(e.target.value)}
+                              placeholder="e.g. Approved copy, fixed typo, rejected because..."
+                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Guest Links Manager Panel (only in edit mode for Published articles) */}
+                    {!isCreating && editingArticle && editingArticle.status === "Published" && (
+                      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
+                        <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
+                              Guest Link Access Tokens
+                            </h4>
+                            <p className="text-[10px] text-zinc-450 font-medium mt-0.5">Generate secure URLs to share this article with guest users.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleGenerateGuestLink}
+                            disabled={generatingLink}
+                            className="rounded border border-zinc-250 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-700 shadow-2xs"
+                          >
+                            {generatingLink ? "Generating..." : "Generate Guest Link"}
+                          </button>
+                        </div>
+
+                        {guestLinks.length === 0 ? (
+                          <p className="text-[10px] text-zinc-400 font-semibold italic">No guest links generated for this article yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {guestLinks.map((link) => {
+                              const guestUrl = typeof window !== "undefined" ? `${window.location.origin}/articles/${editingArticle.id}?token=${link.token}` : "";
+                              return (
+                                <div key={link.id} className="flex items-center justify-between gap-4 p-2.5 bg-white border border-zinc-150 rounded-lg text-xs">
+                                  <div className="space-y-0.5 truncate flex-1">
+                                    <span className="text-[10px] font-mono text-zinc-600 select-all font-semibold block truncate">
+                                      {guestUrl}
+                                    </span>
+                                    <span className="text-[9px] text-zinc-400 font-medium">
+                                      Created {new Date(link.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {link.revoked ? (
+                                      <span className="rounded bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 text-[9px] font-bold">
+                                        Revoked
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(guestUrl);
+                                          alert("Guest link copied to clipboard!");
+                                        }}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-0.5 text-[9px] font-bold text-zinc-650"
+                                      >
+                                        Copy Link
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRevokeGuestLink(link.id, !link.revoked)}
+                                      className={`rounded px-2 py-0.5 text-[9px] font-bold transition-colors ${link.revoked
+                                          ? "bg-zinc-950 text-white hover:bg-zinc-800"
+                                          : "border border-red-200 text-red-700 hover:bg-red-50"
+                                        }`}
+                                    >
+                                      {link.revoked ? "Restore" : "Revoke"}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Content variants editor (tabs) */}
+                    <div className="space-y-4">
+                      <div className="flex border-b border-zinc-200 gap-1 overflow-x-auto">
+                        <button
+                          type="button"
+                          onClick={() => setVariantTab("default")}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${variantTab === "default" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
+                            }`}
+                        >
+                          Default Variant
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVariantTab("agent")}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${variantTab === "agent" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
+                            }`}
+                        >
+                          Agent Desk {isVariantEmpty("agent") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVariantTab("chatbot")}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${variantTab === "chatbot" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
+                            }`}
+                        >
+                          Chatbot {isVariantEmpty("chatbot") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setVariantTab("whatsapp")}
+                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${variantTab === "whatsapp" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
+                            }`}
+                        >
+                          WhatsApp {isVariantEmpty("whatsapp") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
+                        </button>
+                      </div>
+
+                      {/* Fallback Warning Alerts */}
+                      {variantTab !== "default" && isVariantEmpty(variantTab) && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-850 flex items-center gap-2">
+                          <span>⚠️</span>
+                          Notice: No variant exists for the {variantTab.toUpperCase()} channel. The system will fall back to displaying the Default Variant.
+                        </div>
+                      )}
+
+                      {/* Picture Guide Direct Upload tool */}
+                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                          <h4 className="text-xs font-bold text-zinc-900">Direct Picture Guide Upload</h4>
+                          <p className="text-[10px] text-zinc-450 font-medium mt-0.5">Upload image guides (PNG/JPG, max 5MB) to render inline in steps.</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/jpg"
+                            onChange={handleImageUpload}
+                            disabled={uploadingImage}
+                            className="hidden"
+                            id="image-file-input"
+                          />
+                          <label
+                            htmlFor="image-file-input"
+                            className="rounded border border-zinc-250 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 hover:text-zinc-950 cursor-pointer shadow-2xs transition-all disabled:opacity-50"
+                          >
+                            {uploadingImage ? "Uploading image..." : "Upload Image Guide"}
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Editors Fields */}
+                      {variantTab === "default" && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                            <input
+                              type="text"
+                              value={vDefaultShort}
+                              onChange={(e) => setVDefaultShort(e.target.value)}
+                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                              placeholder="Quick summary snippet..."
+                            />
+                          </div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps (Body Content)</label>
+                          <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
+                            {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => insertFormatting("default", type)}
+                                className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
+                              >
+                                {type}
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            id="textarea-default"
+                            required
+                            rows={10}
+                            value={vDefaultDetailed}
+                            onChange={(e) => setVDefaultDetailed(e.target.value)}
+                            className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
+                            placeholder="Write the full support instructions in Markdown..."
+                          />
+                        </div>
+                      )}
+
+                      {variantTab === "agent" && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                              <input
+                                type="text"
+                                value={vAgentShort}
+                                onChange={(e) => setVAgentShort(e.target.value)}
+                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Copy-ready Macro Response</label>
+                              <input
+                                type="text"
+                                value={vAgentMacro}
+                                onChange={(e) => setVAgentMacro(e.target.value)}
+                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                                placeholder="Text copied to clipboard in one click by agents..."
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
+                            <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
+                              {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => insertFormatting("agent", type)}
+                                  className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
+                                >
+                                  {type}
+                                </button>
+                              ))}
+                            </div>
+                            <textarea
+                              id="textarea-agent"
+                              rows={6}
+                              value={vAgentDetailed}
+                              onChange={(e) => setVAgentDetailed(e.target.value)}
+                              className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
+                            />
+                          </div>
+
+                          {/* Troubleshooting flow JSON editor */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Interactive Troubleshooting Flow JSON</label>
+                              <button
+                                type="button"
+                                onClick={() => setVAgentFlow(JSON.stringify(SAMPLE_TROUBLESHOOTING_FLOW, null, 2))}
+                                className="rounded border border-zinc-250 bg-white px-2 py-1 text-[9px] font-bold text-zinc-700 hover:text-zinc-950 shadow-2xs"
+                              >
+                                Load Template Flow
+                              </button>
+                            </div>
+                            <textarea
+                              rows={6}
+                              value={vAgentFlow}
+                              onChange={(e) => setVAgentFlow(e.target.value)}
+                              className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-mono shadow-inner"
+                              placeholder='{ "start_node": "...", "nodes": { ... } }'
+                            />
+                            {vAgentFlow && (
+                              <div className="border border-zinc-200 rounded-lg p-4 bg-zinc-50">
+                                <span className="text-[10px] text-zinc-450 font-bold uppercase block mb-3">Live Flow Tester Preview:</span>
+                                {(() => {
+                                  try {
+                                    const parsed = JSON.parse(vAgentFlow);
+                                    return <TroubleshootingPlayer flow={parsed} />;
+                                  } catch (err) {
+                                    return <span className="text-[10px] text-red-500 font-semibold font-mono">Invalid JSON syntax. Fix structure to preview flow player.</span>;
+                                  }
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {variantTab === "chatbot" && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                            <input
+                              type="text"
+                              value={vChatbotShort}
+                              onChange={(e) => setVChatbotShort(e.target.value)}
+                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
+                            <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
+                              {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => insertFormatting("chatbot", type)}
+                                  className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
+                                >
+                                  {type}
+                                </button>
+                              ))}
+                            </div>
+                            <textarea
+                              id="textarea-chatbot"
+                              rows={6}
+                              value={vChatbotDetailed}
+                              onChange={(e) => setVChatbotDetailed(e.target.value)}
+                              className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {variantTab === "whatsapp" && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                            <input
+                              type="text"
+                              value={vWhatsappShort}
+                              onChange={(e) => setVWhatsappShort(e.target.value)}
+                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
+                            <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
+                              {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => insertFormatting("whatsapp", type)}
+                                  className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
+                                >
+                                  {type}
+                                </button>
+                              ))}
+                            </div>
+                            <textarea
+                              id="textarea-whatsapp"
+                              rows={6}
+                              value={vWhatsappDetailed}
+                              onChange={(e) => setVWhatsappDetailed(e.target.value)}
+                              className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* KNOWLEDGE GAPS QUEUE VIEW */}
+          {currentTab === "gaps" && (
+            <div className="space-y-6">
+              {/* Status selector */}
+              <div className="flex gap-2">
+                {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "DISMISSED"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setGapStatusFilter(st)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs ${gapStatusFilter === st
+                        ? "bg-zinc-950 text-white border-zinc-950"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                      }`}
                   >
-                    <option value="All Categories">All Categories</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Search Bar Input */}
-                  <input
-                    type="text"
-                    placeholder="Search titles or IDs..."
-                    value={searchKeyword}
-                    onChange={(e) => setSearchKeyword(e.target.value)}
-                    className="rounded-lg border border-zinc-200 bg-white px-3.5 py-1.5 text-xs text-zinc-800 placeholder-zinc-400 focus:border-zinc-950 focus:outline-hidden transition-all shadow-2xs w-48 sm:w-60"
-                  />
-                </div>
+                    {st}
+                  </button>
+                ))}
               </div>
 
-              {/* Articles Table */}
               <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Captured Search Miss Gaps</h3>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                     <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-extrabold tracking-wider">
-                        <th className="p-4">ID</th>
-                        <th className="p-4">Title</th>
-                        <th className="p-4">Category</th>
-                        <th className="p-4">Lang</th>
+                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                        <th className="p-4">Search Query Text</th>
+                        <th className="p-4">Occurrences</th>
                         <th className="p-4">Status</th>
-                        <th className="p-4">Views</th>
-                        <th className="p-4">Updated</th>
+                        <th className="p-4">Reported By</th>
+                        <th className="p-4">Claimed By</th>
                         <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-150">
-                      {filteredArticles.length === 0 ? (
+                      {gaps
+                        .filter((g) => gapStatusFilter === "ALL" || g.status === gapStatusFilter)
+                        .length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center text-zinc-450 font-semibold">
-                            No articles found matching filters.
+                          <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
+                            No knowledge gaps found in this queue.
                           </td>
                         </tr>
                       ) : (
-                        filteredArticles.map((art) => {
-                          // Simulated realistic views count based on ID characters
-                          const simulatedViews = Math.abs((art.id.charCodeAt(0) * 12 + art.id.charCodeAt(1)) % 1300);
-                          
-                          // Format date nicely: Jun 23
-                          const dateObj = new Date(art.updated_at);
-                          const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-                          return (
-                            <tr key={art.id} className="hover:bg-zinc-50/50">
-                              <td className="p-4 font-mono text-[10px] text-zinc-400 font-semibold">{art.id.slice(0, 8)}</td>
-                              <td className="p-4 font-extrabold text-zinc-950 text-left">
-                                {art.title}
-                              </td>
-                              <td className="p-4">
-                                <span className="rounded-full bg-zinc-50 border border-zinc-200 px-2.5 py-0.5 text-[9px] font-bold text-zinc-500 uppercase">
-                                  {art.category?.name || "General"}
-                                </span>
-                              </td>
-                              <td className="p-4 uppercase font-bold text-zinc-500">{art.language}</td>
+                        gaps
+                          .filter((g) => gapStatusFilter === "ALL" || g.status === gapStatusFilter)
+                          .map((g) => (
+                            <tr key={g.id} className="hover:bg-zinc-50/50">
+                              <td className="p-4 font-bold text-zinc-950 italic">"{g.query_text}"</td>
+                              <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
                               <td className="p-4">
                                 <span
-                                  className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${
-                                    art.status === "Published"
+                                  className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
                                       ? "bg-green-50 text-green-700 border-green-200"
+<<<<<<< HEAD
                                       : art.status === "Draft"
                                       ? "bg-zinc-100 text-zinc-600 border-zinc-200"
                                       : art.status === "Archived"
@@ -1086,808 +1829,110 @@ export default function AdminDeskWorkspace({
                                 >
                                   Edit
                                 </button>
+=======
+                                      : g.status === "NEW"
+                                        ? "bg-red-50 text-red-700 border-red-200"
+                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                    }`}
+                                >
+                                  {g.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-zinc-500 font-medium">{g.reporter?.name || "Customer / Guest"}</td>
+                              <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
+                              <td className="p-4 text-right space-x-2">
+                                {g.status === "NEW" && (
+                                  <button
+                                    onClick={() => handleClaimGap(g.id)}
+                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                                  >
+                                    Claim Gap
+                                  </button>
+                                )}
+                                {g.status === "IN_PROGRESS" && (
+                                  <button
+                                    onClick={() => setResolvingGap(g)}
+                                    className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
+                                  >
+                                    Resolve Gap
+                                  </button>
+                                )}
+                                {g.status === "RESOLVED" && g.resolving_article && (
+                                  <span className="text-[10px] text-zinc-400 font-medium">
+                                    Resolved ➔ {g.resolving_article.title}
+                                  </span>
+                                )}
+>>>>>>> 10d29ffe93e616b7819c731ef73b81304c8a1ac0
                               </td>
                             </tr>
-                          );
-                        })
+                          ))
                       )}
                     </tbody>
                   </table>
                 </div>
               </div>
-
-              {/* Guest Link Modal Overlay from row action */}
-              {activeLinkManagerArticle && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
-                  <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
-                    <div className="flex items-center justify-between border-b border-zinc-150 pb-2">
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
-                          Guest Shared Links: {activeLinkManagerArticle.title}
-                        </h4>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setGeneratingLink(true);
-                          try {
-                            const res = await fetch(`/api/v1/articles/${activeLinkManagerArticle.id}/guest-links`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ channel: "default" }),
-                            });
-                            if (res.ok) {
-                              const newLink = await res.json();
-                              setGuestLinks([newLink, ...guestLinks]);
-                            }
-                          } catch (e) {
-                            console.error(e);
-                          } finally {
-                            setGeneratingLink(false);
-                          }
-                        }}
-                        disabled={generatingLink}
-                        className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
-                      >
-                        {generatingLink ? "Generating..." : "Generate New Link"}
-                      </button>
-                    </div>
-
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                      {guestLinks.length === 0 ? (
-                        <p className="text-[10px] text-zinc-400 font-semibold italic p-4 text-center">No active guest links found.</p>
-                      ) : (
-                        guestLinks.map((link) => {
-                          const guestUrl = `${window.location.origin}/articles/${activeLinkManagerArticle.id}?token=${link.token}`;
-                          return (
-                            <div key={link.id} className="flex items-center justify-between gap-4 p-2 bg-zinc-50 border border-zinc-150 rounded-lg text-xs">
-                              <div className="truncate flex-1">
-                                <span className="text-[10px] font-mono text-zinc-600 select-all font-semibold block truncate">
-                                  {guestUrl}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {!link.revoked && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(guestUrl);
-                                      alert("Link copied!");
-                                    }}
-                                    className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-[9px] font-bold text-zinc-650"
-                                  >
-                                    Copy
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch(`/api/v1/articles/${activeLinkManagerArticle.id}/guest-links`, {
-                                        method: "PUT",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ link_id: link.id, revoked: !link.revoked }),
-                                      });
-                                      if (res.ok) {
-                                        const updated = await res.json();
-                                        setGuestLinks(guestLinks.map((l) => (l.id === link.id ? updated : l)));
-                                      }
-                                    } catch (e) {
-                                      console.error(e);
-                                    }
-                                  }}
-                                  className={`rounded px-2 py-0.5 text-[9px] font-bold ${
-                                    link.revoked ? "bg-zinc-950 text-white" : "border border-red-200 text-red-700"
-                                  }`}
-                                >
-                                  {link.revoked ? "Restore" : "Revoke"}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <div className="flex justify-end pt-2 border-t border-zinc-150">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveLinkManagerArticle(null);
-                          setGuestLinks([]);
-                        }}
-                        className="rounded border border-zinc-200 bg-white px-4 py-1.5 text-xs font-bold text-zinc-650"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
-          ) : (
-            /* EDITOR / CREATOR FORM VIEW */
-            <form onSubmit={handleSaveArticle} className="space-y-6">
-              <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-6">
-                <div className="flex items-center justify-between border-b border-zinc-150 pb-4">
-                  <h3 className="text-sm font-extrabold text-zinc-950">
-                    {isCreating ? "Create Support Article" : `Review & Edit: ${editingArticle?.title}`}
-                  </h3>
-                  <div className="flex items-center gap-3">
+          )}
+
+          {/* RESOLUTION MODAL OVERLAY FOR GAPS */}
+          {resolvingGap && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
+              <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
+                <div>
+                  <h3 className="text-sm font-extrabold text-zinc-950">Resolve Knowledge Gap</h3>
+                  <p className="text-xs text-zinc-500 font-medium mt-1">
+                    Link this search query gap to a published support article.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-zinc-50 p-3.5 border border-zinc-200 text-xs italic font-semibold text-zinc-700">
+                  Query: "{resolvingGap.query_text}"
+                </div>
+
+                <form onSubmit={handleResolveGapSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
+                      Select Resolving Article
+                    </label>
+                    <select
+                      required
+                      value={selectedResolvingArticleId}
+                      onChange={(e) => setSelectedResolvingArticleId(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-855 focus:outline-hidden cursor-pointer"
+                    >
+                      <option value="">-- Choose Published Article --</option>
+                      {articles
+                        .filter((a) => a.status === "Published")
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.title} (/{a.slug})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={closeEditor}
-                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3.5 py-2 text-xs font-bold text-zinc-600 shadow-xs"
+                      onClick={() => {
+                        setResolvingGap(null);
+                        setSelectedResolvingArticleId("");
+                      }}
+                      className="rounded border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-600"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      disabled={saving}
-                      className="rounded bg-zinc-950 hover:bg-zinc-800 px-4 py-2 text-xs font-bold text-white shadow-xs"
+                      className="rounded bg-green-600 hover:bg-green-700 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
                     >
-                      {saving ? "Saving..." : "Save Changes"}
-                    </button>
-                    {!isCreating && editingArticle && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteArticle(editingArticle.id)}
-                        className="rounded bg-red-650 hover:bg-red-750 px-3.5 py-2 text-xs font-bold text-white shadow-xs"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {formError && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800">
-                    {formError}
-                  </div>
-                )}
-
-                {formSuccess && (
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-xs font-semibold text-green-800">
-                    {formSuccess}
-                  </div>
-                )}
-
-                {/* Grid Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={title}
-                      onChange={(e) => handleTitleChange(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                      placeholder="e.g. SIM Card Setup"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Slug</label>
-                    <input
-                      type="text"
-                      required
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                      placeholder="sim-card-setup"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Category</label>
-                    <select
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Language</label>
-                    <select
-                      value={language}
-                      onChange={(e) => setLanguage(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                    >
-                      <option value="en">English (EN)</option>
-                      <option value="ar">Arabic (AR)</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Visibility</label>
-                    <select
-                      value={visibility}
-                      onChange={(e) => setVisibility(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                    >
-                      <option value="PUBLIC">Public (Guests can search)</option>
-                      <option value="PRIVATE">Private (Internal only)</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Review Due Date</label>
-                    <input
-                      type="date"
-                      value={reviewDue}
-                      onChange={(e) => setReviewDue(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                {/* Workflow status transition panel (only in edit mode) */}
-                {(isCreating || editingArticle) && (
-                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
-                      Workflow Governance Operations
-                    </h4>
-
-                    {/* Separation of Duties Banner Alert */}
-                    {!isCreating && editingArticle && editingArticle.author_id === currentUserId && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 flex items-start gap-2.5">
-                        <span className="text-base">⚠️</span>
-                        <div>
-                          <p className="font-bold">Separation of Duties Restriction</p>
-                          <p className="mt-0.5 font-medium">You are the author of this article. The server enforces that a different Administrator must approve or publish this guide.</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
-                          Current Status: <span className="text-zinc-800 font-extrabold uppercase">{isCreating ? "DRAFT" : editingArticle?.status}</span>
-                        </label>
-                        <select
-                          value={transitionStatus}
-                          onChange={(e) => setTransitionStatus(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
-                        >
-                          <option value="">-- Change Status --</option>
-                          {getAllowedStatusTransitions(isCreating ? "Draft" : editingArticle?.status || "Draft").map((t) => {
-                            const isSelfAuthorRestrict = !isCreating && !!editingArticle && (t.status === "Approved" || t.status === "Published") && editingArticle.author_id === currentUserId;
-                            return (
-                              <option key={t.status} value={t.status} disabled={isSelfAuthorRestrict}>
-                                {t.label} {isSelfAuthorRestrict ? "(Restricted: Author)" : ""}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
-                          Transition Notes / Rejection Comment
-                        </label>
-                        <input
-                          type="text"
-                          value={transitionComment}
-                          onChange={(e) => setTransitionComment(e.target.value)}
-                          placeholder="e.g. Approved copy, fixed typo, rejected because..."
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Guest Links Manager Panel (only in edit mode for Published articles) */}
-                {!isCreating && editingArticle && editingArticle.status === "Published" && (
-                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 space-y-4">
-                    <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
-                          Guest Link Access Tokens
-                        </h4>
-                        <p className="text-[10px] text-zinc-450 font-medium mt-0.5">Generate secure URLs to share this article with guest users.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleGenerateGuestLink}
-                        disabled={generatingLink}
-                        className="rounded border border-zinc-250 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-700 shadow-2xs"
-                      >
-                        {generatingLink ? "Generating..." : "Generate Guest Link"}
-                      </button>
-                    </div>
-
-                    {guestLinks.length === 0 ? (
-                      <p className="text-[10px] text-zinc-400 font-semibold italic">No guest links generated for this article yet.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {guestLinks.map((link) => {
-                          const guestUrl = typeof window !== "undefined" ? `${window.location.origin}/articles/${editingArticle.id}?token=${link.token}` : "";
-                          return (
-                            <div key={link.id} className="flex items-center justify-between gap-4 p-2.5 bg-white border border-zinc-150 rounded-lg text-xs">
-                              <div className="space-y-0.5 truncate flex-1">
-                                <span className="text-[10px] font-mono text-zinc-600 select-all font-semibold block truncate">
-                                  {guestUrl}
-                                </span>
-                                <span className="text-[9px] text-zinc-400 font-medium">
-                                  Created {new Date(link.created_at).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {link.revoked ? (
-                                  <span className="rounded bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 text-[9px] font-bold">
-                                    Revoked
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(guestUrl);
-                                      alert("Guest link copied to clipboard!");
-                                    }}
-                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-0.5 text-[9px] font-bold text-zinc-650"
-                                  >
-                                    Copy Link
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRevokeGuestLink(link.id, !link.revoked)}
-                                  className={`rounded px-2 py-0.5 text-[9px] font-bold transition-colors ${
-                                    link.revoked
-                                      ? "bg-zinc-950 text-white hover:bg-zinc-800"
-                                      : "border border-red-200 text-red-700 hover:bg-red-50"
-                                  }`}
-                                >
-                                  {link.revoked ? "Restore" : "Revoke"}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Content variants editor (tabs) */}
-                <div className="space-y-4">
-                  <div className="flex border-b border-zinc-200 gap-1 overflow-x-auto">
-                    <button
-                      type="button"
-                      onClick={() => setVariantTab("default")}
-                      className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
-                        variantTab === "default" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                      }`}
-                    >
-                      Default Variant
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setVariantTab("agent")}
-                      className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${
-                        variantTab === "agent" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                      }`}
-                    >
-                      Agent Desk {isVariantEmpty("agent") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setVariantTab("chatbot")}
-                      className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${
-                        variantTab === "chatbot" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                      }`}
-                    >
-                      Chatbot {isVariantEmpty("chatbot") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setVariantTab("whatsapp")}
-                      className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${
-                        variantTab === "whatsapp" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                      }`}
-                    >
-                      WhatsApp {isVariantEmpty("whatsapp") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
+                      Submit Resolution
                     </button>
                   </div>
-
-                  {/* Fallback Warning Alerts */}
-                  {variantTab !== "default" && isVariantEmpty(variantTab) && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-850 flex items-center gap-2">
-                      <span>⚠️</span>
-                      Notice: No variant exists for the {variantTab.toUpperCase()} channel. The system will fall back to displaying the Default Variant.
-                    </div>
-                  )}
-
-                  {/* Picture Guide Direct Upload tool */}
-                  <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <h4 className="text-xs font-bold text-zinc-900">Direct Picture Guide Upload</h4>
-                      <p className="text-[10px] text-zinc-450 font-medium mt-0.5">Upload image guides (PNG/JPG, max 5MB) to render inline in steps.</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/png, image/jpeg, image/jpg"
-                        onChange={handleImageUpload}
-                        disabled={uploadingImage}
-                        className="hidden"
-                        id="image-file-input"
-                      />
-                      <label
-                        htmlFor="image-file-input"
-                        className="rounded border border-zinc-250 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 hover:text-zinc-950 cursor-pointer shadow-2xs transition-all disabled:opacity-50"
-                      >
-                        {uploadingImage ? "Uploading image..." : "Upload Image Guide"}
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Editors Fields */}
-                  {variantTab === "default" && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                        <input
-                          type="text"
-                          value={vDefaultShort}
-                          onChange={(e) => setVDefaultShort(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                          placeholder="Quick summary snippet..."
-                        />
-                      </div>
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps (Body Content)</label>
-                        <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                          {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => insertFormatting("default", type)}
-                              className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea
-                          id="textarea-default"
-                          required
-                          rows={10}
-                          value={vDefaultDetailed}
-                          onChange={(e) => setVDefaultDetailed(e.target.value)}
-                          className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                          placeholder="Write the full support instructions in Markdown..."
-                        />
-                    </div>
-                  )}
-
-                  {variantTab === "agent" && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                          <input
-                            type="text"
-                            value={vAgentShort}
-                            onChange={(e) => setVAgentShort(e.target.value)}
-                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Copy-ready Macro Response</label>
-                          <input
-                            type="text"
-                            value={vAgentMacro}
-                            onChange={(e) => setVAgentMacro(e.target.value)}
-                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                            placeholder="Text copied to clipboard in one click by agents..."
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
-                        <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                          {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => insertFormatting("agent", type)}
-                              className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea
-                          id="textarea-agent"
-                          rows={6}
-                          value={vAgentDetailed}
-                          onChange={(e) => setVAgentDetailed(e.target.value)}
-                          className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                        />
-                      </div>
-
-                      {/* Troubleshooting flow JSON editor */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Interactive Troubleshooting Flow JSON</label>
-                          <button
-                            type="button"
-                            onClick={() => setVAgentFlow(JSON.stringify(SAMPLE_TROUBLESHOOTING_FLOW, null, 2))}
-                            className="rounded border border-zinc-250 bg-white px-2 py-1 text-[9px] font-bold text-zinc-700 hover:text-zinc-950 shadow-2xs"
-                          >
-                            Load Template Flow
-                          </button>
-                        </div>
-                        <textarea
-                          rows={6}
-                          value={vAgentFlow}
-                          onChange={(e) => setVAgentFlow(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-mono shadow-inner"
-                          placeholder='{ "start_node": "...", "nodes": { ... } }'
-                        />
-                        {vAgentFlow && (
-                          <div className="border border-zinc-200 rounded-lg p-4 bg-zinc-50">
-                            <span className="text-[10px] text-zinc-450 font-bold uppercase block mb-3">Live Flow Tester Preview:</span>
-                            {(() => {
-                              try {
-                                const parsed = JSON.parse(vAgentFlow);
-                                return <TroubleshootingPlayer flow={parsed} />;
-                              } catch (err) {
-                                return <span className="text-[10px] text-red-500 font-semibold font-mono">Invalid JSON syntax. Fix structure to preview flow player.</span>;
-                              }
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {variantTab === "chatbot" && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                        <input
-                          type="text"
-                          value={vChatbotShort}
-                          onChange={(e) => setVChatbotShort(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
-                        <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                          {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => insertFormatting("chatbot", type)}
-                              className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea
-                          id="textarea-chatbot"
-                          rows={6}
-                          value={vChatbotDetailed}
-                          onChange={(e) => setVChatbotDetailed(e.target.value)}
-                          className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {variantTab === "whatsapp" && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                        <input
-                          type="text"
-                          value={vWhatsappShort}
-                          onChange={(e) => setVWhatsappShort(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
-                        <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                          {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => insertFormatting("whatsapp", type)}
-                              className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea
-                          id="textarea-whatsapp"
-                          rows={6}
-                          value={vWhatsappDetailed}
-                          onChange={(e) => setVWhatsappDetailed(e.target.value)}
-                          className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </form>
               </div>
-            </form>
+            </div>
           )}
-        </div>
-      )}
-
-      {/* KNOWLEDGE GAPS QUEUE VIEW */}
-      {currentTab === "gaps" && (
-        <div className="space-y-6">
-          {/* Status selector */}
-          <div className="flex gap-2">
-            {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "DISMISSED"].map((st) => (
-              <button
-                key={st}
-                onClick={() => setGapStatusFilter(st)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs ${
-                  gapStatusFilter === st
-                    ? "bg-zinc-950 text-white border-zinc-950"
-                    : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
-
-          <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-            <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Captured Search Miss Gaps</h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
-                    <th className="p-4">Search Query Text</th>
-                    <th className="p-4">Occurrences</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Reported By</th>
-                    <th className="p-4">Claimed By</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-150">
-                  {gaps
-                    .filter((g) => gapStatusFilter === "ALL" || g.status === gapStatusFilter)
-                    .length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
-                        No knowledge gaps found in this queue.
-                      </td>
-                    </tr>
-                  ) : (
-                    gaps
-                      .filter((g) => gapStatusFilter === "ALL" || g.status === gapStatusFilter)
-                      .map((g) => (
-                        <tr key={g.id} className="hover:bg-zinc-50/50">
-                          <td className="p-4 font-bold text-zinc-950 italic">"{g.query_text}"</td>
-                          <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
-                          <td className="p-4">
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${
-                                g.status === "RESOLVED"
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : g.status === "NEW"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-amber-50 text-amber-700 border-amber-200"
-                              }`}
-                            >
-                              {g.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-zinc-500 font-medium">{g.reporter?.name || "Customer / Guest"}</td>
-                          <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
-                          <td className="p-4 text-right space-x-2">
-                            {g.status === "NEW" && (
-                              <button
-                                onClick={() => handleClaimGap(g.id)}
-                                className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
-                              >
-                                Claim Gap
-                              </button>
-                            )}
-                            {g.status === "IN_PROGRESS" && (
-                              <button
-                                onClick={() => setResolvingGap(g)}
-                                className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
-                              >
-                                Resolve Gap
-                              </button>
-                            )}
-                            {g.status === "RESOLVED" && g.resolving_article && (
-                              <span className="text-[10px] text-zinc-400 font-medium">
-                                Resolved ➔ {g.resolving_article.title}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* RESOLUTION MODAL OVERLAY FOR GAPS */}
-      {resolvingGap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
-            <div>
-              <h3 className="text-sm font-extrabold text-zinc-950">Resolve Knowledge Gap</h3>
-              <p className="text-xs text-zinc-500 font-medium mt-1">
-                Link this search query gap to a published support article.
-              </p>
-            </div>
-
-            <div className="rounded-lg bg-zinc-50 p-3.5 border border-zinc-200 text-xs italic font-semibold text-zinc-700">
-              Query: "{resolvingGap.query_text}"
-            </div>
-
-            <form onSubmit={handleResolveGapSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">
-                  Select Resolving Article
-                </label>
-                <select
-                  required
-                  value={selectedResolvingArticleId}
-                  onChange={(e) => setSelectedResolvingArticleId(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-855 focus:outline-hidden cursor-pointer"
-                >
-                  <option value="">-- Choose Published Article --</option>
-                  {articles
-                    .filter((a) => a.status === "Published")
-                    .map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.title} (/{a.slug})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResolvingGap(null);
-                    setSelectedResolvingArticleId("");
-                  }}
-                  className="rounded border border-zinc-200 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded bg-green-600 hover:bg-green-700 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
-                >
-                  Submit Resolution
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
         </div>
       </div>
     </div>
