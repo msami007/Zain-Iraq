@@ -123,10 +123,10 @@ export default async function AdminPage() {
 
   const brandingColor = (tenant.branding as any)?.primaryColor || "#09090B";
 
-  async function handleSignOut() {
+  const handleSignOut = async () => {
     "use server";
     await signOut({ redirectTo: "/login" });
-  }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col">

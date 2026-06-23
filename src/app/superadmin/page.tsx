@@ -148,6 +148,11 @@ export default async function SuperAdminPage() {
     resolving_article: g.resolving_article ? { title: g.resolving_article.title } : null,
   }));
 
+  const handleSignOut = async () => {
+    "use server";
+    await signOut({ redirectTo: "/login" });
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans flex flex-col">
       <SuperAdminClient
@@ -163,6 +168,7 @@ export default async function SuperAdminPage() {
         userName={session.user.name || undefined}
         userEmail={session.user.email || undefined}
         tenantName="Zain & OODI Platform"
+        signOutAction={handleSignOut}
       />
     </div>
   );
