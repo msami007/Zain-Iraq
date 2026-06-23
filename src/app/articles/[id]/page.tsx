@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArticleFeedbackForm from "@/components/ArticleFeedbackForm";
 import { ArticleStatus, Channel } from "@prisma/client";
+import { parseMarkdownToHtml } from "@/lib/markdown";
 
 type PageProps = {
   params: Promise<{
@@ -211,9 +212,10 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </div>
           )}
 
-          <div className="prose prose-zinc max-w-none text-zinc-800 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-            {contentBody}
-          </div>
+          <div 
+            className="prose prose-zinc max-w-none text-zinc-800 text-sm leading-relaxed whitespace-pre-wrap font-medium"
+            dangerouslySetInnerHTML={{ __html: parseMarkdownToHtml(contentBody) }}
+          />
 
           {activeChannel === "agent" && macroText && (
             <div className="mt-8 border-t border-zinc-100 pt-6 space-y-3">
