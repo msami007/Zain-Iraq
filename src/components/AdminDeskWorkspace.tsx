@@ -791,7 +791,7 @@ export default function AdminDeskWorkspace({
             </div>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
             >
               Sign Out
