@@ -871,6 +871,11 @@ export default function AdminDeskWorkspace({
       return;
     }
 
+    if (selectedTeams.length === 0) {
+      setFormError("At least one team must be assigned to the article.");
+      return;
+    }
+
     setSaving(true);
     setFormError("");
     setFormSuccess("");
@@ -1725,41 +1730,28 @@ export default function AdminDeskWorkspace({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Visibility</label>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Assign to Teams</label>
                         <select
-                          value={visibility}
-                          onChange={(e) => setVisibility(e.target.value)}
+                          required
+                          value={selectedTeams[0] || ""}
+                          onChange={(e) => setSelectedTeams(e.target.value ? [e.target.value] : [])}
                           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
                         >
-                          <option value="PUBLIC">Public (Guests can search)</option>
-                          <option value="PRIVATE">Private (Internal only)</option>
+                          <option value="">-- Select Team --</option>
+                          {teams
+                            .filter((team) => {
+                              if (currentUserRole === "Admin") {
+                                return team.user_teams?.some((ut: any) => ut.user_id === currentUserId);
+                              }
+                              return true;
+                            })
+                            .map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.name}
+                              </option>
+                            ))}
                         </select>
                       </div>
-
-                      {visibility === "PRIVATE" && teams.length > 0 && (
-                        <div className="space-y-2 sm:col-span-3 border border-zinc-200 rounded-lg p-3 bg-zinc-50">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block mb-1.5">Assign to Teams</label>
-                          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                            {teams.map((team) => (
-                              <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedTeams.includes(team.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedTeams([...selectedTeams, team.id]);
-                                    } else {
-                                      setSelectedTeams(selectedTeams.filter(id => id !== team.id));
-                                    }
-                                  }}
-                                  className="accent-zinc-955"
-                                />
-                                {team.name}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Review Due Date</label>

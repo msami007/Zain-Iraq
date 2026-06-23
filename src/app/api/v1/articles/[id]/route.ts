@@ -137,13 +137,22 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       language,
       owner_id,
       review_due,
-      visibility,
       status: targetStatus, // New workflow status
       comment,
       variants, // Array of variant updates: [{ channel: "agent", detailed_steps: "..." }]
       team_ids,
       workflow_route_id,
     } = body;
+
+    // Enforce mandatory team assignment for all roles if team_ids is updated
+    if (team_ids !== undefined) {
+      if (!Array.isArray(team_ids) || team_ids.length === 0) {
+        return NextResponse.json(
+          { error: "Articles must be explicitly assigned to at least one team." },
+          { status: 400 }
+        );
+      }
+    }
 
     // Enforce Admin restrictions on teams
     if (role === "Admin") {
@@ -152,7 +161,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       });
       const userTeamIds = userTeams.map(ut => ut.team_id);
 
-      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
+      if (team_ids !== undefined && Array.isArray(team_ids)) {
         const invalidTeams = team_ids.filter(tid => !userTeamIds.includes(tid));
         if (invalidTeams.length > 0) {
           return NextResponse.json(
@@ -160,11 +169,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             { status: 403 }
           );
         }
-      } else if (visibility === Visibility.PRIVATE) {
-        return NextResponse.json(
-          { error: "Private articles must be explicitly assigned to at least one of your teams." },
-          { status: 400 }
-        );
       }
     }
 
@@ -357,7 +361,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           language: language || undefined,
           owner_id: owner_id || undefined,
           review_due: review_due ? new Date(review_due) : undefined,
-          visibility: visibility || undefined,
           status: finalStatus,
           published_at: publishedAt,
           workflow_route_id: workflow_route_id !== undefined ? (workflow_route_id || null) : undefined,

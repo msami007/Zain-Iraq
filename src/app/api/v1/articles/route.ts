@@ -139,7 +139,6 @@ export async function POST(req: NextRequest) {
       bodyText,
       owner_id,
       review_due,
-      visibility,
       team_ids,
       workflow_route_id,
     } = body;
@@ -151,6 +150,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Enforce mandatory team assignment for all roles
+    if (!team_ids || !Array.isArray(team_ids) || team_ids.length === 0) {
+      return NextResponse.json(
+        { error: "Articles must be explicitly assigned to at least one team." },
+        { status: 400 }
+      );
+    }
+
     // Enforce Admin restrictions: Admin can only create articles for teams they belong to
     if (role === "Admin") {
       const userTeams = await prisma.userTeam.findMany({
@@ -158,18 +165,11 @@ export async function POST(req: NextRequest) {
       });
       const userTeamIds = userTeams.map(ut => ut.team_id);
 
-      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
-        const invalidTeams = team_ids.filter(tid => !userTeamIds.includes(tid));
-        if (invalidTeams.length > 0) {
-          return NextResponse.json(
-            { error: "Forbidden: Admins can only assign articles to teams they belong to." },
-            { status: 403 }
-          );
-        }
-      } else if (visibility === Visibility.PRIVATE) {
+      const invalidTeams = team_ids.filter(tid => !userTeamIds.includes(tid));
+      if (invalidTeams.length > 0) {
         return NextResponse.json(
-          { error: "Private articles must be explicitly assigned to at least one of your teams." },
-          { status: 400 }
+          { error: "Forbidden: Admins can only assign articles to teams they belong to." },
+          { status: 403 }
         );
       }
     }
@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
           category_id,
           language: language || Language.en,
           status: ArticleStatus.Draft,
-          visibility: visibility || Visibility.PUBLIC,
+          visibility: Visibility.PUBLIC, // Default to PUBLIC as Visibility selection is removed from UI
           author_id: userId,
           owner_id: owner_id || userId,
           review_due: review_due ? new Date(review_due) : null,
