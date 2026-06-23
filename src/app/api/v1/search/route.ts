@@ -39,14 +39,28 @@ export async function POST(req: NextRequest) {
     // Authenticated users (Agent/Admin/SuperAdmin) can search all statuses, guests see Published only
     const searchStatus = session?.user?.role ? undefined : "Published";
 
+    const cleanQuery = query.trim();
+    const words = cleanQuery.split(/\s+/).filter((w) => w.length > 1);
+
+    const searchConditions: any[] = [
+      { title: { contains: cleanQuery, mode: "insensitive" } },
+      { slug: { contains: cleanQuery, mode: "insensitive" } },
+      { category: { name: { contains: cleanQuery, mode: "insensitive" } } },
+    ];
+
+    // Make query flexible by matching individual words too
+    for (const word of words) {
+      searchConditions.push(
+        { title: { contains: word, mode: "insensitive" } },
+        { slug: { contains: word, mode: "insensitive" } },
+        { category: { name: { contains: word, mode: "insensitive" } } }
+      );
+    }
+
     const whereClause: any = {
       language: mappedLanguage,
       status: searchStatus ? (searchStatus as any) : undefined,
-      OR: [
-        { title: { contains: query, mode: "insensitive" } },
-        { slug: { contains: query, mode: "insensitive" } },
-        { category: { name: { contains: query, mode: "insensitive" } } },
-      ],
+      OR: searchConditions,
     };
 
     // Apply search filters
@@ -76,16 +90,37 @@ export async function POST(req: NextRequest) {
     });
 
     const results = articles.map((article) => {
-      // Basic scoring logic: 1.0 for exact title match, 0.5 for contains
-      const exactMatch = article.title.toLowerCase() === query.toLowerCase();
-      const startsWith = article.title.toLowerCase().startsWith(query.toLowerCase());
-      const score = exactMatch ? 1.0 : startsWith ? 0.75 : 0.5;
+      const titleLower = article.title.toLowerCase();
+      const queryLower = cleanQuery.toLowerCase();
+
+      let score = 0.1; // Base match score
+
+      // 1. Exact Match: 1.0
+      if (titleLower === queryLower) {
+        score = 1.0;
+      } 
+      // 2. Starts With: 0.75
+      else if (titleLower.startsWith(queryLower)) {
+        score = 0.75;
+      } 
+      // 3. Contains contiguous full phrase: 0.5
+      else if (titleLower.includes(queryLower)) {
+        score = 0.5;
+      } 
+      // 4. Matches individual words: score proportional to match count
+      else if (words.length > 0) {
+        const matchingWords = words.filter((w) =>
+          titleLower.includes(w.toLowerCase()) || 
+          article.category?.name.toLowerCase().includes(w.toLowerCase())
+        );
+        score = 0.1 + (matchingWords.length / words.length) * 0.35; // Maximum word match score is 0.45
+      }
 
       return {
         article_id: article.id,
         title: article.title,
         category: article.category.name,
-        match_score: score,
+        match_score: Number(score.toFixed(3)),
         status: article.status,
         language: article.language,
       };
