@@ -48,6 +48,23 @@ export default function LoginPage() {
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] bg-[size:20px_20px]" />
       
       <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-2xl shadow-zinc-200/60 transition-all duration-300 hover:border-zinc-300">
+        {/* Back to home */}
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="mb-6 flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400 hover:text-zinc-900 transition-colors group"
+        >
+          <svg
+            className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to home
+        </button>
+
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-zinc-950 text-white shadow-md">
             <svg

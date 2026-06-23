@@ -59,6 +59,11 @@ export default function AgentDeskWorkspace({
   const [previewArticle, setPreviewArticle] = useState<any | null>(null);
   const [loadingArticle, setLoadingArticle] = useState(false);
 
+  // Workspace tab: kb search vs custom reply
+  const [workspaceTab, setWorkspaceTab] = useState<"kb" | "reply">("kb");
+  const [customReply, setCustomReply] = useState("");
+  const [resolvingManually, setResolvingManually] = useState(false);
+
   const filteredCases = cases.filter((c) => {
     if (activeTab === "waiting") return c.status === "waiting";
     if (activeTab === "active") return c.status === "active" && c.assigned_agent_id === currentUserId;
@@ -184,6 +189,45 @@ export default function AgentDeskWorkspace({
       alert("Case resolved successfully!");
     } catch (error: any) {
       alert(error.message);
+    }
+  };
+
+  const handleResolveManually = async (caseId: string) => {
+    if (!customReply.trim()) {
+      alert("Please write your reply before resolving.");
+      return;
+    }
+    setResolvingManually(true);
+    try {
+      const res = await fetch("/api/v1/cases", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: caseId,
+          status: "resolved",
+          resolving_article_id: null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to resolve case");
+      }
+
+      const updated = await res.json();
+      setCases(cases.map((c) => (c.id === caseId ? { ...c, ...updated } : c)));
+      setSelectedCase(null);
+      setPreviewArticle(null);
+      setKbResults([]);
+      setKbQuery("");
+      setSearched(false);
+      setCustomReply("");
+      setWorkspaceTab("kb");
+      alert("Case resolved with your custom reply.");
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setResolvingManually(false);
     }
   };
 
@@ -352,9 +396,79 @@ export default function AgentDeskWorkspace({
                 </div>
               </div>
 
-              {/* Case KB Search Workspace */}
+              {/* Case Workspace */}
               {selectedCase.status === "active" && (
                 <div className="space-y-6">
+                  {/* Tab Switcher */}
+                  <div className="flex gap-1 rounded-lg bg-zinc-100 border border-zinc-200 p-1">
+                    <button
+                      onClick={() => setWorkspaceTab("kb")}
+                      className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-all ${
+                        workspaceTab === "kb"
+                          ? "bg-white text-zinc-900 shadow-sm border border-zinc-200"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                    >
+                      Search Knowledge Base
+                    </button>
+                    <button
+                      onClick={() => setWorkspaceTab("reply")}
+                      className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-all ${
+                        workspaceTab === "reply"
+                          ? "bg-white text-zinc-900 shadow-sm border border-zinc-200"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                    >
+                      Write Custom Reply
+                    </button>
+                  </div>
+
+                  {/* Custom Reply Tab */}
+                  {workspaceTab === "reply" && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-2">
+                          Your Response to Customer
+                        </label>
+                        <textarea
+                          value={customReply}
+                          onChange={(e) => setCustomReply(e.target.value)}
+                          placeholder={`Write your reply to ${selectedCase.customer_name} here...\n\nExample:\n"Thank you for reaching out. I checked your account and found that your data bundle is pending activation. Please follow these steps: ..."`}
+                          rows={10}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-950 focus:outline-hidden transition-all shadow-xs font-medium leading-relaxed resize-none"
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-zinc-400 font-medium">{customReply.length} characters</span>
+                          {customReply.length > 0 && (
+                            <button
+                              onClick={() => navigator.clipboard.writeText(customReply)}
+                              className="text-[10px] font-bold text-zinc-500 hover:text-zinc-900 underline"
+                            >
+                              Copy to clipboard
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-3 pt-2 border-t border-zinc-100">
+                        <button
+                          onClick={() => setCustomReply("")}
+                          className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-4 py-2 text-xs font-semibold text-zinc-600 transition-all"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={() => handleResolveManually(selectedCase.id)}
+                          disabled={resolvingManually || !customReply.trim()}
+                          className="flex-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 px-4 py-2 text-xs font-bold text-white shadow-xs transition-all"
+                        >
+                          {resolvingManually ? "Resolving..." : "Resolve with This Reply"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* KB Search Tab */}
+                  {workspaceTab === "kb" && (
                   <div className="space-y-3">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Workspace Search</h4>
                     <form onSubmit={handleSearchKB} className="flex gap-2">
@@ -515,6 +629,8 @@ export default function AgentDeskWorkspace({
                         </div>
                       )}
                     </div>
+                  )}
+                  </div>
                   )}
                 </div>
               )}
