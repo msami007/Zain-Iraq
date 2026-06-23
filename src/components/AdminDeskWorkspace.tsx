@@ -969,18 +969,21 @@ export default function AdminDeskWorkspace({
                                     art.status === "Published"
                                       ? "bg-green-50 text-green-700 border-green-200"
                                       : art.status === "Draft"
-                                      ? "bg-zinc-100 text-zinc-650 border-zinc-200"
+                                      ? "bg-zinc-100 text-zinc-600 border-zinc-200"
                                       : art.status === "Archived"
                                       ? "bg-red-50 text-red-700 border-red-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200" // Pending
+                                      : art.status === "InReview"
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200" // Approved
                                   }`}
                                 >
-                                  {art.status === "InReview" || art.status === "Approved" ? "PENDING" : art.status.toUpperCase()}
+                                  {art.status === "InReview" ? "In Review" : art.status === "Approved" ? "Approved" : art.status}
                                 </span>
                               </td>
                               <td className="p-4 font-mono font-bold text-zinc-600">{simulatedViews.toLocaleString()}</td>
                               <td className="p-4 text-zinc-500 font-medium">{formattedDate}</td>
                               <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+                                {/* View — always visible */}
                                 <Link
                                   href={`/articles/${art.id}`}
                                   target="_blank"
@@ -988,28 +991,94 @@ export default function AdminDeskWorkspace({
                                 >
                                   View
                                 </Link>
-                                
+
+                                {/* Draft → Submit for Review */}
+                                {art.status === "Draft" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDirectStatusTransition(art.id, "InReview")}
+                                    className="rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-700 shadow-2xs"
+                                  >
+                                    Submit for Review
+                                  </button>
+                                )}
+
+                                {/* InReview → Approve or Reject back to Draft */}
+                                {art.status === "InReview" && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectStatusTransition(art.id, "Approved")}
+                                      disabled={art.author_id === currentUserId}
+                                      title={art.author_id === currentUserId ? "Author cannot approve their own article" : ""}
+                                      className="rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectStatusTransition(art.id, "Draft")}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:border-red-200 shadow-2xs"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+
+                                {/* Approved → Publish or Reject back to Draft */}
+                                {art.status === "Approved" && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectStatusTransition(art.id, "Published")}
+                                      disabled={art.author_id === currentUserId}
+                                      title={art.author_id === currentUserId ? "Author cannot publish their own article" : ""}
+                                      className="rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      Publish
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectStatusTransition(art.id, "Draft")}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:border-red-200 shadow-2xs"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+
+                                {/* Published → Guest Link + Archive */}
                                 {art.status === "Published" && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveLinkManagerArticle(art)}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
+                                    >
+                                      Guest Link
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDirectStatusTransition(art.id, "Archived")}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:border-red-200 shadow-2xs"
+                                    >
+                                      Archive
+                                    </button>
+                                  </>
+                                )}
+
+                                {/* Archived → Restore to Draft */}
+                                {art.status === "Archived" && (
                                   <button
                                     type="button"
-                                    onClick={() => setActiveLinkManagerArticle(art)}
-                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
+                                    onClick={() => handleDirectStatusTransition(art.id, "Draft")}
+                                    className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700 shadow-2xs"
                                   >
-                                    Guest Link
+                                    Restore to Draft
                                   </button>
                                 )}
 
-                                {(art.status === "InReview" || art.status === "Approved") && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectStatusTransition(art.id, art.status === "InReview" ? "Approved" : "Published")}
-                                    disabled={art.author_id === currentUserId}
-                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-green-650 hover:bg-green-50 shadow-2xs disabled:opacity-50"
-                                  >
-                                    Approve
-                                  </button>
-                                )}
-
+                                {/* Edit — always visible */}
                                 <button
                                   type="button"
                                   onClick={() => openEditor(art)}
@@ -1017,16 +1086,6 @@ export default function AdminDeskWorkspace({
                                 >
                                   Edit
                                 </button>
-
-                                {art.status !== "Archived" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectStatusTransition(art.id, "Archived")}
-                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-red-650 hover:bg-red-50 shadow-2xs"
-                                  >
-                                    Archive
-                                  </button>
-                                )}
                               </td>
                             </tr>
                           );
