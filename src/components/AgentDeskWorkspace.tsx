@@ -322,6 +322,10 @@ export default function AgentDeskWorkspace({
                       className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${
                         c.priority === "high"
                           ? "bg-red-50 text-red-700 border-red-200"
+                          : c.priority === "medium"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : c.priority === "low"
+                          ? "bg-green-50 text-green-700 border-green-200"
                           : "bg-zinc-50 text-zinc-700 border-zinc-200"
                       }`}
                     >
@@ -329,9 +333,9 @@ export default function AgentDeskWorkspace({
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-zinc-900 line-clamp-1">{c.subject}</h4>
-                  <div className="flex items-center justify-between text-[10px] text-zinc-400 font-medium">
-                    <span>Customer: {c.customer_name}</span>
-                    <span>{new Date(c.wait_started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400 font-medium gap-2">
+                    <span className="truncate">Customer: {c.customer_name}</span>
+                    <span className="shrink-0">{new Date(c.wait_started_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                 </button>
               ))
@@ -378,7 +382,19 @@ export default function AgentDeskWorkspace({
                   </div>
                   <div>
                     <span className="text-[10px] text-zinc-400 font-bold uppercase block">Priority</span>
-                    <strong className="text-zinc-800 uppercase">{selectedCase.priority}</strong>
+                    <span
+                      className={`inline-block mt-0.5 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${
+                        selectedCase.priority === "high"
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : selectedCase.priority === "medium"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : selectedCase.priority === "low"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-zinc-50 text-zinc-700 border-zinc-200"
+                      }`}
+                    >
+                      {selectedCase.priority}
+                    </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-zinc-400 font-bold uppercase block">Wait Started</span>
