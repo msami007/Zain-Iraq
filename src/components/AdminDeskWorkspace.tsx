@@ -228,6 +228,7 @@ export default function AdminDeskWorkspace({
   // Teams state and fetch
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [isTeamsDropdownOpen, setIsTeamsDropdownOpen] = useState(false);
 
   // Rejection modal states
   const [rejectionModalArticleId, setRejectionModalArticleId] = useState<string | null>(null);
@@ -247,7 +248,10 @@ export default function AdminDeskWorkspace({
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await fetch(`/api/v1/teams?tenant_id=${tenantId}`);
+        const url = currentUserRole === "SuperAdmin" 
+          ? "/api/v1/teams" 
+          : `/api/v1/teams?tenant_id=${tenantId}`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           setTeams(data);
@@ -257,7 +261,7 @@ export default function AdminDeskWorkspace({
       }
     };
     fetchTeams();
-  }, [tenantId]);
+  }, [tenantId, currentUserRole]);
 
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
@@ -680,6 +684,7 @@ export default function AdminDeskWorkspace({
 
     // Load assigned teams
     setSelectedTeams(article.article_teams?.map((at: any) => at.team.id) || []);
+    setIsTeamsDropdownOpen(false);
 
     try {
       const res = await fetch(`/api/v1/articles/${article.id}`);
@@ -711,6 +716,7 @@ export default function AdminDeskWorkspace({
     setOwnerId(currentUserId);
     setReviewDue("");
     setSelectedTeams([]);
+    setIsTeamsDropdownOpen(false);
 
     setVDefaultShort("");
     setVDefaultDetailed("");
@@ -733,6 +739,7 @@ export default function AdminDeskWorkspace({
     setIsCreating(false);
     setTransitionStatus("");
     setTransitionComment("");
+    setIsTeamsDropdownOpen(false);
   };
 
   const handleSaveArticle = async (e: React.FormEvent) => {
@@ -1598,28 +1605,56 @@ export default function AdminDeskWorkspace({
                         </select>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="space-y-2 relative">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Assign to Teams</label>
-                        <select
-                          required
-                          value={selectedTeams[0] || ""}
-                          onChange={(e) => setSelectedTeams(e.target.value ? [e.target.value] : [])}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                        <button
+                          type="button"
+                          onClick={() => setIsTeamsDropdownOpen(!isTeamsDropdownOpen)}
+                          className="flex items-center justify-between w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-850 hover:bg-zinc-50 transition-colors text-left"
                         >
-                          <option value="">-- Select Team --</option>
-                          {teams
-                            .filter((team) => {
-                              if (currentUserRole === "Admin") {
-                                return team.user_teams?.some((ut: any) => ut.user_id === currentUserId);
-                              }
-                              return true;
-                            })
-                            .map((team) => (
-                              <option key={team.id} value={team.id}>
-                                {team.name}
-                              </option>
-                            ))}
-                        </select>
+                          <span className="truncate">
+                            {selectedTeams.length === 0
+                              ? "Select Teams..."
+                              : teams
+                                  .filter(t => selectedTeams.includes(t.id))
+                                  .map(t => t.name)
+                                  .join(", ")}
+                          </span>
+                          <svg className="h-4 w-4 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {isTeamsDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsTeamsDropdownOpen(false)} />
+                            <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 text-left shadow-md max-h-40 overflow-y-auto space-y-1">
+                              {teams
+                                .filter((team) => {
+                                  if (currentUserRole === "Admin") {
+                                    return team.user_teams?.some((ut: any) => ut.user_id === currentUserId);
+                                  }
+                                  return true;
+                                })
+                                .map((team) => (
+                                  <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700 hover:bg-zinc-50 p-2 rounded transition-colors">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedTeams.includes(team.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedTeams([...selectedTeams, team.id]);
+                                        } else {
+                                          setSelectedTeams(selectedTeams.filter(id => id !== team.id));
+                                        }
+                                      }}
+                                      className="accent-zinc-955"
+                                    />
+                                    <span className="truncate">{team.name}</span>
+                                  </label>
+                                ))}
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <div className="space-y-2">
