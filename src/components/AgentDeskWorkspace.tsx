@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
 import { parseMarkdownToHtml } from "@/lib/markdown";
+import KBSearchPanel from "@/components/KBSearchPanel";
 
 type AgentCase = {
   id: string;
@@ -49,7 +50,7 @@ export default function AgentDeskWorkspace({
   const [selectedCase, setSelectedCase] = useState<AgentCase | null>(null);
 
   // Top level Console Active Tab
-  const [agentActiveTab, setAgentActiveTab] = useState<"tickets" | "chat">("tickets");
+  const [agentActiveTab, setAgentActiveTab] = useState<"tickets" | "chat" | "search">("tickets");
 
   // Search KB states
   const [kbQuery, setKbQuery] = useState("");
@@ -492,6 +493,17 @@ export default function AgentDeskWorkspace({
           }`}
         >
           💬 Customer Chat Console
+        </button>
+        <button
+          type="button"
+          onClick={() => setAgentActiveTab("search")}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            agentActiveTab === "search"
+              ? "bg-zinc-950 text-white shadow-xs"
+              : "bg-white text-zinc-650 hover:bg-zinc-50 border border-zinc-200"
+          }`}
+        >
+          🔎 KB Search
         </button>
       </div>
 
@@ -1314,6 +1326,11 @@ export default function AgentDeskWorkspace({
             )}
           </div>
         </div>
+      )}
+
+      {/* STANDALONE KB SEARCH */}
+      {agentActiveTab === "search" && (
+        <KBSearchPanel tenantId={tenantId} />
       )}
     </div>
   );
