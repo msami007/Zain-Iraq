@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
@@ -73,7 +73,6 @@ type WorkspaceProps = {
   brandingColor?: string;
   hideSidebar?: boolean;
   overrideActiveTab?: "articles" | "gaps" | "audit";
-  signOutAction?: () => Promise<void>;
 };
 
 const SAMPLE_TROUBLESHOOTING_FLOW = {
@@ -143,7 +142,6 @@ export default function AdminDeskWorkspace({
   brandingColor = "#09090B",
   hideSidebar = false,
   overrideActiveTab,
-  signOutAction,
 }: WorkspaceProps) {
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
@@ -201,6 +199,18 @@ export default function AdminDeskWorkspace({
   const [vWhatsappShort, setVWhatsappShort] = useState("");
   const [vWhatsappDetailed, setVWhatsappDetailed] = useState("");
 
+  // Initial values for WYSIWYG editors (loaded once when editing article changes)
+  const [initialDefaultDetailed, setInitialDefaultDetailed] = useState("");
+  const [initialAgentDetailed, setInitialAgentDetailed] = useState("");
+  const [initialChatbotDetailed, setInitialChatbotDetailed] = useState("");
+  const [initialWhatsappDetailed, setInitialWhatsappDetailed] = useState("");
+
+  // Refs for WYSIWYG editors
+  const editorRefDefault = useRef<HTMLDivElement>(null);
+  const editorRefAgent = useRef<HTMLDivElement>(null);
+  const editorRefChatbot = useRef<HTMLDivElement>(null);
+  const editorRefWhatsapp = useRef<HTMLDivElement>(null);
+
   // Image Upload State
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -254,12 +264,39 @@ export default function AdminDeskWorkspace({
     }
   };
 
+
+
   // Fetch Audit Logs when tab changes
   useEffect(() => {
     if (activeTab === "audit") {
       fetchAuditLogs();
     }
   }, [activeTab]);
+
+  // Load visual editor initial HTML contents when editing article changes (uncontrolled editor initialization)
+  useEffect(() => {
+    if (editorRefDefault.current) {
+      editorRefDefault.current.innerHTML = initialDefaultDetailed;
+    }
+  }, [initialDefaultDetailed]);
+
+  useEffect(() => {
+    if (editorRefAgent.current) {
+      editorRefAgent.current.innerHTML = initialAgentDetailed;
+    }
+  }, [initialAgentDetailed]);
+
+  useEffect(() => {
+    if (editorRefChatbot.current) {
+      editorRefChatbot.current.innerHTML = initialChatbotDetailed;
+    }
+  }, [initialChatbotDetailed]);
+
+  useEffect(() => {
+    if (editorRefWhatsapp.current) {
+      editorRefWhatsapp.current.innerHTML = initialWhatsappDetailed;
+    }
+  }, [initialWhatsappDetailed]);
 
   const fetchAuditLogs = async () => {
     try {
@@ -321,60 +358,81 @@ export default function AdminDeskWorkspace({
     }
   };
 
-  const insertFormatting = (channel: "default" | "agent" | "chatbot" | "whatsapp", type: string) => {
-    const elementId = `textarea-${channel}`;
-    const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
-    if (!textarea) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
 
-    let replacement = "";
-    switch (type) {
-      case "bold":
-        replacement = `**${selectedText || "bold text"}**`;
-        break;
-      case "italic":
-        replacement = `*${selectedText || "italic text"}*`;
-        break;
-      case "underline":
-        replacement = `<u>${selectedText || "underlined text"}</u>`;
-        break;
-      case "h1":
-        replacement = `\n# ${selectedText || "Heading 1"}\n`;
-        break;
-      case "h2":
-        replacement = `\n## ${selectedText || "Heading 2"}\n`;
-        break;
-      case "bullet":
-        replacement = `\n- ${selectedText || "List item"}\n`;
-        break;
-      case "number":
-        replacement = `\n1. ${selectedText || "List item"}\n`;
-        break;
-      case "link":
-        replacement = `[${selectedText || "link text"}](https://example.com)`;
-        break;
-      case "image":
-        replacement = `![${selectedText || "image description"}](https://example.com/image.png)`;
-        break;
-      default:
-        return;
+  const executeCommand = (command: string, value: string = "") => {
+    // 1. Restore focus to the active editor ref before executing the command
+    const activeEditor =
+      variantTab === "default" ? editorRefDefault.current :
+        variantTab === "agent" ? editorRefAgent.current :
+          variantTab === "chatbot" ? editorRefChatbot.current :
+            editorRefWhatsapp.current;
+
+    if (activeEditor) {
+      activeEditor.focus();
     }
 
-    const newText = text.substring(0, start) + replacement + text.substring(end);
+    // 2. Execute the document command
+    if (command === "fontSize") {
+      const sizeMap: Record<string, string> = {
+        "12": "2",
+        "14": "3",
+        "16": "4",
+        "18": "5",
+        "20": "6"
+      };
+      document.execCommand(command, false, sizeMap[value] || "4");
+    } else if (command === "createLink") {
+      const url = prompt("Enter URL:", "https://");
+      if (url) {
+        document.execCommand(command, false, url);
+      }
+    } else if (command === "insertImage") {
+      const url = prompt("Enter Image URL:", "https://");
+      if (url) {
+        document.execCommand(command, false, url);
+      }
+    } else if (command === "insertTable") {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const el = document.createElement("div");
+        el.innerHTML = `<table style="width:100%; border-collapse:collapse; border:1px solid #e4e4e7; margin:10px 0;">
+          <thead>
+            <tr style="background:#f4f4f5;">
+              <th style="border:1px solid #e4e4e7; padding:8px; text-align:left;">Header 1</th>
+              <th style="border:1px solid #e4e4e7; padding:8px; text-align:left;">Header 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border:1px solid #e4e4e7; padding:8px;">Cell 1</td>
+              <td style="border:1px solid #e4e4e7; padding:8px;">Cell 2</td>
+            </tr>
+          </tbody>
+        </table>`;
+        const frag = document.createDocumentFragment();
+        let node;
+        while ((node = el.firstChild)) {
+          frag.appendChild(node);
+        }
+        range.insertNode(frag);
+      }
+    } else if (command === "clearFormatting") {
+      document.execCommand("removeFormat", false);
+    } else {
+      document.execCommand(command, false, value);
+    }
 
-    if (channel === "default") setVDefaultDetailed(newText);
-    else if (channel === "agent") setVAgentDetailed(newText);
-    else if (channel === "chatbot") setVChatbotDetailed(newText);
-    else if (channel === "whatsapp") setVWhatsappDetailed(newText);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start, start + replacement.length);
-    }, 50);
+    // 3. Manually trigger state update from visual innerHTML contents
+    if (activeEditor) {
+      const newHTML = activeEditor.innerHTML;
+      if (variantTab === "default") setVDefaultDetailed(newHTML);
+      else if (variantTab === "agent") setVAgentDetailed(newHTML);
+      else if (variantTab === "chatbot") setVChatbotDetailed(newHTML);
+      else if (variantTab === "whatsapp") setVWhatsappDetailed(newHTML);
+    }
   };
 
   const handleDirectStatusTransition = async (articleId: string, targetStatus: string) => {
@@ -418,6 +476,8 @@ export default function AdminDeskWorkspace({
     }
   };
 
+
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -440,12 +500,40 @@ export default function AdminDeskWorkspace({
       const data = await res.json();
       const imageUrl = data.url;
 
-      // Insert image markdown into the currently active detailed steps variant textarea
-      const imgMarkdown = `\n![Uploaded Image](${imageUrl})\n`;
-      if (variantTab === "default") setVDefaultDetailed(vDefaultDetailed + imgMarkdown);
-      else if (variantTab === "agent") setVAgentDetailed(vAgentDetailed + imgMarkdown);
-      else if (variantTab === "chatbot") setVChatbotDetailed(vChatbotDetailed + imgMarkdown);
-      else if (variantTab === "whatsapp") setVWhatsappDetailed(vWhatsappDetailed + imgMarkdown);
+      // Insert image visually into the active editor
+      const imgHtml = `<img src="${imageUrl}" alt="Uploaded Image" style="max-width:100%; height:auto; margin:10px 0; border-radius:8px; border:1px solid #e4e4e7;" />`;
+
+      const activeEditor =
+        variantTab === "default" ? editorRefDefault.current :
+          variantTab === "agent" ? editorRefAgent.current :
+            variantTab === "chatbot" ? editorRefChatbot.current :
+              editorRefWhatsapp.current;
+
+      if (activeEditor) {
+        activeEditor.focus();
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = imgHtml;
+          const node = tempDiv.firstChild;
+          if (node) {
+            range.insertNode(node);
+            range.collapse(false);
+          }
+        } else {
+          // Fallback if no selection
+          activeEditor.innerHTML += imgHtml;
+        }
+
+        // Update state
+        const newHTML = activeEditor.innerHTML;
+        if (variantTab === "default") setVDefaultDetailed(newHTML);
+        else if (variantTab === "agent") setVAgentDetailed(newHTML);
+        else if (variantTab === "chatbot") setVChatbotDetailed(newHTML);
+        else if (variantTab === "whatsapp") setVWhatsappDetailed(newHTML);
+      }
 
       alert("Image uploaded successfully and link inserted!");
     } catch (err: any) {
@@ -472,25 +560,32 @@ export default function AdminDeskWorkspace({
     // Set transition status defaults
     setTransitionStatus("");
     setTransitionComment("");
-
     // Reset variants
     const dV = article.variants?.find((v) => v.channel === "default");
+    const defaultVal = dV?.detailed_steps || "";
     setVDefaultShort(dV?.short_answer || "");
-    setVDefaultDetailed(dV?.detailed_steps || "");
+    setVDefaultDetailed(defaultVal);
+    setInitialDefaultDetailed(defaultVal);
 
     const aV = article.variants?.find((v) => v.channel === "agent");
+    const agentVal = aV?.detailed_steps || "";
     setVAgentShort(aV?.short_answer || "");
-    setVAgentDetailed(aV?.detailed_steps || "");
+    setVAgentDetailed(agentVal);
+    setInitialAgentDetailed(agentVal);
     setVAgentMacro(aV?.copy_ready_macro || "");
     setVAgentFlow(aV?.troubleshooting_flow ? JSON.stringify(aV.troubleshooting_flow, null, 2) : "");
 
     const cV = article.variants?.find((v) => v.channel === "chatbot");
+    const chatbotVal = cV?.detailed_steps || "";
     setVChatbotShort(cV?.short_answer || "");
-    setVChatbotDetailed(cV?.detailed_steps || "");
+    setVChatbotDetailed(chatbotVal);
+    setInitialChatbotDetailed(chatbotVal);
 
     const wV = article.variants?.find((v) => v.channel === "whatsapp");
+    const whatsappVal = wV?.detailed_steps || "";
     setVWhatsappShort(wV?.short_answer || "");
-    setVWhatsappDetailed(wV?.detailed_steps || "");
+    setVWhatsappDetailed(whatsappVal);
+    setInitialWhatsappDetailed(whatsappVal);
   };
 
   const openCreator = () => {
@@ -511,14 +606,18 @@ export default function AdminDeskWorkspace({
 
     setVDefaultShort("");
     setVDefaultDetailed("");
+    setInitialDefaultDetailed("");
     setVAgentShort("");
     setVAgentDetailed("");
+    setInitialAgentDetailed("");
     setVAgentMacro("");
     setVAgentFlow("");
     setVChatbotShort("");
     setVChatbotDetailed("");
+    setInitialChatbotDetailed("");
     setVWhatsappShort("");
     setVWhatsappDetailed("");
+    setInitialWhatsappDetailed("");
   };
 
   const closeEditor = () => {
@@ -530,7 +629,8 @@ export default function AdminDeskWorkspace({
 
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !slug || !categoryId || !vDefaultDetailed) {
+    const defaultDetailedTextClean = vDefaultDetailed.replace(/<[^>]*>/g, "").trim();
+    if (!title || !slug || !categoryId || !defaultDetailedTextClean) {
       setFormError("Title, Slug, Category, and Default Detailed Steps are required.");
       return;
     }
@@ -791,13 +891,7 @@ export default function AdminDeskWorkspace({
             </div>
             <button
               type="button"
-              onClick={async () => {
-                if (signOutAction) {
-                  await signOutAction();
-                } else {
-                  await signOut({ callbackUrl: "/login" });
-                }
-              }}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
             >
               Sign Out
@@ -1389,51 +1483,550 @@ export default function AdminDeskWorkspace({
 
                     {/* Content variants editor (tabs) */}
                     <div className="space-y-4">
-                      <div className="flex border-b border-zinc-200 gap-1 overflow-x-auto">
-                        <button
-                          type="button"
-                          onClick={() => setVariantTab("default")}
-                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${variantTab === "default" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                            }`}
-                        >
-                          Default Variant
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVariantTab("agent")}
-                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${variantTab === "agent" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                            }`}
-                        >
-                          Agent Desk {isVariantEmpty("agent") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVariantTab("chatbot")}
-                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${variantTab === "chatbot" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                            }`}
-                        >
-                          Chatbot {isVariantEmpty("chatbot") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVariantTab("whatsapp")}
-                          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1 ${variantTab === "whatsapp" ? "border-zinc-950 text-zinc-950" : "border-transparent text-zinc-400"
-                            }`}
-                        >
-                          WhatsApp {isVariantEmpty("whatsapp") && <span className="text-[9px] text-amber-600 font-semibold">(Fallback)</span>}
-                        </button>
+                      {/* Variant Selection Tabs */}
+                      <div className="flex border-b border-zinc-200 pb-2 mb-4 gap-2 overflow-x-auto text-left">
+                        {[
+                          { id: "default", label: "Default Variant", icon: "🌐" },
+                          { id: "agent", label: "Agent Desk", icon: "👥" },
+                          { id: "chatbot", label: "Chatbot", icon: "🤖" },
+                          { id: "whatsapp", label: "WhatsApp", icon: "💬" }
+                        ].map((tab) => {
+                          const isActive = variantTab === tab.id;
+                          const isEmpty = isVariantEmpty(tab.id);
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setVariantTab(tab.id as any)}
+                              className={`rounded-lg py-2 px-4 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${isActive
+                                  ? "text-white shadow-xs"
+                                  : "text-zinc-500 bg-white border-zinc-200 hover:text-zinc-950 hover:bg-zinc-50"
+                                }`}
+                              style={isActive ? { backgroundColor: brandingColor, borderColor: brandingColor } : {}}
+                            >
+                              <span>{tab.icon}</span>
+                              <span>{tab.label}</span>
+                              {tab.id !== "default" && isEmpty && (
+                                <span className="text-[8px] uppercase tracking-wider text-amber-600 font-extrabold ml-1">(Fallback)</span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
 
                       {/* Fallback Warning Alerts */}
                       {variantTab !== "default" && isVariantEmpty(variantTab) && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-850 flex items-center gap-2">
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-850 flex items-center gap-2 mb-4 text-left">
                           <span>⚠️</span>
                           Notice: No variant exists for the {variantTab.toUpperCase()} channel. The system will fall back to displaying the Default Variant.
                         </div>
                       )}
 
-                      {/* Picture Guide Direct Upload tool */}
-                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      {/* Variant Specific Fields */}
+                      {variantTab === "default" && (
+                        <div className="space-y-1.5 text-left mb-4">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                          <input
+                            type="text"
+                            value={vDefaultShort}
+                            onChange={(e) => setVDefaultShort(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
+                            placeholder="Quick summary snippet..."
+                          />
+                        </div>
+                      )}
+
+                      {variantTab === "agent" && (
+                        <div className="space-y-4 mb-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5 text-left">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                              <input
+                                type="text"
+                                value={vAgentShort}
+                                onChange={(e) => setVAgentShort(e.target.value)}
+                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
+                                placeholder="Agent specific summary..."
+                              />
+                            </div>
+                            <div className="space-y-1.5 text-left">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Copy-ready Macro Response</label>
+                              <input
+                                type="text"
+                                value={vAgentMacro}
+                                onChange={(e) => setVAgentMacro(e.target.value)}
+                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
+                                placeholder="Text copied to clipboard in one click by agents..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {variantTab === "chatbot" && (
+                        <div className="space-y-1.5 text-left mb-4">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                          <input
+                            type="text"
+                            value={vChatbotShort}
+                            onChange={(e) => setVChatbotShort(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
+                            placeholder="Chatbot specific summary..."
+                          />
+                        </div>
+                      )}
+
+                      {variantTab === "whatsapp" && (
+                        <div className="space-y-1.5 text-left mb-4">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
+                          <input
+                            type="text"
+                            value={vWhatsappShort}
+                            onChange={(e) => setVWhatsappShort(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-850 focus:outline-hidden"
+                            placeholder="WhatsApp specific summary..."
+                          />                    </div>
+                      )}
+
+                      {/* Redesigned Premium Editor Container */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block text-left">Detailed Steps</label>
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                          {/* Floating Formatting Toolbar */}
+                          <div className="flex flex-wrap items-center gap-1.5 bg-zinc-50/50 p-2.5 border-b border-zinc-200 text-left">
+                            {/* Undo / Redo */}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand('undo')}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 hover:bg-white rounded-lg transition-colors cursor-pointer border border-transparent hover:border-zinc-200 shadow-2xs"
+                              title="Undo"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand('redo')}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 hover:bg-white rounded-lg transition-colors cursor-pointer border border-transparent hover:border-zinc-200 shadow-2xs"
+                              title="Redo"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-22l-6 6m6-6l-6-6" />
+                              </svg>
+                            </button>
+
+                            <div className="h-5 w-px bg-zinc-200 mx-1" />
+
+                            {/* Text Style Dropdown */}
+                            <select
+                              onChange={(e) => executeCommand("formatBlock", e.target.value === "paragraph" ? "<p>" : `<${e.target.value}>`)}
+                              className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-655 cursor-pointer focus:outline-hidden"
+                              defaultValue="paragraph"
+                            >
+                              <option value="paragraph">Normal text</option>
+                              <option value="h1">Heading 1</option>
+                              <option value="h2">Heading 2</option>
+                              <option value="h3">Heading 3</option>
+                            </select>
+
+                            {/* Font Size Dropdown */}
+                            <select
+                              onChange={(e) => executeCommand("fontSize", e.target.value)}
+                              className="rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-655 cursor-pointer focus:outline-hidden"
+                              defaultValue="16"
+                            >
+                              <option value="12">12</option>
+                              <option value="14">14</option>
+                              <option value="16">16</option>
+                              <option value="18">18</option>
+                              <option value="20">20</option>
+                            </select>
+
+                            <div className="h-5 w-px bg-zinc-200 mx-1" />
+
+                            {/* Bold, Italic, Underline, Strikethrough */}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("bold")}
+                              className="w-8 h-8 flex items-center justify-center text-xs font-black text-zinc-650 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Bold"
+                            >
+                              B
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("italic")}
+                              className="w-8 h-8 flex items-center justify-center text-xs italic text-zinc-650 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Italic"
+                            >
+                              I
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("underline")}
+                              className="w-8 h-8 flex items-center justify-center text-xs underline text-zinc-650 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Underline"
+                            >
+                              U
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("strikeThrough")}
+                              className="w-8 h-8 flex items-center justify-center text-xs line-through text-zinc-650 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Strikethrough"
+                            >
+                              S
+                            </button>
+
+                            {/* Text Color / Highlight */}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                const color = prompt("Enter text color (e.g. red, #ef4444):", "#ef4444");
+                                if (color) executeCommand("foreColor", color);
+                              }}
+                              className="w-8 h-8 flex items-center justify-center text-xs text-zinc-655 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs gap-0.5 font-bold"
+                              title="Text Color"
+                            >
+                              <span>T</span>
+                              <span className="text-[10px] text-red-500 font-bold">●</span>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                const color = prompt("Enter highlight color (e.g. yellow, #fef08a):", "#fef08a");
+                                if (color) executeCommand("backColor", color);
+                              }}
+                              className="w-8 h-8 flex items-center justify-center text-xs text-zinc-655 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Highlight Color"
+                            >
+                              ✏️
+                            </button>
+
+                            <div className="h-5 w-px bg-zinc-200 mx-1" />
+
+                            {/* Alignments */}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("justifyLeft")}
+                              className="p-1.5 text-zinc-550 hover:text-zinc-900 rounded-lg hover:bg-zinc-100 cursor-pointer"
+                              title="Align Left"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h10M4 18h14" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("justifyCenter")}
+                              className="p-1.5 text-zinc-550 hover:text-zinc-900 rounded-lg hover:bg-zinc-100 cursor-pointer"
+                              title="Align Center"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M7 12h10M5 18h14" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("justifyRight")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Align Right"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M10 12h10M6 18h14" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("justifyFull")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Justify"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            </button>
+
+                            <div className="h-5 w-px bg-zinc-200 mx-1" />
+
+                            {/* Lists & Indents */}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("insertUnorderedList")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Bullet List"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("insertOrderedList")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Numbered List"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h13M7 12h13M7 16h13M3 8h.01M3 12h.01M3 16h.01" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("outdent")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Decrease Indent"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 7-7m5 14l-7-7 7-7" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("indent")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Increase Indent"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M6 5l7 7-7 7" />
+                              </svg>
+                            </button>
+
+                            <div className="h-5 w-px bg-zinc-200 mx-1" />
+
+                            {/* Link, Image, Table, HR, Clear */}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("createLink")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Insert Link"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => document.getElementById("image-file-input")?.click()}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Upload Image Guide"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("insertTable")}
+                              className="p-1.5 text-zinc-555 hover:text-zinc-900 rounded-lg hover:bg-zinc-50 cursor-pointer"
+                              title="Insert Table"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("insertHorizontalRule")}
+                              className="w-8 h-8 flex items-center justify-center text-xs font-bold text-zinc-650 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Insert Horizontal Rule"
+                            >
+                              —
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => executeCommand("clearFormatting")}
+                              className="w-8 h-8 flex items-center justify-center text-xs font-bold text-zinc-655 hover:bg-zinc-50 hover:text-zinc-955 rounded-lg border border-zinc-200 cursor-pointer shadow-2xs font-bold"
+                              title="Clear Formatting"
+                            >
+                              Tx
+                            </button>
+                          </div>
+
+                          {/* Content WYSIWYG Editors */}
+                          <div className="relative text-left">
+                            <style>{`
+                          .wysiwyg-editor {
+                            min-height: 350px;
+                            outline: none;
+                            position: relative;
+                            padding: 16px;
+                            line-height: 1.625;
+                            font-size: 0.875rem;
+                            color: #18181b;
+                            text-align: left;
+                          }
+                          .wysiwyg-editor:empty:before {
+                            content: attr(data-placeholder);
+                            color: #a1a1aa;
+                            cursor: text;
+                            position: absolute;
+                            left: 16px;
+                            top: 16px;
+                          }
+                          .wysiwyg-editor table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin: 12px 0;
+                          }
+                          .wysiwyg-editor table td, .wysiwyg-editor table th {
+                            border: 1px solid #e4e4e7;
+                            padding: 8px;
+                          }
+                          .wysiwyg-editor ul {
+                            list-style-type: disc;
+                            padding-left: 20px;
+                            margin: 8px 0;
+                          }
+                          .wysiwyg-editor ol {
+                            list-style-type: decimal;
+                            padding-left: 20px;
+                            margin: 8px 0;
+                          }
+                          .wysiwyg-editor blockquote {
+                            border-left: 4px solid #e4e4e7;
+                            padding-left: 16px;
+                            margin: 12px 0;
+                            color: #71717a;
+                            font-style: italic;
+                          }
+                          .wysiwyg-editor h1 {
+                            font-size: 1.5rem;
+                            font-weight: 850;
+                            margin-top: 16px;
+                            margin-bottom: 8px;
+                            color: #09090b;
+                          }
+                          .wysiwyg-editor h2 {
+                            font-size: 1.25rem;
+                            font-weight: 800;
+                            margin-top: 14px;
+                            margin-bottom: 6px;
+                            color: #09090b;
+                          }
+                          .wysiwyg-editor h3 {
+                            font-size: 1.1rem;
+                            font-weight: 750;
+                            margin-top: 12px;
+                            margin-bottom: 4px;
+                            color: #09090b;
+                          }
+                        `}</style>
+
+                            {/* Editor Default */}
+                            <div
+                              ref={editorRefDefault}
+                              contentEditable={true}
+                              onInput={(e) => setVDefaultDetailed(e.currentTarget.innerHTML)}
+                              className={`wysiwyg-editor bg-white ${variantTab === "default" ? "block" : "hidden"}`}
+                              data-placeholder="Start writing..."
+                              suppressContentEditableWarning={true}
+                            />
+
+                            {/* Editor Agent */}
+                            <div
+                              ref={editorRefAgent}
+                              contentEditable={true}
+                              onInput={(e) => setVAgentDetailed(e.currentTarget.innerHTML)}
+                              className={`wysiwyg-editor bg-white ${variantTab === "agent" ? "block" : "hidden"}`}
+                              data-placeholder="Start writing..."
+                              suppressContentEditableWarning={true}
+                            />
+
+                            {/* Editor Chatbot */}
+                            <div
+                              ref={editorRefChatbot}
+                              contentEditable={true}
+                              onInput={(e) => setVChatbotDetailed(e.currentTarget.innerHTML)}
+                              className={`wysiwyg-editor bg-white ${variantTab === "chatbot" ? "block" : "hidden"}`}
+                              data-placeholder="Start writing..."
+                              suppressContentEditableWarning={true}
+                            />
+
+                            {/* Editor WhatsApp */}
+                            <div
+                              ref={editorRefWhatsapp}
+                              contentEditable={true}
+                              onInput={(e) => setVWhatsappDetailed(e.currentTarget.innerHTML)}
+                              className={`wysiwyg-editor bg-white ${variantTab === "whatsapp" ? "block" : "hidden"}`}
+                              data-placeholder="Start writing..."
+                              suppressContentEditableWarning={true}
+                            />
+
+                            {/* Word Counter */}
+                            <div className="absolute bottom-3 right-4 px-2 py-0.5 rounded bg-zinc-100 text-[10px] font-bold text-zinc-450 shadow-3xs select-none">
+                              {(() => {
+                                const activeVal =
+                                  variantTab === "default" ? vDefaultDetailed :
+                                    variantTab === "agent" ? vAgentDetailed :
+                                      variantTab === "chatbot" ? vChatbotDetailed :
+                                        vWhatsappDetailed;
+                                const textClean = activeVal.replace(/<[^>]*>/g, " ").trim();
+                                const wordCount = textClean ? textClean.split(/\s+/).length : 0;
+                                return `${wordCount} words`;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {variantTab === "agent" && (
+                        <div className="space-y-2 pt-4 border-t border-zinc-150 text-left">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Interactive Troubleshooting Flow JSON</label>
+                            <button
+                              type="button"
+                              onClick={() => setVAgentFlow(JSON.stringify(SAMPLE_TROUBLESHOOTING_FLOW, null, 2))}
+                              className="rounded border border-zinc-250 bg-white px-2 py-1 text-[9px] font-bold text-zinc-700 hover:text-zinc-955 shadow-2xs cursor-pointer"
+                            >
+                              Load Template Flow
+                            </button>
+                          </div>
+                          <textarea
+                            rows={6}
+                            value={vAgentFlow}
+                            onChange={(e) => setVAgentFlow(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-mono shadow-inner"
+                            placeholder='{ "start_node": "...", "nodes": { ... } }'
+                          />
+                          {vAgentFlow && (
+                            <div className="border border-zinc-200 rounded-lg p-4 bg-zinc-50 mt-2">
+                              <span className="text-[10px] text-zinc-450 font-bold uppercase block mb-3">Live Flow Tester Preview:</span>
+                              {(() => {
+                                try {
+                                  const parsed = JSON.parse(vAgentFlow);
+                                  return <TroubleshootingPlayer flow={parsed} />;
+                                } catch (err) {
+                                  return <span className="text-[10px] text-red-500 font-semibold font-mono">Invalid JSON syntax. Fix structure to preview flow player.</span>;
+                                }
+                              })()}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Picture Guide Direct Upload Card */}
+                      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-left">
                         <div>
                           <h4 className="text-xs font-bold text-zinc-900">Direct Picture Guide Upload</h4>
                           <p className="text-[10px] text-zinc-450 font-medium mt-0.5">Upload image guides (PNG/JPG, max 5MB) to render inline in steps.</p>
@@ -1455,198 +2048,6 @@ export default function AdminDeskWorkspace({
                           </label>
                         </div>
                       </div>
-
-                      {/* Editors Fields */}
-                      {variantTab === "default" && (
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                            <input
-                              type="text"
-                              value={vDefaultShort}
-                              onChange={(e) => setVDefaultShort(e.target.value)}
-                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                              placeholder="Quick summary snippet..."
-                            />
-                          </div>
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps (Body Content)</label>
-                          <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                            {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                              <button
-                                key={type}
-                                type="button"
-                                onClick={() => insertFormatting("default", type)}
-                                className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                              >
-                                {type}
-                              </button>
-                            ))}
-                          </div>
-                          <textarea
-                            id="textarea-default"
-                            required
-                            rows={10}
-                            value={vDefaultDetailed}
-                            onChange={(e) => setVDefaultDetailed(e.target.value)}
-                            className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                            placeholder="Write the full support instructions in Markdown..."
-                          />
-                        </div>
-                      )}
-
-                      {variantTab === "agent" && (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                              <input
-                                type="text"
-                                value={vAgentShort}
-                                onChange={(e) => setVAgentShort(e.target.value)}
-                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Copy-ready Macro Response</label>
-                              <input
-                                type="text"
-                                value={vAgentMacro}
-                                onChange={(e) => setVAgentMacro(e.target.value)}
-                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                                placeholder="Text copied to clipboard in one click by agents..."
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
-                            <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                              {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                                <button
-                                  key={type}
-                                  type="button"
-                                  onClick={() => insertFormatting("agent", type)}
-                                  className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                                >
-                                  {type}
-                                </button>
-                              ))}
-                            </div>
-                            <textarea
-                              id="textarea-agent"
-                              rows={6}
-                              value={vAgentDetailed}
-                              onChange={(e) => setVAgentDetailed(e.target.value)}
-                              className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                            />
-                          </div>
-
-                          {/* Troubleshooting flow JSON editor */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Interactive Troubleshooting Flow JSON</label>
-                              <button
-                                type="button"
-                                onClick={() => setVAgentFlow(JSON.stringify(SAMPLE_TROUBLESHOOTING_FLOW, null, 2))}
-                                className="rounded border border-zinc-250 bg-white px-2 py-1 text-[9px] font-bold text-zinc-700 hover:text-zinc-950 shadow-2xs"
-                              >
-                                Load Template Flow
-                              </button>
-                            </div>
-                            <textarea
-                              rows={6}
-                              value={vAgentFlow}
-                              onChange={(e) => setVAgentFlow(e.target.value)}
-                              className="w-full rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-mono shadow-inner"
-                              placeholder='{ "start_node": "...", "nodes": { ... } }'
-                            />
-                            {vAgentFlow && (
-                              <div className="border border-zinc-200 rounded-lg p-4 bg-zinc-50">
-                                <span className="text-[10px] text-zinc-450 font-bold uppercase block mb-3">Live Flow Tester Preview:</span>
-                                {(() => {
-                                  try {
-                                    const parsed = JSON.parse(vAgentFlow);
-                                    return <TroubleshootingPlayer flow={parsed} />;
-                                  } catch (err) {
-                                    return <span className="text-[10px] text-red-500 font-semibold font-mono">Invalid JSON syntax. Fix structure to preview flow player.</span>;
-                                  }
-                                })()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {variantTab === "chatbot" && (
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                            <input
-                              type="text"
-                              value={vChatbotShort}
-                              onChange={(e) => setVChatbotShort(e.target.value)}
-                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
-                            <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                              {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                                <button
-                                  key={type}
-                                  type="button"
-                                  onClick={() => insertFormatting("chatbot", type)}
-                                  className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                                >
-                                  {type}
-                                </button>
-                              ))}
-                            </div>
-                            <textarea
-                              id="textarea-chatbot"
-                              rows={6}
-                              value={vChatbotDetailed}
-                              onChange={(e) => setVChatbotDetailed(e.target.value)}
-                              className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {variantTab === "whatsapp" && (
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550">Short Summary</label>
-                            <input
-                              type="text"
-                              value={vWhatsappShort}
-                              onChange={(e) => setVWhatsappShort(e.target.value)}
-                              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Detailed Steps</label>
-                            <div className="flex flex-wrap gap-1 bg-zinc-100 p-1.5 rounded-t-lg border-t border-x border-zinc-200">
-                              {["bold", "italic", "underline", "h1", "h2", "bullet", "number", "link", "image"].map((type) => (
-                                <button
-                                  key={type}
-                                  type="button"
-                                  onClick={() => insertFormatting("whatsapp", type)}
-                                  className="rounded bg-white hover:bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-700 hover:text-zinc-955 transition-all capitalize"
-                                >
-                                  {type}
-                                </button>
-                              ))}
-                            </div>
-                            <textarea
-                              id="textarea-whatsapp"
-                              rows={6}
-                              value={vWhatsappDetailed}
-                              onChange={(e) => setVWhatsappDetailed(e.target.value)}
-                              className="w-full rounded-b-lg rounded-t-none border border-zinc-200 bg-white p-3 text-xs text-zinc-850 focus:outline-hidden font-medium"
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </form>
@@ -1710,126 +2111,6 @@ export default function AdminDeskWorkspace({
                                 <span
                                   className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
                                       ? "bg-green-50 text-green-700 border-green-200"
-<<<<<<< HEAD
-                                      : art.status === "Draft"
-                                      ? "bg-zinc-100 text-zinc-600 border-zinc-200"
-                                      : art.status === "Archived"
-                                      ? "bg-red-50 text-red-700 border-red-200"
-                                      : art.status === "InReview"
-                                      ? "bg-blue-50 text-blue-700 border-blue-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200" // Approved
-                                  }`}
-                                >
-                                  {art.status === "InReview" ? "In Review" : art.status === "Approved" ? "Approved" : art.status}
-                                </span>
-                              </td>
-                              <td className="p-4 font-mono font-bold text-zinc-600">{simulatedViews.toLocaleString()}</td>
-                              <td className="p-4 text-zinc-500 font-medium">{formattedDate}</td>
-                              <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
-                                {/* View — always visible */}
-                                <Link
-                                  href={`/articles/${art.id}`}
-                                  target="_blank"
-                                  className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs inline-block"
-                                >
-                                  View
-                                </Link>
-
-                                {/* Draft → Submit for Review */}
-                                {art.status === "Draft" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectStatusTransition(art.id, "InReview")}
-                                    className="rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 px-2 py-1 text-[10px] font-bold text-blue-700 shadow-2xs"
-                                  >
-                                    Submit for Review
-                                  </button>
-                                )}
-
-                                {/* InReview → Approve or Reject back to Draft */}
-                                {art.status === "InReview" && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDirectStatusTransition(art.id, "Approved")}
-                                      disabled={art.author_id === currentUserId}
-                                      title={art.author_id === currentUserId ? "Author cannot approve their own article" : ""}
-                                      className="rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDirectStatusTransition(art.id, "Draft")}
-                                      className="rounded border border-zinc-200 bg-white hover:bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:border-red-200 shadow-2xs"
-                                    >
-                                      Reject
-                                    </button>
-                                  </>
-                                )}
-
-                                {/* Approved → Publish or Reject back to Draft */}
-                                {art.status === "Approved" && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDirectStatusTransition(art.id, "Published")}
-                                      disabled={art.author_id === currentUserId}
-                                      title={art.author_id === currentUserId ? "Author cannot publish their own article" : ""}
-                                      className="rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                      Publish
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDirectStatusTransition(art.id, "Draft")}
-                                      className="rounded border border-zinc-200 bg-white hover:bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:border-red-200 shadow-2xs"
-                                    >
-                                      Reject
-                                    </button>
-                                  </>
-                                )}
-
-                                {/* Published → Guest Link + Archive */}
-                                {art.status === "Published" && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => setActiveLinkManagerArticle(art)}
-                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
-                                    >
-                                      Guest Link
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDirectStatusTransition(art.id, "Archived")}
-                                      className="rounded border border-zinc-200 bg-white hover:bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:border-red-200 shadow-2xs"
-                                    >
-                                      Archive
-                                    </button>
-                                  </>
-                                )}
-
-                                {/* Archived → Restore to Draft */}
-                                {art.status === "Archived" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectStatusTransition(art.id, "Draft")}
-                                    className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700 shadow-2xs"
-                                  >
-                                    Restore to Draft
-                                  </button>
-                                )}
-
-                                {/* Edit — always visible */}
-                                <button
-                                  type="button"
-                                  onClick={() => openEditor(art)}
-                                  className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
-                                >
-                                  Edit
-                                </button>
-=======
                                       : g.status === "NEW"
                                         ? "bg-red-50 text-red-700 border-red-200"
                                         : "bg-amber-50 text-amber-700 border-amber-200"
@@ -1862,7 +2143,6 @@ export default function AdminDeskWorkspace({
                                     Resolved ➔ {g.resolving_article.title}
                                   </span>
                                 )}
->>>>>>> 10d29ffe93e616b7819c731ef73b81304c8a1ac0
                               </td>
                             </tr>
                           ))
