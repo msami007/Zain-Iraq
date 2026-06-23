@@ -56,6 +56,7 @@ const TENANT_MODELS = [
   "ChatCase",
   "Announcement",
   "AuditLog",
+  "WorkflowRoute",
 ];
 
 function isTenantModel(model: string): boolean {

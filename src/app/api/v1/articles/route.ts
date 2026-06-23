@@ -87,6 +87,17 @@ export async function GET(req: NextRequest) {
         author: { select: { id: true, name: true, email: true } },
         owner: { select: { id: true, name: true, email: true } },
         variants: true,
+        workflow_route: {
+          include: {
+            steps: { orderBy: { step_number: "asc" } }
+          }
+        },
+        current_step: {
+          include: {
+            team: { select: { id: true, name: true } },
+            user: { select: { id: true, name: true, email: true } }
+          }
+        },
         article_teams: {
           select: {
             team: {
@@ -130,6 +141,7 @@ export async function POST(req: NextRequest) {
       review_due,
       visibility,
       team_ids,
+      workflow_route_id,
     } = body;
 
     if (!title || !category_id || !bodyText) {
@@ -168,6 +180,16 @@ export async function POST(req: NextRequest) {
 
     const db = getTenantDb(tenantId);
 
+    if (workflow_route_id) {
+      const route = await db.workflowRoute.findFirst({ where: { id: workflow_route_id } });
+      if (!route) {
+        return NextResponse.json({ error: "Workflow route not found" }, { status: 400 });
+      }
+      if (!route.is_active) {
+        return NextResponse.json({ error: "The selected workflow route is inactive" }, { status: 400 });
+      }
+    }
+
     // Verify slug uniqueness under this tenant
     const existing = await db.article.findFirst({
       where: { slug: formattedSlug },
@@ -194,6 +216,7 @@ export async function POST(req: NextRequest) {
           author_id: userId,
           owner_id: owner_id || userId,
           review_due: review_due ? new Date(review_due) : null,
+          workflow_route_id: workflow_route_id || null,
         },
       });
 
