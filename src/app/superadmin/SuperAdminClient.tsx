@@ -77,10 +77,12 @@ export default function SuperAdminClient({
 
   // User creation teams state
   const [userSelectedTeams, setUserSelectedTeams] = useState<string[]>([]);
+  const [isTeamsDropdownOpen, setIsTeamsDropdownOpen] = useState(false);
 
   // User team editing modal state
   const [editingUserTeams, setEditingUserTeams] = useState<User | null>(null);
   const [modalSelectedTeams, setModalSelectedTeams] = useState<string[]>([]);
+  const [isModalTeamsDropdownOpen, setIsModalTeamsDropdownOpen] = useState(false);
   const [modalSaving, setModalSaving] = useState(false);
 
   // Tenant form state
@@ -292,6 +294,7 @@ export default function SuperAdminClient({
         setUserPassword("");
         setUserRole("Agent");
         setUserSelectedTeams([]);
+        setIsTeamsDropdownOpen(false);
       }
     } catch (err: any) {
       console.error(err);
@@ -742,27 +745,49 @@ export default function SuperAdminClient({
                       </select>
                     </div>
                     {teams.filter(t => t.tenant_id === userTenantId).length > 0 && (
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Assign to Teams</label>
-                        <div className="space-y-1.5 max-h-24 overflow-y-auto border border-zinc-200 rounded p-2.5 bg-zinc-50">
-                          {teams.filter(t => t.tenant_id === userTenantId).map((team) => (
-                            <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
-                              <input
-                                type="checkbox"
-                                checked={userSelectedTeams.includes(team.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setUserSelectedTeams([...userSelectedTeams, team.id]);
-                                  } else {
-                                    setUserSelectedTeams(userSelectedTeams.filter(id => id !== team.id));
-                                  }
-                                }}
-                                className="accent-zinc-955"
-                              />
-                              {team.name}
-                            </label>
-                          ))}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsTeamsDropdownOpen(!isTeamsDropdownOpen)}
+                          className="flex items-center justify-between w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 hover:bg-zinc-100 transition-colors text-left"
+                        >
+                          <span className="truncate">
+                            {userSelectedTeams.length === 0
+                              ? "Select Teams..."
+                              : teams
+                                  .filter(t => userSelectedTeams.includes(t.id))
+                                  .map(t => t.name)
+                                  .join(", ")}
+                          </span>
+                          <svg className="h-4 w-4 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {isTeamsDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsTeamsDropdownOpen(false)} />
+                            <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 text-left shadow-md max-h-40 overflow-y-auto space-y-1">
+                              {teams.filter(t => t.tenant_id === userTenantId).map((team) => (
+                                <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700 hover:bg-zinc-50 p-2 rounded transition-colors">
+                                  <input
+                                    type="checkbox"
+                                    checked={userSelectedTeams.includes(team.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setUserSelectedTeams([...userSelectedTeams, team.id]);
+                                      } else {
+                                        setUserSelectedTeams(userSelectedTeams.filter(id => id !== team.id));
+                                      }
+                                    }}
+                                    className="accent-zinc-955"
+                                  />
+                                  <span className="truncate">{team.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                     <div>
@@ -1119,37 +1144,64 @@ export default function SuperAdminClient({
             </div>
             
             <form onSubmit={handleSaveUserTeams} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Select Assigned Teams</label>
-                <div className="space-y-2 max-h-48 overflow-y-auto border border-zinc-200 rounded-lg p-3 bg-zinc-50">
-                  {teams.filter(t => t.tenant_id === editingUserTeams.tenant_id).length === 0 ? (
-                    <div className="text-xs text-zinc-400 font-semibold italic">No teams exist for this organization.</div>
-                  ) : (
-                    teams.filter(t => t.tenant_id === editingUserTeams.tenant_id).map((t) => (
-                      <label key={t.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
-                        <input
-                          type="checkbox"
-                          checked={modalSelectedTeams.includes(t.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setModalSelectedTeams([...modalSelectedTeams, t.id]);
-                            } else {
-                              setModalSelectedTeams(modalSelectedTeams.filter(id => id !== t.id));
-                            }
-                          }}
-                          className="accent-zinc-955"
-                        />
-                        {t.name}
-                      </label>
-                    ))
-                  )}
-                </div>
+              <div className="space-y-2 relative">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block mb-1">Select Assigned Teams</label>
+                {teams.filter(t => t.tenant_id === editingUserTeams.tenant_id).length === 0 ? (
+                  <div className="text-xs text-zinc-400 font-semibold italic p-3 border border-zinc-200 rounded bg-zinc-50">No teams exist for this organization.</div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalTeamsDropdownOpen(!isModalTeamsDropdownOpen)}
+                      className="flex items-center justify-between w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 hover:bg-zinc-100 transition-colors text-left"
+                    >
+                      <span className="truncate text-xs font-semibold">
+                        {modalSelectedTeams.length === 0
+                          ? "Select Teams..."
+                          : teams
+                              .filter(t => modalSelectedTeams.includes(t.id))
+                              .map(t => t.name)
+                              .join(", ")}
+                      </span>
+                      <svg className="h-4 w-4 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {isModalTeamsDropdownOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setIsModalTeamsDropdownOpen(false)} />
+                        <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 shadow-md max-h-36 overflow-y-auto space-y-1">
+                          {teams.filter(t => t.tenant_id === editingUserTeams.tenant_id).map((t) => (
+                            <label key={t.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700 hover:bg-zinc-50 p-2 rounded transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={modalSelectedTeams.includes(t.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setModalSelectedTeams([...modalSelectedTeams, t.id]);
+                                  } else {
+                                    setModalSelectedTeams(modalSelectedTeams.filter(id => id !== t.id));
+                                  }
+                                }}
+                                className="accent-zinc-955"
+                              />
+                              <span className="truncate">{t.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setEditingUserTeams(null)}
+                  onClick={() => {
+                    setEditingUserTeams(null);
+                    setIsModalTeamsDropdownOpen(false);
+                  }}
                   className="rounded border border-zinc-250 bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-650"
                 >
                   Cancel
