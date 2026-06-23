@@ -192,6 +192,15 @@ export default function AdminDeskWorkspace({
   const [transitionStatus, setTransitionStatus] = useState("");
   const [transitionComment, setTransitionComment] = useState("");
 
+  // Custom Workflow Builder state
+  const [workflowRoutes, setWorkflowRoutes] = useState<any[]>([]);
+  const [selectedWorkflowRouteId, setSelectedWorkflowRouteId] = useState("");
+  const [workflowSubTab, setWorkflowSubTab] = useState<"queue" | "builder">("queue");
+  const [editingWorkflow, setEditingWorkflow] = useState<any | null>(null);
+  const [newWorkflowName, setNewWorkflowName] = useState("");
+  const [newWorkflowDesc, setNewWorkflowDesc] = useState("");
+  const [newWorkflowSteps, setNewWorkflowSteps] = useState<{ name: string; role_restriction: string; team_id: string; user_id: string }[]>([]);
+
   // Variant fields: short answers are used for summaries across channels
   const [vDefaultShort, setVDefaultShort] = useState(""); // Default variant summary description
   const [vDefaultDetailed, setVDefaultDetailed] = useState("");
@@ -248,8 +257,8 @@ export default function AdminDeskWorkspace({
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const url = currentUserRole === "SuperAdmin" 
-          ? "/api/v1/teams" 
+        const url = currentUserRole === "SuperAdmin"
+          ? "/api/v1/teams"
           : `/api/v1/teams?tenant_id=${tenantId}`;
         const res = await fetch(url);
         if (res.ok) {
@@ -262,6 +271,23 @@ export default function AdminDeskWorkspace({
     };
     fetchTeams();
   }, [tenantId]);
+
+  const fetchWorkflowRoutes = async () => {
+    try {
+      const res = await fetch("/api/v1/workflows");
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflowRoutes(data);
+      }
+    } catch (err) {
+      console.error("Failed to load workflow routes", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchWorkflowRoutes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
@@ -720,6 +746,7 @@ export default function AdminDeskWorkspace({
     setOwnerId(currentUserId);
     setReviewDue("");
     setSelectedTeams([]);
+    setSelectedWorkflowRouteId("");
 
     setVDefaultShort("");
     setVDefaultDetailed("");
@@ -742,7 +769,70 @@ export default function AdminDeskWorkspace({
     setIsCreating(false);
     setTransitionStatus("");
     setTransitionComment("");
+    setSelectedWorkflowRouteId("");
     setIsTeamsDropdownOpen(false);
+  };
+
+  const startNewWorkflow = () => {
+    setNewWorkflowName("");
+    setNewWorkflowDesc("");
+    setNewWorkflowSteps([]);
+    setEditingWorkflow({ id: "new", name: "" });
+  };
+
+  const startEditWorkflow = (route: any) => {
+    setNewWorkflowName(route.name);
+    setNewWorkflowDesc(route.description || "");
+    setNewWorkflowSteps(
+      (route.steps || []).map((s: any) => ({
+        name: s.name,
+        role_restriction: s.role_restriction,
+        team_id: s.team_id || "",
+        user_id: s.user_id || "",
+      }))
+    );
+    setEditingWorkflow(route);
+  };
+
+  const handleSaveWorkflow = async () => {
+    if (!newWorkflowName.trim() || newWorkflowSteps.length === 0) return;
+    const isNew = editingWorkflow?.id === "new";
+    const url = isNew ? "/api/v1/workflows" : `/api/v1/workflows/${editingWorkflow.id}`;
+    const method = isNew ? "POST" : "PUT";
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newWorkflowName.trim(),
+          description: newWorkflowDesc.trim() || null,
+          steps: newWorkflowSteps.map(s => ({
+            name: s.name.trim(),
+            role_restriction: s.role_restriction,
+            team_id: s.team_id || null,
+            user_id: s.user_id || null,
+          })),
+        }),
+      });
+      if (res.ok) {
+        await fetchWorkflowRoutes();
+        setEditingWorkflow(null);
+      }
+    } catch (err) {
+      console.error("Failed to save workflow", err);
+    }
+  };
+
+  const handleDeleteWorkflow = async (id: string) => {
+    if (!confirm("Delete this workflow? Articles using it will lose the route assignment.")) return;
+    try {
+      const res = await fetch(`/api/v1/workflows/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setWorkflowRoutes(prev => prev.filter(r => r.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete workflow", err);
+    }
   };
 
   const handleSaveArticle = async (e: React.FormEvent) => {
