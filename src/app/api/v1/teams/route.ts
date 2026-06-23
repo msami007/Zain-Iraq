@@ -16,26 +16,45 @@ export async function GET(req: NextRequest) {
     }
 
     const searchParams = req.nextUrl.searchParams;
-    const targetTenantId = role === "SuperAdmin" ? searchParams.get("tenant_id") || userTenantId : userTenantId;
-
-    if (!targetTenantId) {
-      return NextResponse.json({ error: "Tenant ID is required" }, { status: 400 });
-    }
-
-    const db = getTenantDb(targetTenantId);
-    const teams = await db.team.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        user_teams: {
-          select: {
-            user_id: true,
-            user: {
-              select: { id: true, name: true, email: true, role: true }
+    
+    let teams;
+    if (role === "SuperAdmin" && !searchParams.get("tenant_id")) {
+      // SuperAdmin fetching all teams across all tenants
+      teams = await prisma.team.findMany({
+        orderBy: { name: "asc" },
+        include: {
+          user_teams: {
+            select: {
+              user_id: true,
+              user: {
+                select: { id: true, name: true, email: true, role: true }
+              }
             }
           }
         }
+      });
+    } else {
+      const targetTenantId = role === "SuperAdmin" ? searchParams.get("tenant_id") || userTenantId : userTenantId;
+
+      if (!targetTenantId) {
+        return NextResponse.json({ error: "Tenant ID is required" }, { status: 400 });
       }
-    });
+
+      const db = getTenantDb(targetTenantId);
+      teams = await db.team.findMany({
+        orderBy: { name: "asc" },
+        include: {
+          user_teams: {
+            select: {
+              user_id: true,
+              user: {
+                select: { id: true, name: true, email: true, role: true }
+              }
+            }
+          }
+        }
+      });
+    }
 
     return NextResponse.json(teams);
   } catch (error: any) {
@@ -123,23 +142,26 @@ export async function DELETE(req: NextRequest) {
 
     const searchParams = req.nextUrl.searchParams;
     const teamId = searchParams.get("id");
-    const targetTenantId = role === "SuperAdmin" ? searchParams.get("tenant_id") || userTenantId : userTenantId;
 
     if (!teamId) {
       return NextResponse.json({ error: "Team ID is required" }, { status: 400 });
     }
 
-    const db = getTenantDb(targetTenantId);
-
-    // Verify team exists and belongs to tenant
-    const team = await db.team.findUnique({
+    // Verify team exists and find its tenant ID
+    const team = await prisma.team.findUnique({
       where: { id: teamId },
     });
 
-    if (!team || team.tenant_id !== targetTenantId) {
+    if (!team) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
+    // Enforce that regular admins can only delete their own tenant's teams
+    if (role !== "SuperAdmin" && team.tenant_id !== userTenantId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const db = getTenantDb(team.tenant_id);
     await db.team.delete({
       where: { id: teamId },
     });
@@ -147,7 +169,7 @@ export async function DELETE(req: NextRequest) {
     // Write audit log entry
     await db.auditLog.create({
       data: {
-        tenant_id: targetTenantId,
+        tenant_id: team.tenant_id,
         actor_id: userId,
         action: "Delete Team",
         target_type: "Team",

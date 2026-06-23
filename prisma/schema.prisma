@@ -94,6 +94,7 @@ model Tenant {
   article_teams  ArticleTeam[]
   feedback       ArticleFeedback[]
   guest_links    GuestLink[]
+  workflow_routes WorkflowRoute[]
 
   @@map("tenants")
 }
@@ -107,6 +108,7 @@ model Team {
   tenant        Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
   user_teams    UserTeam[]
   article_teams ArticleTeam[]
+  workflow_steps WorkflowStep[]
 
   @@index([tenant_id])
   @@map("teams")
@@ -137,6 +139,7 @@ model User {
   assigned_cases    ChatCase[]             @relation("CaseAgent")
   announcements     Announcement[]         @relation("AnnouncementCreator")
   audit_logs        AuditLog[]             @relation("AuditActor")
+  workflow_steps    WorkflowStep[]
 
   @@unique([tenant_id, email])
   @@index([tenant_id])
@@ -205,12 +208,16 @@ model Article {
   created_at         DateTime      @default(now())
   updated_at         DateTime      @updatedAt
   published_at       DateTime?     @db.Timestamp
+  workflow_route_id  String?       @db.Uuid
+  current_step_id    String?       @db.Uuid
 
   // Relations
   tenant         Tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
   category       Category               @relation(fields: [category_id], references: [id], onDelete: Restrict)
   owner          User                   @relation("ArticleOwner", fields: [owner_id], references: [id], onDelete: Restrict)
   author         User                   @relation("ArticleAuthor", fields: [author_id], references: [id], onDelete: Restrict)
+  workflow_route WorkflowRoute?         @relation(fields: [workflow_route_id], references: [id], onDelete: SetNull)
+  current_step   WorkflowStep?          @relation("CurrentStep", fields: [current_step_id], references: [id], onDelete: SetNull)
   variants       ArticleVariant[]
   versions       ArticleVersion[]
   status_history ArticleStatusHistory[]
@@ -451,4 +458,41 @@ model AuditLog {
 
   @@index([tenant_id])
   @@map("audit_log")
+}
+
+model WorkflowRoute {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenant_id   String         @db.Uuid
+  name        String
+  description String?        @db.Text
+  is_active   Boolean        @default(true)
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+
+  // Relations
+  tenant   Tenant         @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
+  steps    WorkflowStep[]
+  articles Article[]
+
+  @@index([tenant_id])
+  @@map("workflow_routes")
+}
+
+model WorkflowStep {
+  id               String   @id @default(uuid()) @db.Uuid
+  route_id         String   @db.Uuid
+  step_number      Int
+  name             String
+  role_restriction UserRole @default(Admin)
+  team_id          String?  @db.Uuid
+  user_id          String?  @db.Uuid
+
+  // Relations
+  route    WorkflowRoute @relation(fields: [route_id], references: [id], onDelete: Cascade)
+  team     Team?         @relation(fields: [team_id], references: [id], onDelete: SetNull)
+  user     User?         @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  articles Article[]     @relation("CurrentStep")
+
+  @@index([route_id])
+  @@map("workflow_steps")
 }

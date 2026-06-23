@@ -23,8 +23,10 @@ type AdminArticle = {
   variants?: any[];
   status_history?: any[];
   article_teams?: { team: { id: string; name: string } }[];
+  article_tags?: { tag: { id: string; name: string } }[];
   created_at?: string;
   published_at?: string | null;
+  workflow_route_id?: string | null;
 };
 
 type Category = {
@@ -153,6 +155,7 @@ export default function AdminDeskWorkspace({
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows" | "analytics">("articles");
+  const currentTab = overrideActiveTab || activeTab;
 
   // Articles Filter states
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
@@ -191,6 +194,15 @@ export default function AdminDeskWorkspace({
   const [transitionStatus, setTransitionStatus] = useState("");
   const [transitionComment, setTransitionComment] = useState("");
 
+  // Custom Workflow Builder state
+  const [workflowRoutes, setWorkflowRoutes] = useState<any[]>([]);
+  const [selectedWorkflowRouteId, setSelectedWorkflowRouteId] = useState("");
+  const [workflowSubTab, setWorkflowSubTab] = useState<"queue" | "builder">("queue");
+  const [editingWorkflow, setEditingWorkflow] = useState<any | null>(null);
+  const [newWorkflowName, setNewWorkflowName] = useState("");
+  const [newWorkflowDesc, setNewWorkflowDesc] = useState("");
+  const [newWorkflowSteps, setNewWorkflowSteps] = useState<{ name: string; role_restriction: string; team_id: string; user_id: string }[]>([]);
+
   // Variant fields: short answers are used for summaries across channels
   const [vDefaultShort, setVDefaultShort] = useState(""); // Default variant summary description
   const [vDefaultDetailed, setVDefaultDetailed] = useState("");
@@ -228,6 +240,17 @@ export default function AdminDeskWorkspace({
   // Teams state and fetch
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [isTeamsDropdownOpen, setIsTeamsDropdownOpen] = useState(false);
+
+  // Tags state
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+  // Category states
+  const [categoriesList, setCategoriesList] = useState<Category[]>(categories);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState("");
 
   // Rejection modal states
   const [rejectionModalArticleId, setRejectionModalArticleId] = useState<string | null>(null);
@@ -247,7 +270,10 @@ export default function AdminDeskWorkspace({
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await fetch(`/api/v1/teams?tenant_id=${tenantId}`);
+        const url = currentUserRole === "SuperAdmin"
+          ? "/api/v1/teams"
+          : `/api/v1/teams?tenant_id=${tenantId}`;
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           setTeams(data);
@@ -258,6 +284,23 @@ export default function AdminDeskWorkspace({
     };
     fetchTeams();
   }, [tenantId]);
+
+  const fetchWorkflowRoutes = async () => {
+    try {
+      const res = await fetch("/api/v1/workflows");
+      if (res.ok) {
+        const data = await res.json();
+        setWorkflowRoutes(data);
+      }
+    } catch (err) {
+      console.error("Failed to load workflow routes", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchWorkflowRoutes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
@@ -294,10 +337,10 @@ export default function AdminDeskWorkspace({
   };
 
   useEffect(() => {
-    if (activeTab === "gaps") {
+    if (currentTab === "gaps") {
       fetchFilteredGaps();
     }
-  }, [gapStatusFilter, gapStartDate, gapEndDate, activeTab]);
+  }, [gapStatusFilter, gapStartDate, gapEndDate, currentTab]);
 
   // Compute filtered articles list based on status, category, and search text filters
   const filteredArticles = articles.filter((art) => {
@@ -349,12 +392,12 @@ export default function AdminDeskWorkspace({
 
   // Fetch Audit Logs and Analytics when tab changes
   useEffect(() => {
-    if (activeTab === "audit") {
+    if (currentTab === "audit") {
       fetchAuditLogs();
-    } else if (activeTab === "analytics") {
+    } else if (currentTab === "analytics") {
       fetchAnalytics();
     }
-  }, [activeTab]);
+  }, [currentTab]);
 
   // Load visual editor initial HTML contents when editing article changes (uncontrolled editor initialization)
   useEffect(() => {
@@ -678,8 +721,9 @@ export default function AdminDeskWorkspace({
     setVWhatsappDetailed(whatsappVal);
     setInitialWhatsappDetailed(whatsappVal);
 
-    // Load assigned teams
+    // Load assigned teams and workflow route
     setSelectedTeams(article.article_teams?.map((at: any) => at.team.id) || []);
+    setTags(article.article_tags?.map((at: any) => at.tag.name) || []);
 
     try {
       const res = await fetch(`/api/v1/articles/${article.id}`);
@@ -688,6 +732,14 @@ export default function AdminDeskWorkspace({
         setFullArticleDetail(fullDetail);
         if (fullDetail.article_teams) {
           setSelectedTeams(fullDetail.article_teams.map((at: any) => at.team.id));
+        }
+        if (fullDetail.article_tags) {
+          setTags(fullDetail.article_tags.map((at: any) => at.tag.name));
+        }
+        if (fullDetail.workflow_route_id) {
+          setSelectedWorkflowRouteId(fullDetail.workflow_route_id);
+        } else {
+          setSelectedWorkflowRouteId("");
         }
       }
     } catch (e) {
@@ -705,12 +757,15 @@ export default function AdminDeskWorkspace({
 
     setTitle("");
     setSlug("");
-    setCategoryId(categories[0]?.id || "");
+    setCategoryId(categoriesList[0]?.id || "");
     setLanguage("en");
     setVisibility("PUBLIC");
     setOwnerId(currentUserId);
     setReviewDue("");
     setSelectedTeams([]);
+    setSelectedWorkflowRouteId("");
+    setTags([]);
+    setTagInput("");
 
     setVDefaultShort("");
     setVDefaultDetailed("");
@@ -733,6 +788,96 @@ export default function AdminDeskWorkspace({
     setIsCreating(false);
     setTransitionStatus("");
     setTransitionComment("");
+    setSelectedWorkflowRouteId("");
+    setIsTeamsDropdownOpen(false);
+  };
+
+  const handleCreateCategory = async () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    setCategoryError("");
+    try {
+      const res = await fetch("/api/v1/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (res.ok) {
+        const newCat = await res.json();
+        setCategoriesList([...categoriesList, newCat]);
+        setCategoryId(newCat.id);
+        setIsAddingCategory(false);
+        setNewCategoryName("");
+      } else {
+        const err = await res.json();
+        setCategoryError(err.error || "Failed to create category");
+      }
+    } catch (e) {
+      console.error(e);
+      setCategoryError("Failed to create category due to connection error.");
+    }
+  };
+
+  const startNewWorkflow = () => {
+    setNewWorkflowName("");
+    setNewWorkflowDesc("");
+    setNewWorkflowSteps([]);
+    setEditingWorkflow({ id: "new", name: "" });
+  };
+
+  const startEditWorkflow = (route: any) => {
+    setNewWorkflowName(route.name);
+    setNewWorkflowDesc(route.description || "");
+    setNewWorkflowSteps(
+      (route.steps || []).map((s: any) => ({
+        name: s.name,
+        role_restriction: s.role_restriction,
+        team_id: s.team_id || "",
+        user_id: s.user_id || "",
+      }))
+    );
+    setEditingWorkflow(route);
+  };
+
+  const handleSaveWorkflow = async () => {
+    if (!newWorkflowName.trim() || newWorkflowSteps.length === 0) return;
+    const isNew = editingWorkflow?.id === "new";
+    const url = isNew ? "/api/v1/workflows" : `/api/v1/workflows/${editingWorkflow.id}`;
+    const method = isNew ? "POST" : "PUT";
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newWorkflowName.trim(),
+          description: newWorkflowDesc.trim() || null,
+          steps: newWorkflowSteps.map(s => ({
+            name: s.name.trim(),
+            role_restriction: s.role_restriction,
+            team_id: s.team_id || null,
+            user_id: s.user_id || null,
+          })),
+        }),
+      });
+      if (res.ok) {
+        await fetchWorkflowRoutes();
+        setEditingWorkflow(null);
+      }
+    } catch (err) {
+      console.error("Failed to save workflow", err);
+    }
+  };
+
+  const handleDeleteWorkflow = async (id: string) => {
+    if (!confirm("Delete this workflow? Articles using it will lose the route assignment.")) return;
+    try {
+      const res = await fetch(`/api/v1/workflows/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setWorkflowRoutes(prev => prev.filter(r => r.id !== id));
+      }
+    } catch (err) {
+      console.error("Failed to delete workflow", err);
+    }
   };
 
   const handleSaveArticle = async (e: React.FormEvent) => {
@@ -740,6 +885,11 @@ export default function AdminDeskWorkspace({
     const defaultDetailedTextClean = vDefaultDetailed.replace(/<[^>]*>/g, "").trim();
     if (!title || !slug || !categoryId || !defaultDetailedTextClean) {
       setFormError("Title, Slug, Category, and Default Detailed Steps are required.");
+      return;
+    }
+
+    if (selectedTeams.length === 0) {
+      setFormError("At least one team must be assigned to the article.");
       return;
     }
 
@@ -770,6 +920,8 @@ export default function AdminDeskWorkspace({
             review_due: reviewDue || null,
             bodyText: vDefaultDetailed,
             team_ids: selectedTeams,
+            workflow_route_id: selectedWorkflowRouteId || null,
+            tags: tags,
           }),
         });
 
@@ -784,6 +936,8 @@ export default function AdminDeskWorkspace({
         const putPayload: any = {
           variants: variantsPayload,
           team_ids: selectedTeams,
+          workflow_route_id: selectedWorkflowRouteId || null,
+          tags: tags,
         };
         if (transitionStatus) {
           putPayload.status = transitionStatus;
@@ -839,6 +993,8 @@ export default function AdminDeskWorkspace({
           review_due: reviewDue || null,
           variants: variantsPayload,
           team_ids: selectedTeams,
+          workflow_route_id: selectedWorkflowRouteId || null,
+          tags: tags,
         };
 
         if (transitionStatus) {
@@ -998,7 +1154,7 @@ export default function AdminDeskWorkspace({
     return [];
   };
 
-  const currentTab = overrideActiveTab || activeTab;
+
 
   return (
     <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full"}`}>
@@ -1187,7 +1343,7 @@ export default function AdminDeskWorkspace({
                         className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 focus:outline-hidden cursor-pointer"
                       >
                         <option value="All Categories">All Categories</option>
-                        {categories.map((c) => (
+                        {categoriesList.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
                           </option>
@@ -1567,18 +1723,55 @@ export default function AdminDeskWorkspace({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Category</label>
-                        <select
-                          value={categoryId}
-                          onChange={(e) => setCategoryId(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
-                        >
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Category</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingCategory(!isAddingCategory);
+                              setNewCategoryName("");
+                              setCategoryError("");
+                            }}
+                            className="text-[10px] text-zinc-950 font-bold hover:underline cursor-pointer focus:outline-hidden"
+                          >
+                            {isAddingCategory ? "Cancel" : "+ Add New"}
+                          </button>
+                        </div>
+                        {isAddingCategory ? (
+                          <div className="space-y-1">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                placeholder="New category name..."
+                                className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleCreateCategory}
+                                className="rounded-lg bg-zinc-950 hover:bg-zinc-850 px-3 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+                              >
+                                Add
+                              </button>
+                            </div>
+                            {categoryError && (
+                              <p className="text-[10px] font-bold text-red-650 mt-1">{categoryError}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <select
+                            value={categoryId}
+                            onChange={(e) => setCategoryId(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
+                          >
+                            {categoriesList.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1593,42 +1786,57 @@ export default function AdminDeskWorkspace({
                         </select>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Visibility</label>
-                        <select
-                          value={visibility}
-                          onChange={(e) => setVisibility(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                      <div className="space-y-2 relative">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Assign to Teams</label>
+                        <button
+                          type="button"
+                          onClick={() => setIsTeamsDropdownOpen(!isTeamsDropdownOpen)}
+                          className="flex items-center justify-between w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-850 hover:bg-zinc-50 transition-colors text-left"
                         >
-                          <option value="PUBLIC">Public (Guests can search)</option>
-                          <option value="PRIVATE">Private (Internal only)</option>
-                        </select>
+                          <span className="truncate">
+                            {selectedTeams.length === 0
+                              ? "Select Teams..."
+                              : teams
+                                  .filter(t => selectedTeams.includes(t.id))
+                                  .map(t => t.name)
+                                  .join(", ")}
+                          </span>
+                          <svg className="h-4 w-4 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {isTeamsDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsTeamsDropdownOpen(false)} />
+                            <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 text-left shadow-md max-h-40 overflow-y-auto space-y-1">
+                              {teams
+                                .filter((team) => {
+                                  if (currentUserRole === "Admin") {
+                                    return team.user_teams?.some((ut: any) => ut.user_id === currentUserId);
+                                  }
+                                  return true;
+                                })
+                                .map((team) => (
+                                  <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700 hover:bg-zinc-50 p-2 rounded transition-colors">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedTeams.includes(team.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedTeams([...selectedTeams, team.id]);
+                                        } else {
+                                          setSelectedTeams(selectedTeams.filter(id => id !== team.id));
+                                        }
+                                      }}
+                                      className="accent-zinc-955"
+                                    />
+                                    <span className="truncate">{team.name}</span>
+                                  </label>
+                                ))}
+                            </div>
+                          </>
+                        )}
                       </div>
-
-                      {visibility === "PRIVATE" && teams.length > 0 && (
-                        <div className="space-y-2 sm:col-span-3 border border-zinc-200 rounded-lg p-3 bg-zinc-50">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block mb-1.5">Assign to Teams</label>
-                          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                            {teams.map((team) => (
-                              <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedTeams.includes(team.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedTeams([...selectedTeams, team.id]);
-                                    } else {
-                                      setSelectedTeams(selectedTeams.filter(id => id !== team.id));
-                                    }
-                                  }}
-                                  className="accent-zinc-955"
-                                />
-                                {team.name}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Review Due Date</label>
@@ -1639,7 +1847,71 @@ export default function AdminDeskWorkspace({
                           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Tags</label>
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const trimmed = tagInput.trim();
+                                if (trimmed && !tags.includes(trimmed)) {
+                                  setTags([...tags, trimmed]);
+                                }
+                                setTagInput("");
+                              }
+                            }}
+                            placeholder="Type tag and press Enter..."
+                            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          />
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-800 text-[10px] font-semibold px-2 py-0.5 rounded border border-zinc-200"
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    onClick={() => setTags(tags.filter((t) => t !== tag))}
+                                    className="text-zinc-450 hover:text-zinc-650 font-bold ml-0.5 cursor-pointer focus:outline-hidden"
+                                  >
+                                    &times;
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+
+                  {/* Workflow Route Selector */}
+                  <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Approval Workflow Route</h4>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Approval Workflow</label>
+                      <select
+                        value={selectedWorkflowRouteId}
+                        onChange={(e) => setSelectedWorkflowRouteId(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
+                        disabled={!!(!isCreating && editingArticle && editingArticle.status !== "Draft" && editingArticle.status !== "Archived")}
+                        title={!isCreating && editingArticle && editingArticle.status !== "Draft" && editingArticle.status !== "Archived" ? "Workflow cannot be changed once review has started." : ""}
+                      >
+                        <option value="">Default Direct Workflow</option>
+                        {workflowRoutes.map((route) => (
+                          <option key={route.id} value={route.id}>
+                            {route.name} ({route.steps?.length || 0} steps)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
                     {/* Workflow status transition panel (only in edit mode) */}
                     {(isCreating || editingArticle) && (
@@ -2348,147 +2620,417 @@ export default function AdminDeskWorkspace({
             </div>
           )}
 
-          {/* WORKFLOWS REVIEW QUEUE */}
+          {/* WORKFLOWS TAB */}
           {currentTab === "workflows" && (
             <div className="space-y-6">
-              <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-                <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Article Workflows Queue</h3>
-                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Review and approve articles moving through the editorial pipeline.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
-                      IN REVIEW: {articles.filter(a => a.status === "InReview").length}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
-                      APPROVED: {articles.filter(a => a.status === "Approved").length}
-                    </span>
-                  </div>
+              {/* Tab Selector */}
+              {currentUserRole === "SuperAdmin" && (
+                <div className="flex border-b border-zinc-200 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setWorkflowSubTab("queue")}
+                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                      workflowSubTab === "queue"
+                        ? "border-zinc-900 text-zinc-900"
+                        : "border-transparent text-zinc-450 hover:text-zinc-700"
+                    }`}
+                  >
+                    Review Queue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkflowSubTab("builder");
+                      setEditingWorkflow(null);
+                    }}
+                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                      workflowSubTab === "builder"
+                        ? "border-zinc-900 text-zinc-900"
+                        : "border-transparent text-zinc-450 hover:text-zinc-700"
+                    }`}
+                  >
+                    Custom Workflows Builder
+                  </button>
                 </div>
+              )}
 
-                {articles.filter(a => a.status === "InReview" || a.status === "Approved").length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="h-14 w-14 rounded-2xl bg-zinc-100 flex items-center justify-center mb-4">
-                      <span className="text-2xl">✅</span>
-                    </div>
-                    <p className="text-sm font-bold text-zinc-400">All clear!</p>
-                    <p className="text-xs text-zinc-350 font-medium mt-1">No articles are waiting for review or approval.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                      <thead>
-                        <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 uppercase text-[10px] font-bold">
-                          <th className="px-5 py-3.5">Article Title</th>
-                          <th className="px-5 py-3.5">Category</th>
-                          <th className="px-5 py-3.5">Author</th>
-                          <th className="px-5 py-3.5">Stage</th>
-                          <th className="px-5 py-3.5">Next Stage</th>
-                          <th className="px-5 py-3.5 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-100">
-                        {articles
-                          .filter(a => a.status === "InReview" || a.status === "Approved")
-                          .map(art => {
-                            const isOwnArticle = art.author_id === currentUserId;
-                            const nextStatus = art.status === "InReview" ? "Approved" : "Published";
-                            const nextLabel = art.status === "InReview" ? "Approve" : "Publish";
-                            return (
-                              <tr key={art.id} className="hover:bg-zinc-50/60 transition-colors">
-                                <td className="px-5 py-4">
-                                  <div className="font-bold text-zinc-900 leading-tight">{art.title}</div>
-                                  <div className="text-[10px] text-zinc-400 font-mono mt-0.5">/{art.slug}</div>
-                                </td>
-                                <td className="px-5 py-4 text-zinc-500 font-medium">{art.category?.name || "—"}</td>
-                                <td className="px-5 py-4">
-                                  <div className="text-zinc-700 font-semibold">{art.author?.name || "Unknown"}</div>
-                                  <div className="text-[10px] text-zinc-400 font-mono">{art.author?.email}</div>
-                                </td>
-                                <td className="px-5 py-4">
-                                  {art.status === "InReview" ? (
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
-                                      In Review
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
-                                      Approved
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-5 py-4">
-                                  <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-[10px] font-bold text-zinc-600">
-                                    ➔ {nextStatus}
-                                  </span>
-                                </td>
-                                <td className="px-5 py-4 text-right space-x-2 whitespace-nowrap">
-                                  <Link
-                                    href={`/articles/${art.id}`}
-                                    target="_blank"
-                                    className="inline-flex items-center gap-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1.5 text-[10px] font-bold text-zinc-600 shadow-2xs"
-                                  >
-                                    View
-                                  </Link>
-                                  {isOwnArticle ? (
-                                    <span className="inline-flex items-center gap-1 rounded border border-red-100 bg-red-50 px-2.5 py-1.5 text-[10px] font-bold text-red-500 cursor-not-allowed" title="Separation of duties: You are the author and cannot approve your own article">
-                                      ⛔ Cannot Approve
-                                    </span>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDirectStatusTransition(art.id, nextStatus)}
-                                      className="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 text-[10px] font-bold text-green-700 shadow-2xs transition-colors"
-                                    >
-                                      ✓ {nextLabel}
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDirectStatusTransition(art.id, "Draft")}
-                                    className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-600 shadow-2xs transition-colors"
-                                  >
-                                    ✕ Reject
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Workflow Pipeline Legend */}
-              <div className="rounded-xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-4">Editorial Pipeline</h4>
-                <div className="flex items-center gap-0">
-                  {[
-                    { label: "Draft", color: "bg-zinc-200 text-zinc-600", active: false },
-                    { label: "In Review", color: "bg-blue-100 text-blue-700", active: true },
-                    { label: "Approved", color: "bg-amber-100 text-amber-700", active: true },
-                    { label: "Published", color: "bg-green-100 text-green-700", active: false },
-                    { label: "Archived", color: "bg-red-100 text-red-600", active: false },
-                  ].map((stage, i, arr) => (
-                    <div key={stage.label} className="flex items-center">
-                      <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border ${
-                        stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
-                      } ${stage.color}`}>
-                        {stage.active && <span className="mr-1">👁</span>}{stage.label}
+              {workflowSubTab === "queue" || currentUserRole !== "SuperAdmin" ? (
+                <>
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                    <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-4 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">Article Workflows Queue</h3>
+                        <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Review and approve articles moving through the editorial pipeline.</p>
                       </div>
-                      {i < arr.length - 1 && (
-                        <span className="mx-2 text-zinc-300 font-bold text-sm">→</span>
-                      )}
+                      <div className="flex gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
+                          IN REVIEW: {articles.filter(a => a.status === "InReview").length}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
+                          APPROVED: {articles.filter(a => a.status === "Approved").length}
+                        </span>
+                      </div>
                     </div>
-                  ))}
+
+                    {articles.filter(a => a.status === "InReview" || a.status === "Approved").length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="h-14 w-14 rounded-2xl bg-zinc-100 flex items-center justify-center mb-4">
+                          <span className="text-2xl">✅</span>
+                        </div>
+                        <p className="text-sm font-bold text-zinc-400">All clear!</p>
+                        <p className="text-xs text-zinc-350 font-medium mt-1">No articles are waiting for review or approval.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                          <thead>
+                            <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 uppercase text-[10px] font-bold">
+                              <th className="px-5 py-3.5">Article Title</th>
+                              <th className="px-5 py-3.5">Category</th>
+                              <th className="px-5 py-3.5">Author</th>
+                              <th className="px-5 py-3.5">Stage</th>
+                              <th className="px-5 py-3.5">Next Stage</th>
+                              <th className="px-5 py-3.5 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-100">
+                            {articles
+                              .filter(a => a.status === "InReview" || a.status === "Approved")
+                              .map(art => {
+                                const isOwnArticle = art.author_id === currentUserId;
+                                const nextStatus = art.status === "InReview" ? "Approved" : "Published";
+                                const nextLabel = art.status === "InReview" ? "Approve" : "Publish";
+                                return (
+                                  <tr key={art.id} className="hover:bg-zinc-50/60 transition-colors">
+                                    <td className="px-5 py-4">
+                                      <div className="font-bold text-zinc-900 leading-tight">{art.title}</div>
+                                      <div className="text-[10px] text-zinc-400 font-mono mt-0.5">/{art.slug}</div>
+                                    </td>
+                                    <td className="px-5 py-4 text-zinc-500 font-medium">{art.category?.name || "—"}</td>
+                                    <td className="px-5 py-4">
+                                      <div className="text-zinc-700 font-semibold">{art.author?.name || "Unknown"}</div>
+                                      <div className="text-[10px] text-zinc-400 font-mono">{art.author?.email}</div>
+                                    </td>
+                                    <td className="px-5 py-4">
+                                      {art.status === "InReview" ? (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
+                                          In Review
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
+                                          Approved
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-5 py-4">
+                                      <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-2.5 py-1 text-[10px] font-bold text-zinc-600">
+                                        ➔ {nextStatus}
+                                      </span>
+                                    </td>
+                                    <td className="px-5 py-4 text-right space-x-2 whitespace-nowrap">
+                                      <Link
+                                        href={`/articles/${art.id}`}
+                                        target="_blank"
+                                        className="inline-flex items-center gap-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1.5 text-[10px] font-bold text-zinc-600 shadow-2xs"
+                                      >
+                                        View
+                                      </Link>
+                                      {isOwnArticle ? (
+                                        <span className="inline-flex items-center gap-1 rounded border border-red-100 bg-red-50 px-2.5 py-1.5 text-[10px] font-bold text-red-500 cursor-not-allowed" title="Separation of duties: You are the author and cannot approve your own article">
+                                          ⛔ Cannot Approve
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDirectStatusTransition(art.id, nextStatus)}
+                                          className="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 text-[10px] font-bold text-green-700 shadow-2xs transition-colors"
+                                        >
+                                          ✓ {nextLabel}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDirectStatusTransition(art.id, "Draft")}
+                                        className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-600 shadow-2xs transition-colors"
+                                      >
+                                        ✕ Reject
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Workflow Pipeline Legend */}
+                  <div className="rounded-xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-4">Editorial Pipeline</h4>
+                    <div className="flex items-center gap-0">
+                      {[
+                        { label: "Draft", color: "bg-zinc-200 text-zinc-600", active: false },
+                        { label: "In Review", color: "bg-blue-100 text-blue-700", active: true },
+                        { label: "Approved", color: "bg-amber-100 text-amber-700", active: true },
+                        { label: "Published", color: "bg-green-100 text-green-700", active: false },
+                        { label: "Archived", color: "bg-red-100 text-red-600", active: false },
+                      ].map((stage, i, arr) => (
+                        <div key={stage.label} className="flex items-center">
+                          <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border ${
+                            stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
+                          } ${stage.color}`}>
+                            {stage.active && <span className="mr-1">👁</span>}{stage.label}
+                          </div>
+                          {i < arr.length - 1 && (
+                            <span className="mx-2 text-zinc-300 font-bold text-sm">→</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-zinc-400 font-medium mt-3">Highlighted stages are currently visible in this Workflows queue. Approving an article automatically advances it to the next stage.</p>
+                  </div>
+                </>
+              ) : (
+                /* ─── CUSTOM WORKFLOWS BUILDER ─── */
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-zinc-900">Custom Approval Workflows</h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">Define sequential multi-step approval routes that articles must pass through before publication.</p>
+                    </div>
+                    {!editingWorkflow && (
+                      <button
+                        type="button"
+                        onClick={startNewWorkflow}
+                        className="inline-flex items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-950 px-4 py-2 text-xs font-bold text-white hover:bg-zinc-800 shadow-sm transition-colors"
+                      >
+                        <span>+</span> New Workflow
+                      </button>
+                    )}
+                  </div>
+
+                  {!editingWorkflow && (
+                    workflowRoutes.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex flex-col items-center justify-center py-14 text-center">
+                        <div className="h-12 w-12 rounded-2xl bg-zinc-200 flex items-center justify-center mb-3">
+                          <span className="text-xl">🔀</span>
+                        </div>
+                        <p className="text-sm font-bold text-zinc-500">No custom workflows yet</p>
+                        <p className="text-xs text-zinc-400 font-medium mt-1">Click &ldquo;New Workflow&rdquo; to define a sequential approval route.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {workflowRoutes.map((route: any) => (
+                          <div key={route.id} className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                            <div className="flex items-start justify-between px-5 py-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-zinc-900 text-sm">{route.name}</div>
+                                {route.description && (
+                                  <div className="text-xs text-zinc-500 mt-0.5">{route.description}</div>
+                                )}
+                                <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                                  {(route.steps || []).map((step: any, idx: number) => (
+                                    <div key={step.id || idx} className="flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-700">
+                                        <span className="font-mono text-[9px] opacity-60">{idx + 1}.</span>
+                                        {step.name}
+                                        {step.role_restriction && (
+                                          <span className="ml-1 opacity-60">· {step.role_restriction}</span>
+                                        )}
+                                      </span>
+                                      {idx < (route.steps || []).length - 1 && (
+                                        <span className="text-zinc-300 text-xs">→</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-4 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => startEditWorkflow(route)}
+                                  className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-700 shadow-2xs transition-colors"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteWorkflow(route.id)}
+                                  className="rounded border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-1.5 text-[10px] font-bold text-red-600 shadow-2xs transition-colors"
+                                >
+                                  🗑 Delete
+                                </button>
+                              </div>
+                            </div>
+                            <div className="border-t border-zinc-100 bg-zinc-50/60 px-5 py-2 text-[10px] text-zinc-400 font-medium">
+                              {(route.steps || []).length} step{(route.steps || []).length !== 1 ? "s" : ""} · {articles.filter((a: any) => a.workflow_route_id === route.id).length} article{articles.filter((a: any) => a.workflow_route_id === route.id).length !== 1 ? "s" : ""} using this route
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
+
+                  {editingWorkflow && (
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-md overflow-hidden">
+                      <div className="border-b border-zinc-100 bg-gradient-to-r from-zinc-50 to-white px-6 py-4 flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-extrabold uppercase tracking-wider text-zinc-700">
+                            {editingWorkflow.id === "new" ? "Create New Workflow" : `Editing: ${editingWorkflow.name}`}
+                          </h4>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">Define the sequential approval steps for this route.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingWorkflow(null)}
+                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-600 shadow-2xs"
+                        >
+                          ✕ Cancel
+                        </button>
+                      </div>
+
+                      <div className="px-6 py-5 space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Workflow Name *</label>
+                            <input
+                              type="text"
+                              value={newWorkflowName}
+                              onChange={e => setNewWorkflowName(e.target.value)}
+                              placeholder="e.g. Legal & Compliance Review"
+                              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Description</label>
+                            <input
+                              type="text"
+                              value={newWorkflowDesc}
+                              onChange={e => setNewWorkflowDesc(e.target.value)}
+                              placeholder="Optional — describe when to use this workflow"
+                              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Approval Steps (Sequential)</label>
+                            <button
+                              type="button"
+                              onClick={() => setNewWorkflowSteps([...newWorkflowSteps, { name: "", role_restriction: "Admin", team_id: "", user_id: "" }])}
+                              className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 text-[10px] font-bold text-indigo-700 transition-colors"
+                            >
+                              + Add Step
+                            </button>
+                          </div>
+
+                          {newWorkflowSteps.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 py-8 text-center">
+                              <p className="text-xs text-zinc-400 font-semibold">No steps yet — click &ldquo;Add Step&rdquo; to begin.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {newWorkflowSteps.map((step, idx) => (
+                                <div key={idx} className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-white text-[10px] font-extrabold shrink-0">{idx + 1}</span>
+                                      <span className="text-xs font-bold text-zinc-700">Step {idx + 1}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      {idx > 0 && (
+                                        <button type="button" title="Move up" onClick={() => { const u = [...newWorkflowSteps]; [u[idx-1],u[idx]]=[u[idx],u[idx-1]]; setNewWorkflowSteps(u); }} className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs">↑</button>
+                                      )}
+                                      {idx < newWorkflowSteps.length - 1 && (
+                                        <button type="button" title="Move down" onClick={() => { const u = [...newWorkflowSteps]; [u[idx],u[idx+1]]=[u[idx+1],u[idx]]; setNewWorkflowSteps(u); }} className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs">↓</button>
+                                      )}
+                                      <button type="button" onClick={() => setNewWorkflowSteps(newWorkflowSteps.filter((_,i)=>i!==idx))} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 shadow-2xs">✕ Remove</button>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                                    <div className="lg:col-span-2">
+                                      <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Step Name *</label>
+                                      <input type="text" value={step.name} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],name:e.target.value}; setNewWorkflowSteps(u); }} placeholder="e.g. Technical Review" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition" />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Role Required</label>
+                                      <select value={step.role_restriction} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],role_restriction:e.target.value}; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
+                                        <option value="Admin">Admin</option>
+                                        <option value="SuperAdmin">Super Admin</option>
+                                        <option value="Any">Any Role</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Restrict to Team</label>
+                                      <select value={step.team_id} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],team_id:e.target.value}; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
+                                        <option value="">Any Team</option>
+                                        {teams.map((t: any) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                                      </select>
+                                    </div>
+                                    <div className="lg:col-span-2">
+                                      <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Restrict to Specific User</label>
+                                      <select value={step.user_id} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],user_id:e.target.value}; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
+                                        <option value="">Any User (matching role/team)</option>
+                                        {users.map((u: User) => (<option key={u.id} value={u.id}>{u.name} · {u.email}</option>))}
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {newWorkflowSteps.length > 0 && (
+                          <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-5 py-4">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-indigo-500 mb-3">Workflow Preview</p>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-bold text-zinc-600">Draft</span>
+                              <span className="text-zinc-300 text-xs">→</span>
+                              {newWorkflowSteps.map((step, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-1 text-[10px] font-bold text-indigo-700">
+                                    {idx + 1}. {step.name || `Step ${idx + 1}`}
+                                    {step.role_restriction && step.role_restriction !== "Any" && (
+                                      <span className="opacity-60 ml-0.5">({step.role_restriction})</span>
+                                    )}
+                                  </span>
+                                  <span className="text-zinc-300 text-xs">→</span>
+                                </div>
+                              ))}
+                              <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">Published</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-100">
+                          <button type="button" onClick={() => setEditingWorkflow(null)} className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-5 py-2 text-xs font-bold text-zinc-600 shadow-2xs transition-colors">Cancel</button>
+                          <button type="button" onClick={handleSaveWorkflow} className="rounded-lg border border-zinc-900 bg-zinc-950 hover:bg-zinc-800 px-6 py-2 text-xs font-bold text-white shadow-sm transition-colors">
+                            {editingWorkflow.id === "new" ? "Create Workflow" : "Save Changes"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mb-1">How Custom Workflows Work</p>
+                    <ul className="text-xs text-amber-700/80 font-medium space-y-1 list-disc list-inside">
+                      <li>Assign a workflow to an article in the Article Editor before submitting for review.</li>
+                      <li>Articles must pass through each approval step in order before being published.</li>
+                      <li>Each step validates the approver&rsquo;s role, team membership, and (optionally) identity.</li>
+                      <li>Separation of duties: the article author cannot approve their own work at any step.</li>
+                      <li>If an article is rejected, the approver must provide feedback for the author.</li>
+                    </ul>
+                  </div>
                 </div>
-                <p className="text-[10px] text-zinc-400 font-medium mt-3">Highlighted stages are currently visible in this Workflows queue. Approving an article automatically advances it to the next stage.</p>
-              </div>
+              )}
             </div>
           )}
 

@@ -46,9 +46,27 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           orderBy: { created_at: "desc" },
           include: { actor: { select: { id: true, name: true } } },
         },
+        workflow_route: {
+          include: {
+            steps: { orderBy: { step_number: "asc" } }
+          }
+        },
+        current_step: {
+          include: {
+            team: { select: { id: true, name: true } },
+            user: { select: { id: true, name: true, email: true } }
+          }
+        },
         article_teams: {
           select: {
             team: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        article_tags: {
+          select: {
+            tag: {
               select: { id: true, name: true }
             }
           }
@@ -126,12 +144,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       language,
       owner_id,
       review_due,
-      visibility,
       status: targetStatus, // New workflow status
       comment,
       variants, // Array of variant updates: [{ channel: "agent", detailed_steps: "..." }]
       team_ids,
+      workflow_route_id,
+      tags,
     } = body;
+
+    // Enforce mandatory team assignment for all roles if team_ids is updated
+    if (team_ids !== undefined) {
+      if (!Array.isArray(team_ids) || team_ids.length === 0) {
+        return NextResponse.json(
+          { error: "Articles must be explicitly assigned to at least one team." },
+          { status: 400 }
+        );
+      }
+    }
 
     // Enforce Admin restrictions on teams
     if (role === "Admin") {
@@ -140,7 +169,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       });
       const userTeamIds = userTeams.map(ut => ut.team_id);
 
-      if (team_ids && Array.isArray(team_ids) && team_ids.length > 0) {
+      if (team_ids !== undefined && Array.isArray(team_ids)) {
         const invalidTeams = team_ids.filter(tid => !userTeamIds.includes(tid));
         if (invalidTeams.length > 0) {
           return NextResponse.json(
@@ -148,11 +177,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             { status: 403 }
           );
         }
-      } else if (visibility === Visibility.PRIVATE) {
-        return NextResponse.json(
-          { error: "Private articles must be explicitly assigned to at least one of your teams." },
-          { status: 400 }
-        );
       }
     }
 
@@ -161,6 +185,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     // Validate workflow transitions and separation of duties if status is changing
     let finalStatus = currentArticle.status;
     let publishedAt = currentArticle.published_at;
+
+    let nextStepId: string | null | undefined = undefined;
 
     if (targetStatus && targetStatus !== currentArticle.status) {
       const from = currentArticle.status;
@@ -207,19 +233,124 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         }
       }
 
-      finalStatus = to;
-      if (to === ArticleStatus.Published) {
-        publishedAt = new Date();
+      // Check if custom workflow is assigned
+      const activeWorkflowRouteId = workflow_route_id !== undefined ? workflow_route_id : currentArticle.workflow_route_id;
+
+      if (activeWorkflowRouteId) {
+        // Handle transitions under custom workflow
+        if (from === ArticleStatus.Draft && to === ArticleStatus.InReview) {
+          // Submit for review: set to first step of custom workflow
+          const firstStep = await db.workflowStep.findFirst({
+            where: { route_id: activeWorkflowRouteId },
+            orderBy: { step_number: "asc" }
+          });
+          if (!firstStep) {
+            return NextResponse.json(
+              { error: "Selected workflow route has no defined steps." },
+              { status: 400 }
+            );
+          }
+          finalStatus = ArticleStatus.InReview;
+          nextStepId = firstStep.id;
+        } else if (from === ArticleStatus.InReview && to === ArticleStatus.Approved) {
+          // Approving step
+          if (currentArticle.current_step_id) {
+            const currentStep = await db.workflowStep.findUnique({
+              where: { id: currentArticle.current_step_id }
+            });
+            if (!currentStep) {
+              return NextResponse.json({ error: "Active workflow step not found." }, { status: 400 });
+            }
+
+            // Verify role restriction
+            const roleHierarchy = { Agent: 1, Admin: 2, SuperAdmin: 3 };
+            const userLevel = roleHierarchy[role as keyof typeof roleHierarchy] || 1;
+            const requiredLevel = roleHierarchy[currentStep.role_restriction as keyof typeof roleHierarchy] || 1;
+            if (role !== "SuperAdmin" && userLevel < requiredLevel) {
+              return NextResponse.json(
+                { error: `Forbidden: You need ${currentStep.role_restriction} role to approve this step.` },
+                { status: 403 }
+              );
+            }
+
+            // Verify team restriction
+            if (currentStep.team_id) {
+              const userInTeam = await prisma.userTeam.findFirst({
+                where: { user_id: userId, team_id: currentStep.team_id }
+              });
+              if (!userInTeam && role !== "SuperAdmin") {
+                return NextResponse.json(
+                  { error: "Forbidden: You do not belong to the required team for this approval step." },
+                  { status: 403 }
+                );
+              }
+            }
+
+            // Verify specific user restriction
+            if (currentStep.user_id && currentStep.user_id !== userId && role !== "SuperAdmin") {
+              return NextResponse.json(
+                { error: "Forbidden: Only the designated user can approve this step." },
+                { status: 403 }
+              );
+            }
+
+            // Find next step
+            const nextStep = await db.workflowStep.findFirst({
+              where: { route_id: activeWorkflowRouteId, step_number: currentStep.step_number + 1 },
+              orderBy: { step_number: "asc" }
+            });
+
+            if (nextStep) {
+              // Stay InReview, update current_step_id to next step
+              finalStatus = ArticleStatus.InReview;
+              nextStepId = nextStep.id;
+            } else {
+              // Final step approved, set status to Approved
+              finalStatus = ArticleStatus.Approved;
+              nextStepId = null;
+            }
+          } else {
+            finalStatus = ArticleStatus.Approved;
+            nextStepId = null;
+          }
+        } else if (to === ArticleStatus.Draft) {
+          // Rejected back to Draft, reset step
+          finalStatus = ArticleStatus.Draft;
+          nextStepId = null;
+        } else {
+          finalStatus = to;
+          if (to === ArticleStatus.Published) {
+            publishedAt = new Date();
+          }
+          nextStepId = null;
+        }
+      } else {
+        // Standard Direct Workflow
+        finalStatus = to;
+        if (to === ArticleStatus.Published) {
+          publishedAt = new Date();
+        }
+        nextStepId = null;
       }
 
       // Record status transition in history
+      let historyComment = comment || `Status transitioned from ${from} to ${finalStatus}`;
+      if (activeWorkflowRouteId && from === ArticleStatus.InReview && to === ArticleStatus.Approved && nextStepId) {
+        const currentStep = await db.workflowStep.findUnique({ where: { id: currentArticle.current_step_id || "" } });
+        const nextStep = await db.workflowStep.findUnique({ where: { id: nextStepId } });
+        historyComment = comment || `Approved step "${currentStep?.name}". Advanced to step "${nextStep?.name}".`;
+      } else if (activeWorkflowRouteId && from === ArticleStatus.InReview && to === ArticleStatus.Approved && !nextStepId) {
+        const currentStep = await db.workflowStep.findUnique({ where: { id: currentArticle.current_step_id || "" } });
+        historyComment = comment || `Approved final step "${currentStep?.name}". Workflow complete.`;
+      }
+
       await db.articleStatusHistory.create({
         data: {
           article_id: id,
           from_status: from,
-          to_status: to,
+          to_status: finalStatus,
           actor_id: userId,
-          comment: comment || `Status transitioned from ${from} to ${to}`,
+          comment: historyComment,
         },
       });
     }
@@ -238,9 +369,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           language: language || undefined,
           owner_id: owner_id || undefined,
           review_due: review_due ? new Date(review_due) : undefined,
-          visibility: visibility || undefined,
           status: finalStatus,
           published_at: publishedAt,
+          workflow_route_id: workflow_route_id !== undefined ? (workflow_route_id || null) : undefined,
+          current_step_id: nextStepId !== undefined ? nextStepId : undefined,
         },
       });
 
@@ -254,6 +386,44 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             data: team_ids.map((tid: string) => ({
               article_id: id,
               team_id: tid,
+              tenant_id: tenantId,
+            })),
+          });
+        }
+      }
+
+      if (tags !== undefined && Array.isArray(tags)) {
+        await tx.articleTag.deleteMany({
+          where: { article_id: id }
+        });
+
+        const uniqueTags = Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)));
+        const tagIds: string[] = [];
+        
+        for (const tagName of uniqueTags) {
+          let tag = await tx.tag.findFirst({
+            where: {
+              tenant_id: tenantId,
+              name: { equals: tagName, mode: "insensitive" }
+            }
+          });
+          if (!tag) {
+            tag = await tx.tag.create({
+              data: {
+                tenant_id: tenantId,
+                name: tagName
+              }
+            });
+          }
+          tagIds.push(tag.id);
+        }
+
+        const uniqueTagIds = Array.from(new Set(tagIds));
+        if (uniqueTagIds.length > 0) {
+          await tx.articleTag.createMany({
+            data: uniqueTagIds.map((tid) => ({
+              article_id: id,
+              tag_id: tid,
               tenant_id: tenantId,
             })),
           });
@@ -339,7 +509,50 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       },
     });
 
-    return NextResponse.json(updatedArticle);
+    const finalArticleWithRelations = await db.article.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        author: { select: { id: true, name: true, email: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        variants: true,
+        versions: {
+          orderBy: { created_at: "desc" },
+          include: { editor: { select: { id: true, name: true } } },
+        },
+        status_history: {
+          orderBy: { created_at: "desc" },
+          include: { actor: { select: { id: true, name: true } } },
+        },
+        workflow_route: {
+          include: {
+            steps: { orderBy: { step_number: "asc" } }
+          }
+        },
+        current_step: {
+          include: {
+            team: { select: { id: true, name: true } },
+            user: { select: { id: true, name: true, email: true } }
+          }
+        },
+        article_teams: {
+          select: {
+            team: {
+              select: { id: true, name: true }
+            }
+          }
+        },
+        article_tags: {
+          select: {
+            tag: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      },
+    });
+
+    return NextResponse.json(finalArticleWithRelations);
   } catch (error: any) {
     console.error("PUT Article Error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });

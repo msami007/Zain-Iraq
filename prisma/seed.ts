@@ -269,7 +269,7 @@ async function main() {
     });
   }
 
-  // Assign agents to teams if not already assigned
+  // Assign agents and admins to teams if not already assigned
   const userTeam1Exists = await prisma.userTeam.findFirst({
     where: { user_id: agent1Zain.id, team_id: mobileTeamZain.id }
   });
@@ -283,6 +283,19 @@ async function main() {
     });
   }
 
+  const adminTeam1Exists = await prisma.userTeam.findFirst({
+    where: { user_id: admin1Zain.id, team_id: mobileTeamZain.id }
+  });
+  if (!adminTeam1Exists) {
+    await prisma.userTeam.create({
+      data: {
+        user_id: admin1Zain.id,
+        team_id: mobileTeamZain.id,
+        tenant_id: zainTenant.id,
+      },
+    });
+  }
+
   const userTeam2Exists = await prisma.userTeam.findFirst({
     where: { user_id: agent2Zain.id, team_id: broadbandTeamZain.id }
   });
@@ -290,6 +303,19 @@ async function main() {
     await prisma.userTeam.create({
       data: {
         user_id: agent2Zain.id,
+        team_id: broadbandTeamZain.id,
+        tenant_id: zainTenant.id,
+      },
+    });
+  }
+
+  const adminTeam2Exists = await prisma.userTeam.findFirst({
+    where: { user_id: admin2Zain.id, team_id: broadbandTeamZain.id }
+  });
+  if (!adminTeam2Exists) {
+    await prisma.userTeam.create({
+      data: {
+        user_id: admin2Zain.id,
         team_id: broadbandTeamZain.id,
         tenant_id: zainTenant.id,
       },

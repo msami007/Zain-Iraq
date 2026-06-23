@@ -32,6 +32,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
       category: true,
       author: { select: { id: true, name: true } },
       variants: true,
+      article_teams: true,
     },
   });
 
@@ -42,8 +43,8 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   // Access Control Validation
   let hasAccess = false;
 
-  // - Rule A: If article is Published, anyone has access
-  if (article.status === ArticleStatus.Published) {
+  // - Rule A: If article is Published and PUBLIC, anyone has access
+  if (article.status === ArticleStatus.Published && article.visibility === "PUBLIC") {
     hasAccess = true;
   }
 
@@ -57,9 +58,23 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     }
   }
 
-  // - Rule C: If the user is logged in (Agent/Admin/SuperAdmin), they can view all articles
+  // - Rule C: If the user is logged in (Agent/Admin/SuperAdmin)
   if (!hasAccess && user) {
-    hasAccess = true;
+    if (article.visibility === "PRIVATE") {
+      if (user.role === "SuperAdmin") {
+        hasAccess = true;
+      } else {
+        const userTeams = await prisma.userTeam.findMany({
+          where: { user_id: user.id }
+        });
+        const userTeamIds = userTeams.map(ut => ut.team_id);
+        const articleTeamIds = article.article_teams.map(at => at.team_id);
+        hasAccess = articleTeamIds.some(tid => userTeamIds.includes(tid));
+      }
+    } else {
+      // Logged in staff can view any PUBLIC article status (Draft, InReview, Approved, etc.)
+      hasAccess = true;
+    }
   }
 
   if (!hasAccess) {
