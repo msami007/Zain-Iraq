@@ -155,6 +155,7 @@ export default function AdminDeskWorkspace({
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows" | "analytics">("articles");
+  const currentTab = overrideActiveTab || activeTab;
 
   // Articles Filter states
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
@@ -336,10 +337,10 @@ export default function AdminDeskWorkspace({
   };
 
   useEffect(() => {
-    if (activeTab === "gaps") {
+    if (currentTab === "gaps") {
       fetchFilteredGaps();
     }
-  }, [gapStatusFilter, gapStartDate, gapEndDate, activeTab]);
+  }, [gapStatusFilter, gapStartDate, gapEndDate, currentTab]);
 
   // Compute filtered articles list based on status, category, and search text filters
   const filteredArticles = articles.filter((art) => {
@@ -391,12 +392,12 @@ export default function AdminDeskWorkspace({
 
   // Fetch Audit Logs and Analytics when tab changes
   useEffect(() => {
-    if (activeTab === "audit") {
+    if (currentTab === "audit") {
       fetchAuditLogs();
-    } else if (activeTab === "analytics") {
+    } else if (currentTab === "analytics") {
       fetchAnalytics();
     }
-  }, [activeTab]);
+  }, [currentTab]);
 
   // Load visual editor initial HTML contents when editing article changes (uncontrolled editor initialization)
   useEffect(() => {
@@ -1153,7 +1154,7 @@ export default function AdminDeskWorkspace({
     return [];
   };
 
-  const currentTab = overrideActiveTab || activeTab;
+
 
   return (
     <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full"}`}>
@@ -2623,7 +2624,7 @@ export default function AdminDeskWorkspace({
           {currentTab === "workflows" && (
             <div className="space-y-6">
               {/* Tab Selector */}
-              {(currentUserRole === "SuperAdmin" || currentUserRole === "Admin") && (
+              {currentUserRole === "SuperAdmin" && (
                 <div className="flex border-b border-zinc-200 mb-2">
                   <button
                     type="button"
@@ -2653,7 +2654,7 @@ export default function AdminDeskWorkspace({
                 </div>
               )}
 
-              {workflowSubTab === "queue" ? (
+              {workflowSubTab === "queue" || currentUserRole !== "SuperAdmin" ? (
                 <>
                   <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                     <div className="border-b border-zinc-100 bg-zinc-50/50 px-6 py-4 flex items-center justify-between">

@@ -65,8 +65,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
 
     const { role, tenant_id: userTenantId, id: userId } = session.user;
-    if (role !== "Admin" && role !== "SuperAdmin") {
-      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    if (role !== "SuperAdmin") {
+      return NextResponse.json({ error: "Forbidden: SuperAdmin access required" }, { status: 403 });
     }
 
     const body = await req.json();
@@ -204,8 +204,8 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
 
     const { role, tenant_id: userTenantId, id: userId } = session.user;
-    if (role !== "Admin" && role !== "SuperAdmin") {
-      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    if (role !== "SuperAdmin") {
+      return NextResponse.json({ error: "Forbidden: SuperAdmin access required" }, { status: 403 });
     }
 
     const searchParams = req.nextUrl.searchParams;
