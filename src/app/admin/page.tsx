@@ -1,9 +1,9 @@
 import { auth, signOut } from "@/lib/auth";
 import { prisma, getTenantDb } from "@/lib/db";
 import { redirect } from "next/navigation";
-import AgentDeskWorkspace from "@/components/AgentDeskWorkspace";
+import AdminDeskWorkspace from "@/components/AdminDeskWorkspace";
 
-export default async function AgentPage() {
+export default async function AdminPage() {
   const session = await auth();
   if (!session || !session.user) {
     redirect("/login");
@@ -11,8 +11,8 @@ export default async function AgentPage() {
 
   const { tenant_id: tenantId, name, email, role, id: userId } = session.user;
 
-  // Enforce access control based on permissions matrix
-  if (role !== "Agent" && role !== "Admin" && role !== "SuperAdmin") {
+  // Enforce access control based on permissions matrix: Admin or SuperAdmin only
+  if (role !== "Admin" && role !== "SuperAdmin") {
     redirect("/dashboard-redirect");
   }
 
@@ -33,48 +33,92 @@ export default async function AgentPage() {
 
   const db = getTenantDb(tenantId);
 
-  // Fetch initial cases (waiting and assigned cases)
-  const cases = await db.chatCase.findMany({
-    orderBy: { wait_started_at: "asc" },
+  // Fetch articles with variants & version logs
+  const articles = await db.article.findMany({
+    orderBy: { updated_at: "desc" },
     include: {
-      agent: { select: { name: true } },
+      category: { select: { id: true, name: true } },
+      author: { select: { id: true, name: true, email: true } },
+      owner: { select: { id: true, name: true, email: true } },
+      variants: true,
+    },
+  });
+
+  // Fetch categories
+  const categories = await db.category.findMany({
+    orderBy: { name: "asc" },
+  });
+
+  // Fetch users for assigning article ownership
+  const users = await db.user.findMany({
+    where: { status: "Active" },
+    orderBy: { name: "asc" },
+  });
+
+  // Fetch knowledge gaps queue
+  const gaps = await db.knowledgeGap.findMany({
+    orderBy: { occurrences: "desc" },
+    include: {
+      reporter: { select: { name: true } },
+      claimer: { select: { name: true } },
       resolving_article: { select: { title: true } },
     },
   });
 
-  // Calculate today's search query count for this agent
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todaySearchesCount = await db.searchQuery.count({
-    where: {
-      user_id: userId,
-      created_at: { gte: today },
-    },
-  });
+  // Serialization to plain JS objects for client component props
+  const serializedArticles = articles.map((a) => ({
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    category_id: a.category_id,
+    language: a.language,
+    status: a.status,
+    visibility: a.visibility,
+    owner_id: a.owner_id,
+    author_id: a.author_id,
+    review_due: a.review_due ? a.review_due.toISOString() : null,
+    updated_at: a.updated_at.toISOString(),
+    category: a.category ? { id: a.category.id, name: a.category.name } : null,
+    author: a.author ? { id: a.author.id, name: a.author.name, email: a.author.email } : null,
+    owner: a.owner ? { id: a.owner.id, name: a.owner.name, email: a.owner.email } : null,
+    variants: a.variants.map((v) => ({
+      id: v.id,
+      article_id: v.article_id,
+      channel: v.channel,
+      short_answer: v.short_answer,
+      detailed_steps: v.detailed_steps,
+      copy_ready_macro: v.copy_ready_macro,
+      image_url: v.image_url,
+      video_link: v.video_link,
+      troubleshooting_flow: v.troubleshooting_flow || null,
+    })),
+  }));
 
-  // Calculate helpfulness rate
-  const totalFeedbackCount = await db.articleFeedback.count();
-  const helpfulFeedbackCount = await db.articleFeedback.count({
-    where: { helpful: true },
-  });
-  const helpfulnessRate = totalFeedbackCount > 0 
-    ? Math.round((helpfulFeedbackCount / totalFeedbackCount) * 100) 
-    : null;
-
-  const serializedCases = cases.map((c) => ({
+  const serializedCategories = categories.map((c) => ({
     id: c.id,
-    customer_name: c.customer_name,
-    subject: c.subject,
-    query_text: c.query_text,
-    status: c.status,
-    priority: c.priority,
-    assigned_agent_id: c.assigned_agent_id,
-    context: c.context || {},
-    resolving_article_id: c.resolving_article_id,
-    wait_started_at: c.wait_started_at.toISOString(),
-    resolved_at: c.resolved_at ? c.resolved_at.toISOString() : null,
-    agent: c.agent ? { name: c.agent.name } : null,
-    resolving_article: c.resolving_article ? { title: c.resolving_article.title } : null,
+    name: c.name,
+  }));
+
+  const serializedUsers = users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+  }));
+
+  const serializedGaps = gaps.map((g) => ({
+    id: g.id,
+    query_text: g.query_text,
+    language: g.language,
+    channel: g.channel,
+    status: g.status,
+    occurrences: g.occurrences,
+    reported_by: g.reported_by,
+    claimed_by: g.claimed_by,
+    resolving_article_id: g.resolving_article_id,
+    created_at: g.created_at.toISOString(),
+    reporter: g.reporter ? { name: g.reporter.name } : null,
+    claimer: g.claimer ? { name: g.claimer.name } : null,
+    resolving_article: g.resolving_article ? { title: g.resolving_article.title } : null,
   }));
 
   const brandingColor = (tenant.branding as any)?.primaryColor || "#09090B";
@@ -93,7 +137,7 @@ export default async function AgentPage() {
               <h1 className="text-base font-extrabold tracking-tight text-zinc-950 flex items-center gap-2">
                 {tenant.name}
                 <span className="text-zinc-300 font-normal">|</span>
-                <span className="text-zinc-650 font-bold text-xs uppercase tracking-wider">Agent Desk</span>
+                <span className="text-zinc-650 font-bold text-xs uppercase tracking-wider">Admin Workspace</span>
               </h1>
             </div>
 
@@ -133,24 +177,26 @@ export default async function AgentPage() {
             <div>
               <h2 className="text-lg font-extrabold text-zinc-950">Welcome, {name}!</h2>
               <p className="text-xs font-semibold text-zinc-500 mt-1">
-                Customer support console for <strong className="text-zinc-800">{tenant.name}</strong>.
+                Manage articles, approve status changes, and resolve gaps for <strong className="text-zinc-800">{tenant.name}</strong>.
               </p>
             </div>
             <div>
               <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-600">
-                Workspace: <code className="ml-2 font-mono text-[10px] text-zinc-800">{tenant.slug.toUpperCase()}</code>
+                Tenant Key: <code className="ml-2 font-mono text-[10px] text-zinc-800">{tenant.id}</code>
               </span>
             </div>
           </div>
         </div>
 
-        {/* Workspace Workspace Component */}
-        <AgentDeskWorkspace
-          initialCases={serializedCases}
+        {/* Dashboard Workspace */}
+        <AdminDeskWorkspace
+          initialArticles={serializedArticles}
+          categories={serializedCategories}
+          users={serializedUsers}
           currentUserId={userId}
+          currentUserRole={role}
           tenantId={tenantId}
-          todaySearches={todaySearchesCount}
-          helpfulnessRate={helpfulnessRate}
+          initialGaps={serializedGaps}
         />
       </main>
     </div>

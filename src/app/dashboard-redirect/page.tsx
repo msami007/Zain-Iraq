@@ -10,6 +10,8 @@ export default async function DashboardRedirectPage() {
   const role = session.user.role;
   if (role === "SuperAdmin") {
     redirect("/superadmin");
+  } else if (role === "Admin") {
+    redirect("/admin");
   } else {
     redirect("/agent");
   }

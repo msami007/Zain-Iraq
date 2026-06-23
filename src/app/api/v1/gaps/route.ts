@@ -1,0 +1,188 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { getTenantDb } from "@/lib/db";
+import { GapStatus, Language, Channel } from "@prisma/client";
+
+// GET: Fetch knowledge gaps queue (scoped by tenant, Admin/SuperAdmin only)
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { tenant_id: tenantId, role } = session.user;
+
+    // Enforce permission matrix: only Admin/SuperAdmin can view gaps queue
+    if (role !== "Admin" && role !== "SuperAdmin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    const db = getTenantDb(tenantId);
+    const searchParams = req.nextUrl.searchParams;
+    const statusFilter = searchParams.get("status") as GapStatus | null;
+
+    const gaps = await db.knowledgeGap.findMany({
+      where: {
+        status: statusFilter || undefined,
+      },
+      include: {
+        reporter: { select: { id: true, name: true, email: true } },
+        claimer: { select: { id: true, name: true, email: true } },
+        resolving_article: { select: { id: true, title: true, slug: true } },
+      },
+      orderBy: { occurrences: "desc" },
+    });
+
+    return NextResponse.json(gaps);
+  } catch (error: any) {
+    console.error("GET Gaps Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// POST: Log/Create a knowledge gap (Agent/Admin/SuperAdmin)
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { tenant_id: tenantId, id: userId } = session.user;
+    const body = await req.json();
+    const { query_text, language, channel } = body;
+
+    if (!query_text || typeof query_text !== "string") {
+      return NextResponse.json({ error: "Query text is required" }, { status: 400 });
+    }
+
+    const db = getTenantDb(tenantId);
+    const mappedLanguage = language === "ar" ? Language.ar : Language.en;
+    const mappedChannel = channel ? (channel as Channel) : Channel.default;
+
+    // Check if a gap with this query_text already exists and is not resolved/dismissed
+    const existing = await db.knowledgeGap.findFirst({
+      where: {
+        query_text,
+        tenant_id: tenantId,
+        status: { in: [GapStatus.NEW, GapStatus.IN_PROGRESS] },
+      },
+    });
+
+    if (existing) {
+      // Increment occurrence count
+      const updated = await db.knowledgeGap.update({
+        where: { id: existing.id },
+        data: { occurrences: existing.occurrences + 1 },
+      });
+      return NextResponse.json(updated);
+    }
+
+    // Create a new knowledge gap
+    const newGap = await db.knowledgeGap.create({
+      data: {
+        tenant_id: tenantId,
+        query_text,
+        language: mappedLanguage,
+        channel: mappedChannel,
+        status: GapStatus.NEW,
+        reported_by: userId,
+      },
+    });
+
+    return NextResponse.json(newGap, { status: 201 });
+  } catch (error: any) {
+    console.error("POST Gap Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// PUT: Update gap status, claim, or link resolving article (Admin/SuperAdmin only)
+export async function PUT(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { tenant_id: tenantId, role, id: userId } = session.user;
+
+    // Enforce permission matrix: only Admin/SuperAdmin can resolve or edit gaps
+    if (role !== "Admin" && role !== "SuperAdmin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { id, status, resolving_article_id, claim } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "Gap ID is required" }, { status: 400 });
+    }
+
+    const db = getTenantDb(tenantId);
+
+    // Fetch the existing gap to ensure it belongs to this tenant
+    const existing = await db.knowledgeGap.findUnique({
+      where: { id },
+    });
+
+    if (!existing || existing.tenant_id !== tenantId) {
+      return NextResponse.json({ error: "Knowledge gap not found" }, { status: 404 });
+    }
+
+    const updateData: any = {};
+
+    if (claim) {
+      updateData.claimed_by = userId;
+      updateData.status = GapStatus.IN_PROGRESS;
+    } else if (status) {
+      // Rule: cannot resolve without a linked article
+      if (status === GapStatus.RESOLVED) {
+        if (!resolving_article_id) {
+          return NextResponse.json(
+            { error: "Cannot resolve gap without linking a resolving article" },
+            { status: 400 }
+          );
+        }
+        // Verify that the article exists and is in the same tenant
+        const article = await db.article.findUnique({
+          where: { id: resolving_article_id },
+        });
+        if (!article || article.tenant_id !== tenantId) {
+          return NextResponse.json({ error: "Resolving article not found" }, { status: 404 });
+        }
+        updateData.resolving_article_id = resolving_article_id;
+      }
+      updateData.status = status as GapStatus;
+    }
+
+    const updatedGap = await db.knowledgeGap.update({
+      where: { id },
+      data: updateData,
+      include: {
+        reporter: { select: { name: true } },
+        claimer: { select: { name: true } },
+        resolving_article: { select: { title: true } },
+      },
+    });
+
+    // Write audit log entry
+    await db.auditLog.create({
+      data: {
+        tenant_id: tenantId,
+        actor_id: userId,
+        action: "Update Knowledge Gap",
+        target_type: "KnowledgeGap",
+        target_id: id,
+        target_label: `Gap Status: ${updatedGap.status} (${updatedGap.query_text.slice(0, 30)})`,
+        after: updatedGap as any,
+      },
+    });
+
+    return NextResponse.json(updatedGap);
+  } catch (error: any) {
+    console.error("PUT Gap Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}

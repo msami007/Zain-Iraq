@@ -35,21 +35,40 @@ export async function POST(req: NextRequest) {
     const mappedLanguage = language === "ar" ? Language.ar : Language.en;
     const mappedChannel = channel ? (channel as Channel) : Channel.default;
 
-    // Search query in database (case-insensitive title matching)
-    // Frontline agents can search all statuses, customers see Published only
-    const searchStatus = session?.user?.role && session.user.role !== "Agent" 
-      ? undefined 
-      : "Published";
+    // Search query in database
+    // Authenticated users (Agent/Admin/SuperAdmin) can search all statuses, guests see Published only
+    const searchStatus = session?.user?.role ? undefined : "Published";
+
+    const whereClause: any = {
+      language: mappedLanguage,
+      status: searchStatus ? (searchStatus as any) : undefined,
+      OR: [
+        { title: { contains: query, mode: "insensitive" } },
+        { slug: { contains: query, mode: "insensitive" } },
+      ],
+    };
+
+    // Apply search filters
+    if (filters) {
+      if (filters.category_id) {
+        whereClause.category_id = filters.category_id;
+      }
+      if (filters.author_id) {
+        whereClause.author_id = filters.author_id;
+      }
+      if (filters.date_start || filters.date_end) {
+        whereClause.created_at = {};
+        if (filters.date_start) {
+          whereClause.created_at.gte = new Date(filters.date_start);
+        }
+        if (filters.date_end) {
+          whereClause.created_at.lte = new Date(filters.date_end);
+        }
+      }
+    }
 
     const articles = await db.article.findMany({
-      where: {
-        language: mappedLanguage,
-        status: searchStatus ? (searchStatus as any) : undefined,
-        title: {
-          contains: query,
-          mode: "insensitive",
-        },
-      },
+      where: whereClause,
       include: {
         category: true,
       },
@@ -58,7 +77,8 @@ export async function POST(req: NextRequest) {
     const results = articles.map((article) => {
       // Basic scoring logic: 1.0 for exact title match, 0.5 for contains
       const exactMatch = article.title.toLowerCase() === query.toLowerCase();
-      const score = exactMatch ? 1.0 : 0.5;
+      const startsWith = article.title.toLowerCase().startsWith(query.toLowerCase());
+      const score = exactMatch ? 1.0 : startsWith ? 0.75 : 0.5;
 
       return {
         article_id: article.id,
