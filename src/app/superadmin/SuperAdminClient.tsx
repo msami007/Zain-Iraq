@@ -59,6 +59,7 @@ export default function SuperAdminClient({
   const [activeTab, setActiveTab] = useState<"orgs" | "users" | "articles" | "gaps">("orgs");
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   // Tenant form state
   const [orgName, setOrgName] = useState("");
@@ -168,79 +169,163 @@ export default function SuperAdminClient({
     }
   };
 
+  const handleToggleStatus = async (userId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "Active" ? "Disabled" : "Active";
+    setUpdatingUserId(userId);
+    try {
+      const res = await fetch(`/api/v1/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: data.status } : u));
+      }
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    setUpdatingUserId(userId);
+    try {
+      const res = await fetch(`/api/v1/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: data.role } : u));
+      }
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen flex bg-zinc-50 w-full text-left">
-      {/* Sidebar - left */}
-      <aside className="w-64 flex-shrink-0 bg-zinc-950 text-zinc-400 flex flex-col justify-between py-6 px-4 border-r border-zinc-900 sticky top-0 h-screen">
-        <div className="space-y-6">
-          <div className="px-3 mb-6">
-            <div className="flex items-center gap-2.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-yellow-400 animate-pulse" />
-              <span className="font-extrabold text-sm text-white tracking-tight leading-none uppercase">Zain & Oodi</span>
+      {/* Sidebar */}
+      <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen">
+        <div>
+          {/* Brand */}
+          <div className="px-5 py-5 border-b border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-amber-400/[0.09] border border-amber-400/[0.18] flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(251 191 36 / 0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <div>
+                <div className="text-[11px] font-extrabold text-white uppercase tracking-widest leading-none">Zain & Oodi</div>
+                <div className="text-[9px] font-semibold text-white/25 uppercase tracking-widest mt-1">Super Admin</div>
+              </div>
             </div>
-            <div className="text-[10px] font-bold text-zinc-500 mt-1.5 uppercase tracking-wider">Super Admin Panel</div>
           </div>
 
-          {/* Section: Platform */}
-          <div className="space-y-1.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-650 px-3 mb-2">Platform Management</div>
-            <button
-              type="button"
-              onClick={() => setActiveTab("orgs")}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
-                activeTab === "orgs" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-              }`}
-            >
-              <span>🏢</span> Organizations
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("users")}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
-                activeTab === "users" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-              }`}
-            >
-              <span>👥</span> User Accounts
-            </button>
-          </div>
+          {/* Navigation */}
+          <nav className="px-3 pt-5 space-y-5">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Platform</p>
+              <div className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("orgs")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "orgs" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 0-2 2h-2"/>
+                    <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+                  </svg>
+                  Organizations
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("users")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "users" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  User Accounts
+                </button>
+              </div>
+            </div>
 
-          {/* Section: Content */}
-          <div className="space-y-1.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-650 px-3 mb-2">Content Management</div>
-            <button
-              type="button"
-              onClick={() => setActiveTab("articles")}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
-                activeTab === "articles" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-              }`}
-            >
-              <span>📂</span> Articles Manager
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("gaps")}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${
-                activeTab === "gaps" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-              }`}
-            >
-              <span>🔍</span> Gaps Queue
-            </button>
-          </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Content</p>
+              <div className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("articles")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "articles" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <line x1="10" y1="9" x2="8" y2="9"/>
+                  </svg>
+                  Articles Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("gaps")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "gaps" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  Gaps Queue
+                </button>
+              </div>
+            </div>
+          </nav>
         </div>
 
-        <div className="border-t border-zinc-900 pt-4 px-2 space-y-4">
-          <div>
-            <div className="text-xs font-bold text-white truncate">{userName}</div>
-            <div className="text-[10px] text-zinc-500 font-mono truncate mt-0.5">{userEmail}</div>
-            <div className="mt-2 inline-flex rounded bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
-              {currentUserRole}
+        {/* User Footer */}
+        <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3">
+          <div className="flex items-center gap-2.5 px-1">
+            <div className="h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-[11px] font-bold text-indigo-300">{userName?.[0]?.toUpperCase() ?? "S"}</span>
             </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-white truncate leading-none mb-0.5">{userName}</div>
+              <div className="text-[10px] font-mono text-white/35 truncate">{userEmail}</div>
+            </div>
+          </div>
+          <div className="px-1">
+            <span className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-widest bg-amber-400/[0.08] border border-amber-400/[0.15] text-amber-400/70">
+              <span className="h-1 w-1 rounded-full bg-amber-400/70" />
+              {currentUserRole}
+            </span>
           </div>
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-transparent hover:bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-400 hover:text-white transition-all shadow-xs"
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/[0.13] px-3 py-2 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all"
           >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
             Sign Out
           </button>
         </div>
@@ -539,23 +624,49 @@ export default function SuperAdminClient({
                               </span>
                             </td>
                             <td className="py-3.5 px-4">
-                              <span
-                                className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                                  u.role === "SuperAdmin"
-                                    ? "bg-zinc-955 text-white border-zinc-955"
-                                    : u.role === "Admin"
-                                    ? "bg-zinc-50 text-zinc-900 border-zinc-300"
-                                    : "bg-white text-zinc-500 border-zinc-200"
-                                }`}
-                              >
-                                {u.role}
-                              </span>
+                              {u.id === currentUserId ? (
+                                <span className="rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-zinc-950 text-white border-zinc-950">
+                                  {u.role}
+                                </span>
+                              ) : (
+                                <select
+                                  value={u.role}
+                                  disabled={updatingUserId === u.id}
+                                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                  className="rounded border border-zinc-200 bg-white text-[11px] font-semibold text-zinc-700 px-2 py-1 focus:outline-none focus:border-zinc-400 disabled:opacity-50 cursor-pointer hover:border-zinc-300 transition-colors"
+                                >
+                                  <option value="Agent">Agent</option>
+                                  <option value="Admin">Admin</option>
+                                  <option value="SuperAdmin">SuperAdmin</option>
+                                </select>
+                              )}
                             </td>
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700">
-                                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                                {u.status}
-                              </span>
+                              {u.id === currentUserId ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                                  {u.status}
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={updatingUserId === u.id}
+                                  onClick={() => handleToggleStatus(u.id, u.status)}
+                                  className={`inline-flex items-center gap-1.5 text-xs font-bold transition-all disabled:opacity-50 rounded px-2 py-0.5 border ${
+                                    u.status === "Active"
+                                      ? "text-green-700 border-green-200 bg-green-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                                      : u.status === "Disabled"
+                                      ? "text-red-600 border-red-200 bg-red-50 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                                      : "text-zinc-500 border-zinc-200 bg-zinc-50"
+                                  }`}
+                                >
+                                  <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                                    u.status === "Active" ? "bg-green-500" :
+                                    u.status === "Disabled" ? "bg-red-500" : "bg-zinc-400"
+                                  }`} />
+                                  {updatingUserId === u.id ? "..." : u.status}
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
