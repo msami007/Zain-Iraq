@@ -536,12 +536,105 @@ export default function AgentDeskWorkspace({
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-zinc-400 text-center py-20 space-y-2">
-              <span className="text-3xl">🎫</span>
-              <h4 className="text-sm font-bold text-zinc-500">No Ticket Selected</h4>
-              <p className="text-xs text-zinc-400 max-w-xs font-semibold leading-relaxed">
-                Choose a ticket from the left panel queue, claim it, and resolve it using our integrated search workspace.
-              </p>
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-zinc-950">Active Ticket Workspace</h3>
+                  <p className="text-xs text-zinc-400 font-medium mt-0.5">Select a ticket from the queue to begin</p>
+                </div>
+                <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                  No Ticket Selected
+                </span>
+              </div>
+
+              {/* Example ticket — shown as a dimmed preview to orient the agent */}
+              <div className="opacity-40 pointer-events-none select-none space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 rounded-lg bg-zinc-50 border border-zinc-200 p-4 text-xs">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">Customer</span>
+                    <strong className="text-zinc-800">Ahmed Al-Rashidi</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">Subject</span>
+                    <strong className="text-zinc-800">Data bundle not activating</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">Priority</span>
+                    <strong className="text-zinc-800 uppercase">High</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase block mb-1">Wait Started</span>
+                    <strong className="text-zinc-800">Today, 09:14 AM</strong>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block mb-1.5">Customer Query</span>
+                  <p className="rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-700 font-medium leading-relaxed italic">
+                    "I purchased the 5GB monthly data bundle this morning but my phone still shows I have 0MB remaining. I tried restarting my device but nothing changed. Can you help?"
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 space-y-2">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block">KB Workspace Search</span>
+                  <div className="flex gap-2">
+                    <div className="flex-1 rounded border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-400">data bundle activation issue...</div>
+                    <div className="rounded bg-zinc-900 px-3 py-2 text-xs font-bold text-white">Search</div>
+                  </div>
+                  <div className="space-y-1.5 pt-1">
+                    {[
+                      { title: "How to Activate a Data Bundle", score: "98%" },
+                      { title: "Troubleshoot: Bundle Shows 0MB After Purchase", score: "91%" },
+                      { title: "Data Bundle Activation Delay — Known Issue", score: "84%" },
+                    ].map((r) => (
+                      <div key={r.title} className="flex items-center justify-between rounded border border-zinc-200 bg-white px-3 py-2">
+                        <span className="text-xs font-semibold text-zinc-700">{r.title}</span>
+                        <span className="text-[10px] font-bold text-green-600">{r.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 p-6 text-center space-y-3">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 border border-zinc-200 mx-auto">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="13" y2="17"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-zinc-600">Select a ticket from the queue</p>
+                  <p className="text-xs text-zinc-400 font-medium mt-1 max-w-sm mx-auto leading-relaxed">
+                    Pick any <span className="font-bold text-zinc-500">Waiting</span> ticket on the left, claim it, then search the knowledge base to find the right article and resolve the case.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-6 pt-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                    1. Select ticket
+                  </span>
+                  <span className="text-zinc-200">→</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                    2. Claim it
+                  </span>
+                  <span className="text-zinc-200">→</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                    3. Search KB
+                  </span>
+                  <span className="text-zinc-200">→</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-zinc-300" />
+                    4. Resolve
+                  </span>
+                </div>
+              </div>
             </div>
           )}
         </div>
