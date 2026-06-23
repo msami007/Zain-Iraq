@@ -22,7 +22,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   const session = await auth();
   const user = session?.user;
 
-  // 1. Fetch the article with relations
+  // Fetch the article with relations
   const article = await prisma.article.findUnique({
     where: { id },
     include: {
@@ -36,7 +36,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     notFound();
   }
 
-  // 2. Access Control Validation
+  // Access Control Validation
   let hasAccess = false;
 
   // - Rule A: If article is Published, anyone has access
@@ -56,7 +56,6 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
 
   // - Rule C: If the user is logged in (Agent/Admin/SuperAdmin), they can view all articles
   if (!hasAccess && user) {
-    // Both Agents and Admins can view unpublished articles (Agents view only)
     hasAccess = true;
   }
 
@@ -84,7 +83,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     );
   }
 
-  // 3. Determine active variant channel
+  // Determine active variant channel
   const selectedChannel = (channel || "default") as Channel;
   
   // Guard: Restrict agent variant to logged-in users only
@@ -109,7 +108,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-955 transition-colors"
           >
             ← Back to Home
           </Link>
@@ -140,11 +139,11 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </div>
           </div>
 
-          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl text-left">
             {article.title}
           </h1>
 
-          <div className="flex items-center gap-4 text-xs text-zinc-500 pt-2 border-t border-zinc-100 font-medium">
+          <div className="flex items-center gap-4 text-xs text-zinc-500 pt-2 border-t border-zinc-100 font-medium justify-start">
             <span>Author: <strong className="text-zinc-800">{article.author?.name || "System"}</strong></span>
             <span>Language: <strong className="text-zinc-800 uppercase">{article.language}</strong></span>
           </div>
@@ -197,7 +196,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         </div>
 
         {/* Article Body Content */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="rounded-xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xs space-y-6 text-left">
           {isFallback && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-800 flex items-center gap-2">
               <span>⚠️</span>
@@ -205,7 +204,6 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </div>
           )}
 
-          {/* Short Answer summary */}
           {shortAnswer && (
             <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200">
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-450 mb-2">Short Summary</h3>
@@ -213,16 +211,14 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </div>
           )}
 
-          {/* Body Content */}
           <div className="prose prose-zinc max-w-none text-zinc-800 text-sm leading-relaxed whitespace-pre-wrap font-medium">
             {contentBody}
           </div>
 
-          {/* Agent Macro Box */}
           {activeChannel === "agent" && macroText && (
             <div className="mt-8 border-t border-zinc-100 pt-6 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Ready-to-Paste Response Macro</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Response Macro</h4>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(macroText);
@@ -240,7 +236,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           )}
         </div>
 
-        {/* Feedback Section (only for guests/customers, hidden for internal agents) */}
+        {/* Feedback Section (only for guests/customers) */}
         {!user && <ArticleFeedbackForm articleId={article.id} />}
       </main>
     </div>

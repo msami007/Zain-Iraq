@@ -63,9 +63,8 @@ export default function CustomerSearchWorkspace({
     setEscalation(null);
   }, [selectedTenant]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const triggerSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
 
     setSearching(true);
     setSearched(true);
@@ -80,7 +79,7 @@ export default function CustomerSearchWorkspace({
           "x-tenant-id": selectedTenant.id,
         },
         body: JSON.stringify({
-          query: query.trim(),
+          query: searchQuery.trim(),
           language: "en",
           channel: "default",
         }),
@@ -100,6 +99,11 @@ export default function CustomerSearchWorkspace({
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleSearchForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerSearch(query);
   };
 
   return (
@@ -139,7 +143,7 @@ export default function CustomerSearchWorkspace({
 
       {/* Main Search Panel */}
       <div className="max-w-2xl mx-auto space-y-6">
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearchForm} className="flex gap-2">
           <input
             type="text"
             placeholder={`Search ${selectedTenant?.name} help resources...`}
@@ -163,12 +167,9 @@ export default function CustomerSearchWorkspace({
               key={c.id}
               onClick={() => {
                 setQuery(c.name);
-                setTimeout(() => {
-                  const form = document.querySelector("form");
-                  form?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                }, 50);
+                triggerSearch(c.name);
               }}
-              className="rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-600 hover:text-zinc-950 transition-colors shadow-2xs"
+              className="rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-650 hover:text-zinc-950 transition-colors shadow-2xs"
             >
               {c.name}
             </button>
@@ -227,10 +228,7 @@ export default function CustomerSearchWorkspace({
                       key={c.id}
                       onClick={() => {
                         setQuery(c.name);
-                        setTimeout(() => {
-                          const form = document.querySelector("form");
-                          form?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                        }, 50);
+                        triggerSearch(c.name);
                       }}
                       className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-zinc-950 transition-colors shadow-2xs"
                     >
