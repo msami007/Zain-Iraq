@@ -537,7 +537,10 @@ export default function AdminDeskWorkspace({
     }
   }, [initialWhatsappDetailed]);
 
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+
   const fetchAuditLogs = async () => {
+    setLoadingAuditLogs(true);
     try {
       // SuperAdmin omits tenant_id to receive logs from all tenants
       const url = currentUserRole === "SuperAdmin"
@@ -550,6 +553,8 @@ export default function AdminDeskWorkspace({
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoadingAuditLogs(false);
     }
   };
 
@@ -1648,18 +1653,34 @@ export default function AdminDeskWorkspace({
                               const dateObj = new Date(art.updated_at);
                               const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+                              const rowBorder =
+                                art.status === "Published" ? "border-l-[3px] border-l-green-400"
+                                : art.status === "Draft" ? "border-l-[3px] border-l-zinc-300"
+                                : art.status === "Archived" ? "border-l-[3px] border-l-zinc-300"
+                                : art.status === "Rejected" ? "border-l-[3px] border-l-red-400"
+                                : "border-l-[3px] border-l-amber-400"; // InReview / Approved
+
+                              const langBadge =
+                                art.language === "en" ? "bg-blue-50 text-blue-700 border-blue-100"
+                                : art.language === "ar" ? "bg-orange-50 text-orange-700 border-orange-100"
+                                : "bg-zinc-100 text-zinc-500 border-zinc-200";
+
                               return (
-                                <tr key={art.id} className="hover:bg-zinc-50 transition-colors">
+                                <tr key={art.id} className={`hover:bg-zinc-50 transition-colors ${rowBorder}`}>
                                   <td className="p-4 font-mono text-[10px] text-zinc-400 font-semibold">{art.id.slice(0, 8)}</td>
                                   <td className="p-4 font-extrabold text-zinc-950 text-left">
                                     {art.title}
                                   </td>
                                   <td className="p-4">
-                                    <span className="rounded-full bg-zinc-50 border border-zinc-200 px-2.5 py-0.5 text-[9px] font-bold text-zinc-500 uppercase">
+                                    <span className="rounded-md bg-violet-50 border border-violet-100 px-2.5 py-0.5 text-[9px] font-bold text-violet-600 uppercase">
                                       {art.category?.name || "General"}
                                     </span>
                                   </td>
-                                  <td className="p-4 uppercase font-bold text-zinc-500">{art.language}</td>
+                                  <td className="p-4">
+                                    <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase ${langBadge}`}>
+                                      {art.language}
+                                    </span>
+                                  </td>
                                   <td className="p-4">
                                     <span
                                       className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${art.status === "Published"
@@ -3596,9 +3617,13 @@ export default function AdminDeskWorkspace({
                       <button
                         type="button"
                         onClick={fetchAuditLogs}
-                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                        disabled={loadingAuditLogs}
+                        className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-60 disabled:cursor-not-allowed px-2.5 py-1 text-[10px] font-bold text-zinc-650 transition-colors"
                       >
-                        Refresh
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAuditLogs ? "animate-spin" : ""}>
+                          <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        {loadingAuditLogs ? "Refreshing…" : "Refresh"}
                       </button>
                     </div>
                   </div>
@@ -3715,7 +3740,7 @@ export default function AdminDeskWorkspace({
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                       <thead>
-                        <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                        <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 uppercase text-[10px] font-bold">
                           <th className="p-4">Timestamp</th>
                           <th className="p-4">Actor</th>
                           <th className="p-4">Action</th>
@@ -3724,7 +3749,7 @@ export default function AdminDeskWorkspace({
                           <th className="p-4">Rollback</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-150">
+                      <tbody className="divide-y divide-zinc-100">
                         {filteredLogs.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
@@ -3734,16 +3759,47 @@ export default function AdminDeskWorkspace({
                         ) : (
                           filteredLogs.map((log) => {
                             const canRollback = log.target_type === "Article" && log.before && Object.keys(log.before).length > 0;
+                            const a = log.action?.toUpperCase() || "";
+                            const actionBadge =
+                              a.includes("CREATE") || a.includes("PUBLISH") || a.includes("APPROVE")
+                                ? "bg-green-50 text-green-700 border-green-100"
+                                : a.includes("DELETE") || a.includes("ARCHIVE")
+                                ? "bg-red-50 text-red-600 border-red-100"
+                                : a.includes("UPDATE") || a.includes("EDIT")
+                                ? "bg-blue-50 text-blue-700 border-blue-100"
+                                : a.includes("GAP") || a.includes("FLAG")
+                                ? "bg-amber-50 text-amber-700 border-amber-100"
+                                : a.includes("ROLLBACK") || a.includes("RESTORE")
+                                ? "bg-orange-50 text-orange-700 border-orange-100"
+                                : a.includes("VIEW") || a.includes("SEARCH")
+                                ? "bg-zinc-100 text-zinc-500 border-zinc-200"
+                                : "bg-zinc-100 text-zinc-600 border-zinc-200";
+                            const typeBadge =
+                              log.target_type === "Article"
+                                ? "bg-blue-50 text-blue-700 border-blue-100"
+                                : log.target_type === "KnowledgeGap"
+                                ? "bg-amber-50 text-amber-700 border-amber-100"
+                                : log.target_type === "User"
+                                ? "bg-violet-50 text-violet-700 border-violet-100"
+                                : "bg-zinc-100 text-zinc-500 border-zinc-200";
                             return (
-                              <tr key={log.id} className="hover:bg-zinc-50/50">
-                                <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
-                                <td className="p-4 font-bold text-zinc-900">
+                              <tr key={log.id} className="hover:bg-zinc-50/40 transition-colors">
+                                <td className="p-4 text-zinc-400 font-mono whitespace-nowrap text-[11px]">{new Date(log.created_at).toLocaleString()}</td>
+                                <td className="p-4 font-semibold text-zinc-800 text-[11px]">
                                   {log.actor?.name || "System"}{" "}
                                   <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
                                 </td>
-                                <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
-                                <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
-                                <td className="p-4 text-zinc-955 font-semibold max-w-xs truncate">{log.target_label}</td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${actionBadge}`}>
+                                    {log.action}
+                                  </span>
+                                </td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold ${typeBadge}`}>
+                                    {log.target_type}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-zinc-700 font-medium text-[11px] max-w-xs truncate">{log.target_label}</td>
                                 <td className="p-4">
                                   {canRollback ? (
                                     <button

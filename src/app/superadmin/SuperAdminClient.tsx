@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
 import AdminDeskWorkspace from "@/components/AdminDeskWorkspace";
 
@@ -133,6 +133,8 @@ export default function SuperAdminClient({
   // User creation teams state
   const [userSelectedTeams, setUserSelectedTeams] = useState<string[]>([]);
   const [isTeamsDropdownOpen, setIsTeamsDropdownOpen] = useState(false);
+  const teamsDropdownBtnRef = useRef<HTMLButtonElement>(null);
+  const [teamsDropdownRect, setTeamsDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // User team editing modal state
   const [editingUserTeams, setEditingUserTeams] = useState<User | null>(null);
@@ -983,120 +985,168 @@ export default function SuperAdminClient({
 
           {activeTab === "orgs" && (
             <div className="space-y-8">
-              {/* Org Stats Card */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Total Registered Organizations</div>
-                  <div className="mt-2 text-3xl font-extrabold text-zinc-955">{tenants.length}</div>
+              {/* Org Stats Cards */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-4">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <svg className="h-5 w-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Organizations</div>
+                    <div className="mt-1 text-3xl font-extrabold text-zinc-950">{tenants.length}</div>
+                    <div className="mt-0.5 text-[10px] text-zinc-400 font-semibold">Registered tenants</div>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Branding Primary Theme</div>
-                  <div className="mt-2 text-sm font-bold text-zinc-800 flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 rounded-full bg-zinc-950 border border-zinc-200" />
-                    White Primary / Dark Accent
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-4">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Active Tenants</div>
+                    <div className="mt-1 text-3xl font-extrabold text-zinc-950">
+                      {tenants.filter(t => t.status === "active" || t.status === "Active").length}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-zinc-400 font-semibold">Currently enabled</div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Organization Creation Card */}
-                <div className="lg:col-span-1 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
-                    Add Organization
-                  </h2>
-                  
-                  {orgError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-750">
-                      {orgError}
-                    </div>
-                  )}
-                  {orgSuccess && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-xs font-semibold text-green-750">
-                      {orgSuccess}
-                    </div>
-                  )}
+                <div className="lg:col-span-1 rounded-xl border border-zinc-200 bg-white shadow-xs text-left overflow-hidden flex flex-col">
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
+                    <div className="text-xs font-bold uppercase tracking-wider text-zinc-700">Add Organization</div>
+                    <div className="mt-0.5 text-[11px] text-zinc-400">Register a new tenant workspace</div>
+                  </div>
+                  <form onSubmit={handleOrgSubmit} className="p-6 space-y-4 flex-1 flex flex-col">
+                    {orgError && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {orgError}
+                      </div>
+                    )}
+                    {orgSuccess && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                        {orgSuccess}
+                      </div>
+                    )}
 
-                  <form onSubmit={handleOrgSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Org Name</label>
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-zinc-600">Organization Name <span className="text-red-400">*</span></label>
                       <input
                         type="text"
                         required
                         value={orgName}
                         onChange={(e) => handleNameChange(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
+                        className="block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
                         placeholder="e.g. OODI Iraq"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Slug (Auto-generated)</label>
-                      <input
-                        type="text"
-                        required
-                        value={orgSlug}
-                        onChange={(e) => setOrgSlug(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
-                        placeholder="e.g. oodi-iraq"
-                      />
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-zinc-600">
+                        URL Slug <span className="text-zinc-400 font-normal">(auto-generated)</span>
+                      </label>
+                      <div className="flex items-center rounded-lg border border-zinc-200 bg-zinc-50 focus-within:border-zinc-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-zinc-900/5 transition-all overflow-hidden">
+                        <span className="px-3 py-2.5 text-sm text-zinc-400 border-r border-zinc-200 bg-zinc-100 select-none">/</span>
+                        <input
+                          type="text"
+                          required
+                          value={orgSlug}
+                          onChange={(e) => setOrgSlug(e.target.value)}
+                          className="flex-1 px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 bg-transparent focus:outline-none"
+                          placeholder="oodi-iraq"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Branding Primary Color</label>
-                      <div className="mt-2 flex items-center gap-3">
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-zinc-600">Brand Color</label>
+                      <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 focus-within:border-zinc-400 transition-all">
                         <input
                           type="color"
                           value={orgColor}
                           onChange={(e) => setOrgColor(e.target.value)}
-                          className="h-8 w-12 cursor-pointer rounded border border-zinc-250 bg-transparent"
+                          className="h-7 w-7 cursor-pointer rounded-md border-0 bg-transparent p-0 outline-none"
                         />
-                        <span className="text-xs font-mono text-zinc-500">{orgColor}</span>
+                        <span className="text-sm font-mono text-zinc-600 flex-1">{orgColor}</span>
+                        <span className="h-5 w-5 rounded-full border border-black/10 shadow-xs flex-shrink-0" style={{ backgroundColor: orgColor }} />
                       </div>
                     </div>
-                    <button
-                      type="submit"
-                      disabled={orgLoading}
-                      className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors"
-                    >
-                      {orgLoading ? "Creating..." : "Create Organization"}
-                    </button>
+
+                    <div className="pt-2 mt-auto">
+                      <button
+                        type="submit"
+                        disabled={orgLoading}
+                        className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors flex items-center justify-center gap-2"
+                      >
+                        {orgLoading ? (
+                          <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" />Creating…</>
+                        ) : (
+                          <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create Organization</>
+                        )}
+                      </button>
+                    </div>
                   </form>
                 </div>
 
                 {/* Org List */}
-                <div className="lg:col-span-2 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <h3 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
-                    Current Organizations
-                  </h3>
+                <div className="lg:col-span-2 rounded-xl border border-zinc-200 bg-white shadow-xs text-left overflow-hidden">
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-zinc-700">Current Organizations</div>
+                      <div className="mt-0.5 text-[11px] text-zinc-400">{tenants.length} tenant{tenants.length !== 1 ? "s" : ""} registered</div>
+                    </div>
+                    <span className="rounded-full bg-violet-50 border border-violet-100 px-2.5 py-1 text-[10px] font-bold text-violet-700">{tenants.length} total</span>
+                  </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-zinc-750">
+                    <table className="w-full min-w-[520px] text-left">
                       <thead>
-                        <tr className="border-b border-zinc-200 text-zinc-400 text-xs font-bold uppercase tracking-wider">
-                          <th className="py-3 px-4">Name</th>
-                          <th className="py-3 px-4">Slug</th>
-                          <th className="py-3 px-4">Branding</th>
-                          <th className="py-3 px-4">Status</th>
+                        <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                          <th className="py-3 px-5">Organization</th>
+                          <th className="py-3 px-5">Slug</th>
+                          <th className="py-3 px-5">Brand Color</th>
+                          <th className="py-3 px-5">Status</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {tenants.map((t) => (
-                          <tr key={t.id} className="border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors">
-                            <td className="py-3.5 px-4 font-bold text-zinc-955">{t.name}</td>
-                            <td className="py-3.5 px-4 font-mono text-xs text-zinc-500">/{t.slug}</td>
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className="h-3.5 w-3.5 rounded-full border border-black/10 shadow-xs"
-                                  style={{ backgroundColor: t.branding?.primaryColor || "#ccc" }}
-                                />
-                                <span className="text-xs font-mono text-zinc-500">{t.branding?.primaryColor || "#ccc"}</span>
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="rounded bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 border border-green-200 uppercase">
-                                {t.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                      <tbody className="divide-y divide-zinc-100">
+                        {tenants.map((t) => {
+                          const brandColor = t.branding?.primaryColor || "#e4e4e7";
+                          return (
+                            <tr key={t.id} className="hover:bg-zinc-50/40 transition-colors border-l-[3px]" style={{ borderLeftColor: brandColor }}>
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-extrabold flex-shrink-0" style={{ backgroundColor: brandColor }}>
+                                    {t.name[0].toUpperCase()}
+                                  </div>
+                                  <span className="font-bold text-zinc-900 text-sm">{t.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5">
+                                <span className="font-mono text-[11px] bg-zinc-100 text-zinc-600 px-2 py-1 rounded border border-zinc-200">/{t.slug}</span>
+                              </td>
+                              <td className="py-4 px-5">
+                                <div className="flex items-center gap-2">
+                                  <span className="h-4 w-4 rounded-full border border-black/10 shadow-xs flex-shrink-0" style={{ backgroundColor: brandColor }} />
+                                  <span className="text-[11px] font-mono text-zinc-500">{brandColor}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5">
+                                <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                  t.status === "Active" ? "bg-green-50 text-green-700 border-green-100" : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                                }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${t.status === "Active" ? "bg-green-500" : "bg-zinc-400"}`} />
+                                  {t.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1107,170 +1157,215 @@ export default function SuperAdminClient({
 
           {activeTab === "users" && (
             <div className="space-y-8">
-              {/* User Stats Card */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Total Registered User Accounts</div>
-                  <div className="mt-2 text-3xl font-extrabold text-zinc-955">{users.length}</div>
+              {/* User Stats Cards */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-3">
+                  <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-zinc-100 flex items-center justify-center">
+                    <svg className="h-4.5 w-4.5 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total</div>
+                    <div className="mt-0.5 text-2xl font-extrabold text-zinc-950">{users.length}</div>
+                    <div className="text-[10px] text-zinc-400 font-semibold">Accounts</div>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Access Controls</div>
-                  <div className="mt-2 text-sm font-bold text-zinc-800 flex items-center gap-2">
-                    🛡️ Multi-Tenant Role Isolation Enforced
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-3">
+                  <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center">
+                    <svg className="h-4.5 w-4.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Active</div>
+                    <div className="mt-0.5 text-2xl font-extrabold text-zinc-950">{users.filter(u => u.status === "Active").length}</div>
+                    <div className="text-[10px] text-zinc-400 font-semibold">Enabled</div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-3">
+                  <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <svg className="h-4.5 w-4.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Admins</div>
+                    <div className="mt-0.5 text-2xl font-extrabold text-zinc-950">{users.filter(u => u.role === "Admin").length}</div>
+                    <div className="text-[10px] text-zinc-400 font-semibold">Role: Admin</div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-3">
+                  <div className="flex-shrink-0 h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <svg className="h-4.5 w-4.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Agents</div>
+                    <div className="mt-0.5 text-2xl font-extrabold text-zinc-950">{users.filter(u => u.role === "Agent").length}</div>
+                    <div className="text-[10px] text-zinc-400 font-semibold">Role: Agent</div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* User Account Creation Card */}
-                <div className="lg:col-span-1 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
-                    Create User Account
-                  </h2>
+                <div className="lg:col-span-1 rounded-xl border border-zinc-200 bg-white shadow-xs text-left flex flex-col">
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl">
+                    <div className="text-xs font-bold uppercase tracking-wider text-zinc-700">Create User Account</div>
+                    <div className="mt-0.5 text-[11px] text-zinc-400">Provision a new user across any tenant</div>
+                  </div>
 
-                  {userError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-750">
-                      {userError}
-                    </div>
-                  )}
-                  {userSuccess && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-xs font-semibold text-green-750">
-                      {userSuccess}
-                    </div>
-                  )}
-
-                  <form onSubmit={handleUserSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Full Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={newUserName}
-                        onChange={(e) => setNewUserName(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
-                        placeholder="e.g. John Doe"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Email Address</label>
-                      <input
-                        type="email"
-                        required
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
-                        placeholder="e.g. john@zain.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Password</label>
-                      <input
-                        type="password"
-                        required
-                        value={userPassword}
-                        onChange={(e) => setUserPassword(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
-                        placeholder="••••••••"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Assigned Org</label>
-                      <select
-                        value={userTenantId}
-                        onChange={(e) => setUserTenantId(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
-                      >
-                        {tenants.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} (/{t.slug})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {teams.filter(t => t.tenant_id === userTenantId).length > 0 && (
-                      <div className="relative">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Assign to Teams</label>
-                        <button
-                          type="button"
-                          onClick={() => setIsTeamsDropdownOpen(!isTeamsDropdownOpen)}
-                          className="flex items-center justify-between w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 hover:bg-zinc-100 transition-colors text-left"
-                        >
-                          <span className="truncate">
-                            {userSelectedTeams.length === 0
-                              ? "Select Teams..."
-                              : teams
-                                  .filter(t => userSelectedTeams.includes(t.id))
-                                  .map(t => t.name)
-                                  .join(", ")}
-                          </span>
-                          <svg className="h-4 w-4 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        {isTeamsDropdownOpen && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setIsTeamsDropdownOpen(false)} />
-                            <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 bg-white p-2 text-left shadow-md max-h-40 overflow-y-auto space-y-1">
-                              {teams.filter(t => t.tenant_id === userTenantId).map((team) => (
-                                <label key={team.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700 hover:bg-zinc-50 p-2 rounded transition-colors">
-                                  <input
-                                    type="checkbox"
-                                    checked={userSelectedTeams.includes(team.id)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setUserSelectedTeams([...userSelectedTeams, team.id]);
-                                      } else {
-                                        setUserSelectedTeams(userSelectedTeams.filter(id => id !== team.id));
-                                      }
-                                    }}
-                                    className="accent-zinc-955"
-                                  />
-                                  <span className="truncate">{team.name}</span>
-                                </label>
-                              ))}
-                            </div>
-                          </>
-                        )}
+                  <form onSubmit={handleUserSubmit} className="p-6 space-y-4 flex-1 flex flex-col">
+                    {userError && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {userError}
                       </div>
                     )}
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Role Scope</label>
-                      <div className="mt-2.5 flex gap-4">
-                        {["Agent", "Admin", "SuperAdmin"].map((role) => (
-                          <label key={role} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-zinc-700">
-                            <input
-                              type="radio"
-                              name="role"
-                              value={role}
-                              checked={userRole === role}
-                              onChange={() => setUserRole(role)}
-                              className="accent-zinc-955"
-                            />
-                            {role}
-                          </label>
-                        ))}
+                    {userSuccess && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                        {userSuccess}
                       </div>
-                    </div>
+                    )}
 
-                    <button
-                      type="submit"
-                      disabled={userLoading}
-                      className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors"
-                    >
-                      {userLoading ? "Creating..." : "Create User"}
-                    </button>
-                  </form>
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-zinc-600">Full Name <span className="text-red-400">*</span></label>
+                        <input
+                          type="text"
+                          required
+                          value={newUserName}
+                          onChange={(e) => setNewUserName(e.target.value)}
+                          className="block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                          placeholder="e.g. John Doe"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-zinc-600">Email Address <span className="text-red-400">*</span></label>
+                        <input
+                          type="email"
+                          required
+                          value={newUserEmail}
+                          onChange={(e) => setNewUserEmail(e.target.value)}
+                          className="block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                          placeholder="e.g. john@zain.com"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-zinc-600">Password <span className="text-red-400">*</span></label>
+                        <input
+                          type="password"
+                          required
+                          value={userPassword}
+                          onChange={(e) => setUserPassword(e.target.value)}
+                          className="block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-zinc-600">Assigned Organization</label>
+                        <div className="relative">
+                          <select
+                            value={userTenantId}
+                            onChange={(e) => setUserTenantId(e.target.value)}
+                            className="appearance-none block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 pr-9 text-sm text-zinc-900 outline-none focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-900/5 transition-all cursor-pointer"
+                          >
+                            {tenants.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} (/{t.slug})
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                            <svg className="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      {teams.filter(t => t.tenant_id === userTenantId).length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="block text-[11px] font-bold text-zinc-600">Assign to Team</label>
+                          <div className="relative">
+                            <select
+                              value={userSelectedTeams[0] ?? ""}
+                              onChange={(e) => setUserSelectedTeams(e.target.value ? [e.target.value] : [])}
+                              className="appearance-none block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 pr-9 text-sm text-zinc-900 outline-none focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-900/5 transition-all cursor-pointer"
+                            >
+                              <option value="">No team</option>
+                              {teams.filter(t => t.tenant_id === userTenantId).map((team) => (
+                                <option key={team.id} value={team.id}>{team.name}</option>
+                              ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                              <svg className="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-zinc-600">Role</label>
+                        <div className="flex gap-2">
+                          {(["Agent", "Admin", "SuperAdmin"] as const).map((role) => (
+                            <label
+                              key={role}
+                              className={`flex-1 flex items-center justify-center gap-1.5 cursor-pointer rounded-lg border px-2 py-2 text-[11px] font-bold transition-all ${
+                                userRole === role
+                                  ? role === "Agent"
+                                    ? "bg-blue-50 border-blue-300 text-blue-700"
+                                    : role === "Admin"
+                                    ? "bg-violet-50 border-violet-300 text-violet-700"
+                                    : "bg-zinc-950 border-zinc-950 text-white"
+                                  : "bg-zinc-50 border-zinc-200 text-zinc-400 hover:border-zinc-300"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="role"
+                                value={role}
+                                checked={userRole === role}
+                                onChange={() => setUserRole(role)}
+                                className="sr-only"
+                              />
+                              {role}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 mt-auto">
+                        <button
+                          type="submit"
+                          disabled={userLoading}
+                          className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors flex items-center justify-center gap-2"
+                        >
+                          {userLoading ? (
+                            <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" />Creating…</>
+                          ) : (
+                            <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create User</>
+                          )}
+                        </button>
+                      </div>
+                    </form>
                 </div>
 
                 {/* Users Scope Table */}
-                <div className="lg:col-span-2 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
-                    User Accounts & Permissions
-                  </h2>
+                <div className="lg:col-span-2 rounded-xl border border-zinc-200 bg-white shadow-xs text-left overflow-hidden">
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-zinc-700">User Accounts & Permissions</div>
+                      <div className="mt-0.5 text-[11px] text-zinc-400">{users.length} account{users.length !== 1 ? "s" : ""} across all tenants</div>
+                    </div>
+                    <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-700">{users.length} total</span>
+                  </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-zinc-750">
+                    <table className="w-full min-w-[700px] text-left text-sm text-zinc-750">
                       <thead>
-                        <tr className="border-b border-zinc-200 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                        <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           <th className="py-3 px-4">Name</th>
                           <th className="py-3 px-4">Email</th>
                           <th className="py-3 px-4">Organization</th>
@@ -1279,31 +1374,41 @@ export default function SuperAdminClient({
                           <th className="py-3 px-4">Status</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-zinc-100">
                         {users.map((u) => (
                           <tr
                             key={u.id}
-                            className={`border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors ${
-                              u.id === currentUserId ? "bg-zinc-50/70" : ""
-                            }`}
+                            className={`hover:bg-zinc-50/40 transition-colors border-l-[3px] ${
+                              u.role === "Agent" ? "border-l-blue-400" :
+                              u.role === "Admin" ? "border-l-violet-400" :
+                              "border-l-zinc-800"
+                            } ${u.id === currentUserId ? "bg-zinc-50/70" : ""}`}
                           >
-                            <td className="py-3.5 px-4 font-bold text-zinc-900 flex items-center gap-2">
-                              {u.name}
-                              {u.id === currentUserId && (
-                                <span className="rounded bg-zinc-950 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wider">
-                                  You
-                                </span>
-                              )}
+                            <td className="py-3.5 px-4 font-bold text-zinc-900">
+                              <div className="flex items-center gap-2">
+                                {u.name}
+                                {u.id === currentUserId && (
+                                  <span className="rounded bg-zinc-950 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wider">
+                                    You
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3.5 px-4 font-mono text-xs text-zinc-500">{u.email}</td>
                             <td className="py-3.5 px-4">
-                              <span className="text-zinc-900 font-semibold">
-                                {u.tenant?.name || "Unknown Tenant"}
+                              <span className="rounded-md bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-[10px] font-bold text-zinc-700">
+                                {u.tenant?.name || "Unknown"}
                               </span>
                             </td>
                             <td className="py-3.5 px-4">
                               {u.id === currentUserId ? (
-                                <span className="rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-zinc-950 text-white border-zinc-950">
+                                <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                  u.role === "Agent"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : u.role === "Admin"
+                                    ? "bg-violet-50 text-violet-700 border-violet-200"
+                                    : "bg-zinc-950 text-white border-zinc-950"
+                                }`}>
                                   {u.role}
                                 </span>
                               ) : (
@@ -1323,7 +1428,7 @@ export default function SuperAdminClient({
                               <div className="flex flex-wrap gap-1 items-center">
                                 {u.user_teams && u.user_teams.length > 0 ? (
                                   u.user_teams.map((ut: any) => (
-                                    <span key={ut.team.id} className="rounded bg-zinc-150 border border-zinc-250 px-1.5 py-0.5 text-[9px] font-bold text-zinc-750">
+                                    <span key={ut.team.id} className="rounded bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
                                       {ut.team.name}
                                     </span>
                                   ))
@@ -1380,106 +1485,163 @@ export default function SuperAdminClient({
 
           {activeTab === "teams" && (
             <div className="space-y-8">
-              {/* Stats card */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Total Teams Created</div>
-                  <div className="mt-2 text-3xl font-extrabold text-zinc-955">{teams.length}</div>
+              {/* Teams Stats Cards */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-4">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Teams</div>
+                    <div className="mt-1 text-3xl font-extrabold text-zinc-950">{teams.length}</div>
+                    <div className="mt-0.5 text-[10px] text-zinc-400 font-semibold">Across all tenants</div>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">Lines of Business Isolation</div>
-                  <div className="mt-2 text-sm font-bold text-zinc-800 flex items-center gap-2">
-                    🔒 Team-based article visibility active
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs text-left flex items-start gap-4">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Members</div>
+                    <div className="mt-1 text-3xl font-extrabold text-zinc-950">
+                      {teams.reduce((sum, t) => sum + (t.user_teams ? t.user_teams.length : 0), 0)}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-zinc-400 font-semibold">Team memberships</div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Team Creation Form */}
-                <div className="lg:col-span-1 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
-                    Add Team
-                  </h2>
-                  
-                  {teamError && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-750">
-                      {teamError}
-                    </div>
-                  )}
-                  {teamSuccess && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-xs font-semibold text-green-750">
-                      {teamSuccess}
-                    </div>
-                  )}
+                <div className="lg:col-span-1 rounded-xl border border-zinc-200 bg-white shadow-xs text-left self-start">
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 rounded-t-xl">
+                    <div className="text-xs font-bold uppercase tracking-wider text-zinc-700">Add Team</div>
+                    <div className="mt-0.5 text-[11px] text-zinc-400">Create a scoped line-of-business team</div>
+                  </div>
 
-                  <form onSubmit={handleTeamSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Team Name</label>
+                  <form onSubmit={handleTeamSubmit} className="p-6 space-y-4">
+                    {teamError && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {teamError}
+                      </div>
+                    )}
+                    {teamSuccess && (
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700 flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                        {teamSuccess}
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-zinc-600">Team Name <span className="text-red-400">*</span></label>
                       <input
                         type="text"
                         required
                         value={newTeamName}
                         onChange={(e) => setNewTeamName(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
+                        className="block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
                         placeholder="e.g. Zain Care Team"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500">Assigned Organization</label>
-                      <select
-                        value={teamTenantId}
-                        onChange={(e) => setTeamTenantId(e.target.value)}
-                        className="mt-1.5 block w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
-                      >
-                        {tenants.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} (/{t.slug})
-                          </option>
-                        ))}
-                      </select>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-zinc-600">Assigned Organization</label>
+                      <div className="relative">
+                        <select
+                          value={teamTenantId}
+                          onChange={(e) => setTeamTenantId(e.target.value)}
+                          className="appearance-none block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 pr-9 text-sm text-zinc-900 outline-none focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-900/5 transition-all cursor-pointer"
+                        >
+                          {tenants.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name} (/{t.slug})</option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                          <svg className="h-4 w-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
                     </div>
-                    <button
-                      type="submit"
-                      disabled={teamLoading}
-                      className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors"
-                    >
-                      {teamLoading ? "Creating..." : "Create Team"}
-                    </button>
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={teamLoading}
+                        className="w-full rounded-lg bg-zinc-950 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:opacity-55 transition-colors flex items-center justify-center gap-2"
+                      >
+                        {teamLoading ? (
+                          <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" />Creating…</>
+                        ) : (
+                          <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Create Team</>
+                        )}
+                      </button>
+                    </div>
                   </form>
                 </div>
 
                 {/* Team List Table */}
-                <div className="lg:col-span-2 space-y-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-xs text-left">
-                  <h3 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide border-b border-zinc-100 pb-3">
-                    Active Teams
-                  </h3>
+                <div className="lg:col-span-2 rounded-xl border border-zinc-200 bg-white shadow-xs text-left overflow-hidden">
+                  <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-zinc-700">Active Teams</div>
+                      <div className="mt-0.5 text-[11px] text-zinc-400">{teams.length} team{teams.length !== 1 ? "s" : ""} configured</div>
+                    </div>
+                    <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-700">{teams.length} total</span>
+                  </div>
                   <div className="overflow-x-auto">
                     {loadingTeams ? (
                       <div className="text-center text-xs text-zinc-500 py-8 font-semibold animate-pulse">Loading teams...</div>
                     ) : teams.length === 0 ? (
                       <div className="text-center text-xs text-zinc-400 py-8 font-semibold italic">No teams configured yet.</div>
                     ) : (
-                      <table className="w-full text-left text-sm text-zinc-750">
+                      <table className="w-full min-w-[560px] text-left text-sm text-zinc-750">
                         <thead>
-                          <tr className="border-b border-zinc-200 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                          <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                             <th className="py-3 px-4">Name</th>
                             <th className="py-3 px-4">Organization</th>
                             <th className="py-3 px-4">Members</th>
                             <th className="py-3 px-4 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-zinc-100">
                           {teams.map((t) => {
-                            const teamTenantName = tenants.find(ten => ten.id === t.tenant_id)?.name || "Unknown Tenant";
+                            const teamTenant = tenants.find(ten => ten.id === t.tenant_id);
+                            const teamTenantName = teamTenant?.name || "Unknown Tenant";
+                            const brandColor = (teamTenant?.branding as any)?.primaryColor || "#e4e4e7";
                             return (
-                              <tr key={t.id} className="border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors">
-                                <td className="py-3.5 px-4 font-bold text-zinc-955">{t.name}</td>
-                                <td className="py-3.5 px-4 font-semibold text-zinc-600">{teamTenantName}</td>
-                                <td className="py-3.5 px-4">
+                              <tr key={t.id} className="hover:bg-zinc-50/40 transition-colors border-l-[3px]" style={{ borderLeftColor: brandColor }}>
+                                <td className="py-4 px-5">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-[10px] font-extrabold flex-shrink-0" style={{ backgroundColor: brandColor }}>
+                                      {t.name[0].toUpperCase()}
+                                    </div>
+                                    <span className="font-bold text-zinc-900 text-sm">{t.name}</span>
+                                  </div>
+                                </td>
+                                <td className="py-4 px-5">
+                                  <span className="rounded-md bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-[10px] font-bold text-zinc-700">
+                                    {teamTenantName}
+                                  </span>
+                                </td>
+                                <td className="py-4 px-5">
                                   <div className="flex flex-wrap gap-1 max-w-[240px]">
                                     {t.user_teams && t.user_teams.length > 0 ? (
                                       t.user_teams.map((ut: any) => (
-                                        <span key={ut.user_id} className="rounded bg-zinc-100 border border-zinc-250 px-1.5 py-0.5 text-[9px] font-bold text-zinc-750" title={ut.user.email}>
+                                        <span
+                                          key={ut.user_id}
+                                          title={ut.user.email}
+                                          className={`rounded px-1.5 py-0.5 text-[9px] font-bold border ${
+                                            ut.user.role === "Admin"
+                                              ? "bg-violet-50 border-violet-200 text-violet-700"
+                                              : "bg-blue-50 border-blue-200 text-blue-700"
+                                          }`}
+                                        >
                                           {ut.user.name} ({ut.user.role})
                                         </span>
                                       ))
@@ -1488,7 +1650,7 @@ export default function SuperAdminClient({
                                     )}
                                   </div>
                                 </td>
-                                <td className="py-3.5 px-4 text-right">
+                                <td className="py-4 px-5 text-right">
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTeam(t.id)}
