@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getTenantDb } from "@/lib/db";
+import { getTenantDb, prisma } from "@/lib/db";
 
-// POST: Record an article analytics event (e.g. view, click macro)
+// POST: Record an article analytics event — works for authenticated users AND public article views
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { tenant_id: tenantId, id: userId } = session.user;
     const body = await req.json();
     const { article_id, action, label } = body;
 
@@ -18,14 +13,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required analytics fields" }, { status: 400 });
     }
 
+    // Resolve tenant: prefer session, fall back to x-tenant-id header
+    const tenantId = session?.user?.tenant_id || req.headers.get("x-tenant-id") || null;
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant context required" }, { status: 400 });
+    }
+
     const db = getTenantDb(tenantId);
 
-    // Record this in the auditLog table
+    // Resolve actor: authenticated user, or fall back to the tenant's first admin
+    let actorId = session?.user?.id || null;
+    if (!actorId) {
+      const fallback = await db.user.findFirst({
+        where: { tenant_id: tenantId },
+        select: { id: true },
+        orderBy: { created_at: "asc" },
+      });
+      actorId = fallback?.id || null;
+    }
+    if (!actorId) {
+      // Can't write an audit log without an actor — silently succeed
+      return NextResponse.json({ ok: true });
+    }
+
     const log = await db.auditLog.create({
       data: {
         tenant_id: tenantId,
-        actor_id: userId,
-        action: action, // e.g. "View Article" or "Click Macro"
+        actor_id: actorId,
+        action,
         target_type: "Article",
         target_id: article_id,
         target_label: label,

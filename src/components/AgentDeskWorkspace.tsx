@@ -211,7 +211,15 @@ export default function AgentDeskWorkspace({
       const res = await fetch(`/api/v1/articles/${articleId}`, {
         headers: { "x-tenant-id": tenantId },
       });
-      if (res.ok) setPinnedPreview(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setPinnedPreview(data);
+        fetch("/api/v1/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ article_id: articleId, action: "View Article", label: data.title }),
+        }).catch(() => {});
+      }
     } catch { /* silent */ } finally {
       setLoadingPinnedPreview(false);
     }
