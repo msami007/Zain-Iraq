@@ -902,7 +902,7 @@ export default function AgentDeskWorkspace({
           </div>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => { await signOut({ redirect: false }); window.location.href = "/login"; }}
             className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/[0.13] px-3 py-2 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
