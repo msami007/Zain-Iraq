@@ -201,26 +201,31 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             >
               Customer View
             </Link>
-            <Link
-              href={`/articles/${id}?channel=chatbot${token ? `&token=${token}` : ""}`}
-              className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
-                activeChannel === "chatbot"
-                  ? "border-zinc-950 text-zinc-950"
-                  : "border-transparent text-zinc-400 hover:text-zinc-650"
-              }`}
-            >
-              Chatbot Flow
-            </Link>
-            <Link
-              href={`/articles/${id}?channel=whatsapp${token ? `&token=${token}` : ""}`}
-              className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
-                activeChannel === "whatsapp"
-                  ? "border-zinc-950 text-zinc-950"
-                  : "border-transparent text-zinc-400 hover:text-zinc-650"
-              }`}
-            >
-              WhatsApp Variant
-            </Link>
+            {/* Chatbot + WhatsApp variants are Admin/SuperAdmin only */}
+            {(user.role === "Admin" || user.role === "SuperAdmin") && (
+              <>
+                <Link
+                  href={`/articles/${id}?channel=chatbot${token ? `&token=${token}` : ""}`}
+                  className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                    activeChannel === "chatbot"
+                      ? "border-zinc-950 text-zinc-950"
+                      : "border-transparent text-zinc-400 hover:text-zinc-650"
+                  }`}
+                >
+                  Chatbot Flow
+                </Link>
+                <Link
+                  href={`/articles/${id}?channel=whatsapp${token ? `&token=${token}` : ""}`}
+                  className={`px-4 py-2.5 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                    activeChannel === "whatsapp"
+                      ? "border-zinc-950 text-zinc-950"
+                      : "border-transparent text-zinc-400 hover:text-zinc-650"
+                  }`}
+                >
+                  WhatsApp Variant
+                </Link>
+              </>
+            )}
             {showAgentChannel && (
               <Link
                 href={`/articles/${id}?channel=agent${token ? `&token=${token}` : ""}`}
@@ -230,7 +235,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
                     : "border-transparent text-zinc-400 hover:text-zinc-650"
                 }`}
               >
-                Agent Desk 🔒
+                Agent Desk
               </Link>
             )}
           </div>

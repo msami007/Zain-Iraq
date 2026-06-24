@@ -47,13 +47,17 @@ type Gap = {
   channel: string;
   status: string;
   occurrences: number;
+  comment?: string | null;
+  source?: string | null;
+  flagged_article_id?: string | null;
   reported_by: string | null;
   claimed_by: string | null;
   resolving_article_id: string | null;
   created_at: string;
-  reporter?: { name: string } | null;
+  reporter?: { name: string; email: string } | null;
   claimer?: { name: string } | null;
-  resolving_article?: { title: string } | null;
+  resolving_article?: { id: string; title: string } | null;
+  flagged_article?: { id: string; title: string } | null;
 };
 
 type AuditLog = {
@@ -3265,8 +3269,10 @@ export default function AdminDeskWorkspace({
                   <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                     <thead>
                       <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
-                        <th className="p-4">Search Query Text</th>
-                        <th className="p-4">Occurrences</th>
+                        <th className="p-4">Search Query / Flag</th>
+                        <th className="p-4">Source</th>
+                        <th className="p-4">Feedback / Comment</th>
+                        <th className="p-4">Hits</th>
                         <th className="p-4">Status</th>
                         <th className="p-4">Reported By</th>
                         <th className="p-4">Claimed By</th>
@@ -3276,14 +3282,38 @@ export default function AdminDeskWorkspace({
                     <tbody className="divide-y divide-zinc-150">
                       {gaps.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
+                          <td colSpan={8} className="p-8 text-center text-zinc-400 font-semibold">
                             No knowledge gaps found in this queue.
                           </td>
                         </tr>
                       ) : (
                         gaps.map((g) => (
-                          <tr key={g.id} className="hover:bg-zinc-50/50">
-                            <td className="p-4 font-bold text-zinc-955 italic">"{g.query_text}"</td>
+                          <tr key={g.id} className="hover:bg-zinc-50/50 align-top">
+                            <td className="p-4 max-w-xs">
+                              <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>
+                              {g.flagged_article && (
+                                <p className="text-[10px] text-red-600 font-semibold mt-0.5">
+                                  📄 Flagged: {g.flagged_article.title}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <span className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${
+                                g.source === "customer" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                g.source === "article_flag" ? "bg-red-50 text-red-700 border-red-200" :
+                                g.source === "auto" ? "bg-zinc-50 text-zinc-500 border-zinc-200" :
+                                "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}>
+                                {g.source || "agent"}
+                              </span>
+                            </td>
+                            <td className="p-4 max-w-xs">
+                              {g.comment ? (
+                                <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-3">"{g.comment}"</p>
+                              ) : (
+                                <span className="text-[10px] text-zinc-300">—</span>
+                              )}
+                            </td>
                             <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
                             <td className="p-4">
                               <span
@@ -3297,7 +3327,10 @@ export default function AdminDeskWorkspace({
                                 {g.status}
                               </span>
                             </td>
-                            <td className="p-4 text-zinc-500 font-medium">{g.reporter?.name || "Customer / Guest"}</td>
+                            <td className="p-4 text-zinc-500 font-medium">
+                              <p>{g.reporter?.name || "Customer / Guest"}</p>
+                              {g.reporter?.email && <p className="text-[9px] text-zinc-400">{g.reporter.email}</p>}
+                            </td>
                             <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
                             <td className="p-4 text-right space-x-2">
                               {g.status === "NEW" && (

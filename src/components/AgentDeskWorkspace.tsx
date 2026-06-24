@@ -106,8 +106,10 @@ export default function AgentDeskWorkspace({
   };
   const [myGaps, setMyGaps] = useState<GapEntry[]>([]);
   const [gapsLoading, setGapsLoading] = useState(false);
-  const [gapForm, setGapForm] = useState({ query_text: "", language: "en", channel: "default", occurrences: 1 });
+  const [gapForm, setGapForm] = useState({ query_text: "", language: "en", channel: "default", occurrences: 1, comment: "" });
   const [submittingGap, setSubmittingGap] = useState(false);
+  const [myArticles, setMyArticles] = useState<any[]>([]);
+  const [myArticlesLoading, setMyArticlesLoading] = useState(false);
 
   // Simulated Chat Console states
   const [chatSessions, setChatSessions] = useState([
@@ -407,6 +409,19 @@ export default function AgentDeskWorkspace({
     }
   };
 
+  const loadMyArticles = async () => {
+    setMyArticlesLoading(true);
+    try {
+      const res = await fetch("/api/v1/articles?authored_by_me=true");
+      if (res.ok) {
+        const data = await res.json();
+        setMyArticles(data.articles || data || []);
+      }
+    } finally {
+      setMyArticlesLoading(false);
+    }
+  };
+
   const handleSubmitGap = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gapForm.query_text.trim()) return;
@@ -423,7 +438,7 @@ export default function AgentDeskWorkspace({
         return;
       }
       toast("Knowledge gap submitted to admin queue!", "success");
-      setGapForm({ query_text: "", language: "en", channel: "default", occurrences: 1 });
+      setGapForm({ query_text: "", language: "en", channel: "default", occurrences: 1, comment: "" });
       await loadMyGaps();
     } catch {
       toast("Network error — could not submit gap.", "error");
@@ -596,11 +611,17 @@ export default function AgentDeskWorkspace({
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [composerText, setComposerText] = useState("");
 
-  // One-click gap flag state — tracks the last query flagged so we can show confirmation
+  // Gap flag state — tracks last flagged query + inline comment inputs
   const [gapFlagging, setGapFlagging] = useState(false);
   const [gapFlaggedQuery, setGapFlaggedQuery] = useState<string | null>(null);
+  const [searchGapComment, setSearchGapComment] = useState("");
+  const [articleFlagComment, setArticleFlagComment] = useState("");
+  const [chatSearchGapComment, setChatSearchGapComment] = useState("");
+  const [chatArticleFlagComment, setChatArticleFlagComment] = useState("");
+  const [showSearchGapForm, setShowSearchGapForm] = useState(false);
+  const [showChatSearchGapForm, setShowChatSearchGapForm] = useState(false);
 
-  const flagAsGap = async (queryText: string, channel = "agent") => {
+  const flagAsGap = async (queryText: string, channel = "agent", comment?: string, source = "agent", flagged_article_id?: string) => {
     const q = queryText.trim();
     if (!q || gapFlagging) return;
     setGapFlagging(true);
@@ -608,10 +629,14 @@ export default function AgentDeskWorkspace({
       const res = await fetch("/api/v1/gaps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query_text: q, language: "en", channel }),
+        body: JSON.stringify({ query_text: q, language: "en", channel, comment: comment || null, source, flagged_article_id: flagged_article_id || null }),
       });
       if (res.ok) {
         setGapFlaggedQuery(q);
+        setSearchGapComment("");
+        setChatSearchGapComment("");
+        setShowSearchGapForm(false);
+        setShowChatSearchGapForm(false);
         toast("Flagged as knowledge gap — Admin queue notified.", "success");
       } else {
         const err = await res.json();
@@ -741,7 +766,7 @@ export default function AgentDeskWorkspace({
             type="button"
             onClick={() => {
               setAgentActiveTab(tab.key as any);
-              if (tab.key === "gaps") loadMyGaps();
+              if (tab.key === "gaps") { loadMyGaps(); loadMyArticles(); }
             }}
             className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold transition-colors whitespace-nowrap ${
               agentActiveTab === tab.key
@@ -1072,48 +1097,74 @@ export default function AgentDeskWorkspace({
                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Report a Gap</p>
                     {gapFlaggedQuery === resolutionCase.query_text.trim() ? (
                       <p className="flex items-center gap-1.5 text-[10px] font-bold text-green-700">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         Gap reported — Admin queue notified
                       </p>
                     ) : (
-                      <div className="flex flex-col gap-1.5">
-                        <button
-                          type="button"
-                          disabled={gapFlagging}
-                          onClick={() => flagAsGap(resolutionCase.query_text, "agent")}
-                          className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 hover:text-amber-600 disabled:opacity-50 transition-colors"
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                          </svg>
-                          {gapFlagging ? "Flagging…" : "Search Gap — article exists but hard to find (tagging issue)"}
-                        </button>
-                        {resolutionArticle && (
+                      <div className="flex flex-col gap-2">
+                        {/* Search Gap — with mandatory comment */}
+                        {showSearchGapForm ? (
+                          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2">
+                            <p className="text-[10px] font-bold text-amber-700">Search Gap — article exists but hard to find (tagging issue)</p>
+                            <textarea
+                              value={searchGapComment}
+                              onChange={e => setSearchGapComment(e.target.value)}
+                              placeholder="What were you looking for? What search terms did you try? (required)"
+                              rows={2}
+                              className="w-full rounded border border-amber-200 bg-white px-2.5 py-1.5 text-xs resize-none focus:outline-none"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={gapFlagging || !searchGapComment.trim()}
+                                onClick={() => flagAsGap(resolutionCase.query_text, "agent", searchGapComment, "agent")}
+                                className="rounded bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-3 py-1 text-[10px] font-bold text-white"
+                              >
+                                {gapFlagging ? "Reporting…" : "Submit Gap"}
+                              </button>
+                              <button type="button" onClick={() => setShowSearchGapForm(false)} className="text-[10px] text-zinc-400 hover:text-zinc-700">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            disabled={gapFlagging}
-                            onClick={async () => {
-                              setGapFlagging(true);
-                              try {
-                                await fetch("/api/v1/feedback", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ article_id: resolutionArticle.id, helpful: false, comment: `Agent feedback: content issue — "${resolutionCase.query_text}"`, channel: "agent" }),
-                                });
-                                setGapFlaggedQuery(resolutionCase.query_text.trim());
-                                toast("Article content issue reported to content team.", "success");
-                              } catch { toast("Could not submit feedback.", "error"); }
-                              finally { setGapFlagging(false); }
-                            }}
-                            className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+                            onClick={() => setShowSearchGapForm(true)}
+                            className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 hover:text-amber-600 transition-colors text-left"
                           >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="10" y1="13" x2="14" y2="13"/><line x1="12" y1="11" x2="12" y2="15"/>
-                            </svg>
-                            Article Feedback — content is incorrect or missing
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            Search Gap — article exists but hard to find (tagging issue)
                           </button>
+                        )}
+
+                        {/* Article Missing Info — routed through gaps pipeline */}
+                        {resolutionArticle && (
+                          <div className="rounded-lg border border-red-100 bg-red-50/40 p-3 space-y-2">
+                            <p className="text-[10px] font-bold text-red-700">Flag Article as Missing Information</p>
+                            <textarea
+                              value={articleFlagComment}
+                              onChange={e => setArticleFlagComment(e.target.value)}
+                              placeholder="What information is missing or incorrect? (required)"
+                              rows={2}
+                              className="w-full rounded border border-red-200 bg-white px-2.5 py-1.5 text-xs resize-none focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              disabled={gapFlagging || !articleFlagComment.trim()}
+                              onClick={async () => {
+                                await flagAsGap(
+                                  resolutionCase.query_text,
+                                  "agent",
+                                  articleFlagComment,
+                                  "article_flag",
+                                  resolutionArticle.id
+                                );
+                                setArticleFlagComment("");
+                              }}
+                              className="rounded bg-red-600 hover:bg-red-700 disabled:opacity-50 px-3 py-1 text-[10px] font-bold text-white"
+                            >
+                              {gapFlagging ? "Flagging…" : "Flag Article"}
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}
@@ -1506,53 +1557,73 @@ export default function AgentDeskWorkspace({
                         ))}
                       </div>
                     )}
-                    {/* Differentiated gap flag */}
+                    {/* Differentiated gap flag with comment fields */}
                     <div className="border-t border-zinc-100 pt-2 space-y-1.5">
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Report a Gap</p>
                       {gapFlaggedQuery === chatKbQuery.trim() ? (
                         <p className="flex items-center gap-1 text-[10px] font-bold text-green-700">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           Gap reported
                         </p>
                       ) : (
-                        <div className="space-y-1">
-                          <button
-                            type="button"
-                            disabled={gapFlagging}
-                            onClick={() => flagAsGap(chatKbQuery, "agent")}
-                            className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-amber-600 disabled:opacity-50 transition-colors"
-                          >
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                            </svg>
-                            Search Gap (tagging issue)
-                          </button>
-                          {chatPreviewArticle && (
+                        <div className="space-y-2">
+                          {/* Chat Search Gap */}
+                          {showChatSearchGapForm ? (
+                            <div className="rounded border border-amber-200 bg-amber-50/50 p-2 space-y-1.5">
+                              <p className="text-[10px] font-bold text-amber-700">Search Gap</p>
+                              <textarea
+                                value={chatSearchGapComment}
+                                onChange={e => setChatSearchGapComment(e.target.value)}
+                                placeholder="What were you looking for? (required)"
+                                rows={2}
+                                className="w-full rounded border border-amber-200 bg-white px-2 py-1 text-[10px] resize-none focus:outline-none"
+                              />
+                              <div className="flex gap-1.5">
+                                <button
+                                  type="button"
+                                  disabled={gapFlagging || !chatSearchGapComment.trim()}
+                                  onClick={() => flagAsGap(chatKbQuery, "agent", chatSearchGapComment, "agent")}
+                                  className="rounded bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-2 py-1 text-[10px] font-bold text-white"
+                                >Submit</button>
+                                <button type="button" onClick={() => setShowChatSearchGapForm(false)} className="text-[10px] text-zinc-400 hover:text-zinc-700">Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
                             <button
                               type="button"
-                              disabled={gapFlagging}
-                              onClick={async () => {
-                                setGapFlagging(true);
-                                try {
-                                  await fetch("/api/v1/feedback", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ article_id: chatPreviewArticle.id, helpful: false, comment: `Chat KB: content issue — "${chatKbQuery}"`, channel: "agent" }),
-                                  });
-                                  setGapFlaggedQuery(chatKbQuery.trim());
-                                  toast("Article content issue reported.", "success");
-                                } catch { toast("Could not submit feedback.", "error"); }
-                                finally { setGapFlagging(false); }
-                              }}
-                              className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                              onClick={() => setShowChatSearchGapForm(true)}
+                              className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-amber-600 transition-colors"
                             >
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-                              </svg>
-                              Article Feedback (content issue)
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                              Search Gap (tagging issue)
                             </button>
+                          )}
+
+                          {/* Chat Article Flag with comment */}
+                          {chatPreviewArticle && (
+                            <div className="space-y-1">
+                              <textarea
+                                value={chatArticleFlagComment}
+                                onChange={e => setChatArticleFlagComment(e.target.value)}
+                                placeholder="What info is missing or incorrect? (required to flag article)"
+                                rows={2}
+                                className="w-full rounded border border-red-200 bg-white px-2 py-1 text-[10px] resize-none focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                disabled={gapFlagging || !chatArticleFlagComment.trim()}
+                                onClick={async () => {
+                                  await flagAsGap(chatKbQuery, "agent", chatArticleFlagComment, "article_flag", chatPreviewArticle.id);
+                                  setChatArticleFlagComment("");
+                                }}
+                                className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                              >
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                {gapFlagging ? "Flagging…" : "Flag Article (missing info)"}
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -1804,6 +1875,21 @@ export default function AgentDeskWorkspace({
                   </div>
                 </div>
 
+                {/* Feedback / comment */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-zinc-700">
+                    Feedback / Context
+                    <span className="ml-1 font-normal text-zinc-400">(recommended)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="What were you looking for? What info was missing? Helps admins understand the gap."
+                    value={gapForm.comment}
+                    onChange={(e) => setGapForm((f) => ({ ...f, comment: e.target.value }))}
+                    className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all resize-none"
+                  />
+                </div>
+
                 {/* Divider + actions row */}
                 <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
                   <p className="text-[11px] text-zinc-400">
@@ -1919,10 +2005,10 @@ export default function AgentDeskWorkspace({
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-zinc-100 bg-zinc-50/70">
-                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400 w-[35%]">Search Query</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400 w-[28%]">Search Query</th>
+                      <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400 w-[25%]">Your Feedback</th>
                       <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400">Hits</th>
                       <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400">Status</th>
-                      <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400">Channel</th>
                       <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400">Claimed By</th>
                       <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400">Resolution</th>
                     </tr>
@@ -1951,6 +2037,13 @@ export default function AgentDeskWorkspace({
                               <span className="italic text-zinc-700">&ldquo;{gap.query_text}&rdquo;</span>
                             </div>
                           </td>
+                          <td className="px-4 py-4 max-w-[180px]">
+                            {(gap as any).comment ? (
+                              <p className="text-[10px] text-zinc-600 italic leading-relaxed line-clamp-2">"{(gap as any).comment}"</p>
+                            ) : (
+                              <span className="text-[10px] text-zinc-300">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-4">
                             <span className="inline-flex items-center justify-center rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-extrabold text-zinc-700 tabular-nums">
                               {gap.occurrences}×
@@ -1962,7 +2055,6 @@ export default function AgentDeskWorkspace({
                               {gap.status.replace("_", " ")}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-zinc-500 font-medium">{channelLabels[gap.channel] ?? gap.channel}</td>
                           <td className="px-4 py-4">
                             {gap.claimer?.name
                               ? <span className="font-semibold text-zinc-700">{gap.claimer.name}</span>
@@ -1990,6 +2082,72 @@ export default function AgentDeskWorkspace({
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+
+          {/* My Articles — rejection notifications (item 12) */}
+          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-extrabold text-zinc-950">My Articles</h3>
+                <p className="text-[11px] text-zinc-500">Review status changes and rejection feedback on articles you authored.</p>
+              </div>
+              <button type="button" onClick={loadMyArticles} disabled={myArticlesLoading}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-600 transition-all disabled:opacity-40">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={myArticlesLoading ? "animate-spin" : ""}>
+                  <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                Refresh
+              </button>
+            </div>
+            {myArticlesLoading ? (
+              <div className="flex items-center justify-center py-10 gap-3">
+                <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-700" />
+                <span className="text-xs font-semibold text-zinc-500">Loading…</span>
+              </div>
+            ) : myArticles.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-sm font-bold text-zinc-400">No authored articles yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100">
+                {myArticles.map((art: any) => {
+                  const rejections = (art.status_history || []).filter((h: any) => h.to_status === "Draft" && h.comment);
+                  const statusColors: Record<string, string> = {
+                    Published: "bg-green-50 text-green-700 border-green-200",
+                    Draft: "bg-zinc-100 text-zinc-500 border-zinc-200",
+                    InReview: "bg-blue-50 text-blue-700 border-blue-200",
+                    Approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                    Rejected: "bg-red-50 text-red-700 border-red-200",
+                  };
+                  return (
+                    <div key={art.id} className="px-6 py-4 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-zinc-900 leading-snug truncate">{art.title}</p>
+                          <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{art.category?.name} · {new Date(art.updated_at).toLocaleDateString()}</p>
+                        </div>
+                        <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-extrabold uppercase ${statusColors[art.status] || "bg-zinc-100 text-zinc-500 border-zinc-200"}`}>
+                          {art.status}
+                        </span>
+                      </div>
+                      {rejections.length > 0 && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-1.5">
+                          <p className="text-[10px] font-extrabold text-red-700 uppercase tracking-wider">Rejection Feedback</p>
+                          {rejections.map((r: any, i: number) => (
+                            <div key={i} className="text-[11px] text-red-800 leading-relaxed">
+                              <span className="font-semibold">{r.actor?.name || "Reviewer"}</span>
+                              <span className="text-red-600 mx-1">·</span>
+                              <span className="text-[10px] text-red-400">{new Date(r.created_at).toLocaleDateString()}</span>
+                              <p className="mt-0.5 italic">"{r.comment}"</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import { getTenantDb } from "@/lib/db";
 import { GapStatus, Language, Channel } from "@prisma/client";
 
+// Unauthenticated POST allowed for customer gap submissions (source: "customer")
+export const dynamic = "force-dynamic";
+
 // GET: Fetch knowledge gaps queue (scoped by tenant, Admin/SuperAdmin only)
 export async function GET(req: NextRequest) {
   try {
@@ -23,6 +26,7 @@ export async function GET(req: NextRequest) {
           reporter: { select: { id: true, name: true, email: true } },
           claimer: { select: { id: true, name: true, email: true } },
           resolving_article: { select: { id: true, title: true, slug: true } },
+          flagged_article: { select: { id: true, title: true, slug: true } },
         },
         orderBy: { created_at: "desc" },
       });
@@ -58,6 +62,7 @@ export async function GET(req: NextRequest) {
         reporter: { select: { id: true, name: true, email: true } },
         claimer: { select: { id: true, name: true, email: true } },
         resolving_article: { select: { id: true, title: true, slug: true } },
+        flagged_article: { select: { id: true, title: true, slug: true } },
       },
       orderBy: { occurrences: "desc" },
     });
@@ -69,26 +74,31 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Log/Create a knowledge gap (Agent/Admin/SuperAdmin)
+// POST: Log/Create a knowledge gap — authenticated users OR customer (unauthenticated) submissions
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { tenant_id: tenantId, id: userId } = session.user;
     const body = await req.json();
-    const { query_text, language, channel, occurrences } = body;
+    const { query_text, language, channel, occurrences, comment, source, flagged_article_id, tenant_id: bodyTenantId } = body;
 
     if (!query_text || typeof query_text !== "string") {
       return NextResponse.json({ error: "Query text is required" }, { status: 400 });
+    }
+
+    // Unauthenticated customer submissions must supply tenant_id in body
+    const isCustomer = !session?.user;
+    const tenantId = session?.user?.tenant_id || bodyTenantId;
+    const userId = session?.user?.id || null;
+
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant context required" }, { status: 400 });
     }
 
     const db = getTenantDb(tenantId);
     const mappedLanguage = language === "ar" ? Language.ar : Language.en;
     const mappedChannel = channel ? (channel as Channel) : Channel.default;
     const reportedOccurrences = Math.max(1, parseInt(occurrences) || 1);
+    const gapSource = source || (isCustomer ? "customer" : "agent");
 
     // Check if a gap with this query_text already exists and is not resolved/dismissed
     const existing = await db.knowledgeGap.findFirst({
@@ -100,15 +110,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (existing) {
-      // Add reported occurrences to the existing count
       const updated = await db.knowledgeGap.update({
         where: { id: existing.id },
-        data: { occurrences: existing.occurrences + reportedOccurrences },
+        data: {
+          occurrences: existing.occurrences + reportedOccurrences,
+          // Append new comment if provided and gap doesn't have one yet
+          ...(comment && !existing.comment ? { comment } : {}),
+        },
       });
       return NextResponse.json(updated);
     }
 
-    // Create a new knowledge gap
     const newGap = await db.knowledgeGap.create({
       data: {
         tenant_id: tenantId,
@@ -117,6 +129,9 @@ export async function POST(req: NextRequest) {
         channel: mappedChannel,
         status: GapStatus.NEW,
         occurrences: reportedOccurrences,
+        comment: comment || null,
+        source: gapSource,
+        flagged_article_id: flagged_article_id || null,
         reported_by: userId,
       },
     });

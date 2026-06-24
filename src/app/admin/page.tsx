@@ -64,9 +64,10 @@ export default async function AdminPage() {
   const gaps = await db.knowledgeGap.findMany({
     orderBy: { occurrences: "desc" },
     include: {
-      reporter: { select: { name: true } },
+      reporter: { select: { name: true, email: true } },
       claimer: { select: { name: true } },
-      resolving_article: { select: { title: true } },
+      resolving_article: { select: { id: true, title: true } },
+      flagged_article: { select: { id: true, title: true } },
     },
   });
 
@@ -123,13 +124,17 @@ export default async function AdminPage() {
     channel: g.channel,
     status: g.status,
     occurrences: g.occurrences,
+    comment: g.comment || null,
+    source: g.source || "agent",
+    flagged_article_id: g.flagged_article_id || null,
     reported_by: g.reported_by,
     claimed_by: g.claimed_by,
     resolving_article_id: g.resolving_article_id,
     created_at: g.created_at.toISOString(),
-    reporter: g.reporter ? { name: g.reporter.name } : null,
+    reporter: g.reporter ? { name: g.reporter.name, email: g.reporter.email } : null,
     claimer: g.claimer ? { name: g.claimer.name } : null,
-    resolving_article: g.resolving_article ? { title: g.resolving_article.title } : null,
+    resolving_article: g.resolving_article ? { id: g.resolving_article.id, title: g.resolving_article.title } : null,
+    flagged_article: g.flagged_article ? { id: g.flagged_article.id, title: g.flagged_article.title } : null,
   }));
 
   const brandingColor = (tenant.branding as any)?.primaryColor || "#09090B";

@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
     // Parse filters
     const language = searchParams.get("language") as Language | null;
     const categoryId = searchParams.get("category_id") || undefined;
-    const authorId = searchParams.get("author_id") || undefined;
+    const authoredByMe = searchParams.get("authored_by_me") === "true";
+    const authorId = authoredByMe && session?.user ? session.user.id : (searchParams.get("author_id") || undefined);
     const statusFilter = searchParams.get("status") as ArticleStatus | null;
     const search = searchParams.get("search") || "";
 
@@ -110,6 +111,12 @@ export async function GET(req: NextRequest) {
             tag: {
               select: { id: true, name: true }
             }
+          }
+        },
+        status_history: {
+          orderBy: { created_at: "desc" },
+          include: {
+            actor: { select: { id: true, name: true } }
           }
         }
       },

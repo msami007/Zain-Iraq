@@ -55,6 +55,9 @@ export default function CustomerSearchWorkspace({
   const [suggestedCategories, setSuggestedCategories] = useState<{ id: string; name: string }[]>([]);
   const [gapLogged, setGapLogged] = useState(false);
   const [escalation, setEscalation] = useState<any>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   // Filter categories by the active tenant
   const activeCategories = initialCategories.filter((c) => c.tenant_id === selectedTenant?.id);
@@ -67,6 +70,8 @@ export default function CustomerSearchWorkspace({
     setSearched(false);
     setGapLogged(false);
     setEscalation(null);
+    setFeedbackText("");
+    setFeedbackSubmitted(false);
   }, [selectedTenant]);
 
   const triggerSearch = async (searchQuery: string) => {
@@ -109,7 +114,32 @@ export default function CustomerSearchWorkspace({
 
   const handleSearchForm = (e: React.FormEvent) => {
     e.preventDefault();
+    setFeedbackText("");
+    setFeedbackSubmitted(false);
     triggerSearch(query);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackText.trim() || submittingFeedback || !selectedTenant) return;
+    setSubmittingFeedback(true);
+    try {
+      await fetch("/api/v1/gaps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query_text: query.trim(),
+          comment: feedbackText.trim(),
+          source: "customer",
+          channel: "default",
+          tenant_id: selectedTenant.id,
+        }),
+      });
+      setFeedbackSubmitted(true);
+    } catch {
+      // silently fail — customer-facing
+    } finally {
+      setSubmittingFeedback(false);
+    }
   };
 
   return (
@@ -223,6 +253,35 @@ export default function CustomerSearchWorkspace({
                 </div>
               </div>
             )}
+
+            {/* Customer feedback form — always shown after zero-result search */}
+            <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
+              <p className="text-xs font-bold text-zinc-800">Help us improve</p>
+              <p className="text-[11px] text-zinc-500 font-medium">Tell us what you were looking for — our content team will create a guide to help you.</p>
+              {feedbackSubmitted ? (
+                <div className="flex items-center gap-2 text-xs font-semibold text-green-700">
+                  <span className="text-green-500">✔</span> Thank you for your feedback!
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <textarea
+                    value={feedbackText}
+                    onChange={e => setFeedbackText(e.target.value)}
+                    placeholder="Describe what you were trying to find..."
+                    rows={2}
+                    className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs resize-none focus:outline-none focus:border-zinc-400"
+                  />
+                  <button
+                    type="button"
+                    disabled={submittingFeedback || !feedbackText.trim()}
+                    onClick={handleSubmitFeedback}
+                    className="rounded-lg bg-zinc-950 hover:bg-zinc-800 disabled:opacity-50 px-4 py-1.5 text-xs font-bold text-white"
+                  >
+                    {submittingFeedback ? "Sending…" : "Send Feedback"}
+                  </button>
+                </div>
+              )}
+            </div>
 
             {suggestedCategories.length > 0 && (
               <div className="space-y-3 pt-2">

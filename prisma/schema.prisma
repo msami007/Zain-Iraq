@@ -223,10 +223,11 @@ model Article {
   status_history ArticleStatusHistory[]
   article_tags   ArticleTag[]
   article_teams  ArticleTeam[]
-  feedback       ArticleFeedback[]
-  guest_links    GuestLink[]
-  resolving_gaps KnowledgeGap[]
-  resolving_cases ChatCase[]
+  feedback         ArticleFeedback[]
+  guest_links      GuestLink[]
+  resolving_gaps   KnowledgeGap[]    @relation("ResolvingArticle")
+  flagged_gaps     KnowledgeGap[]    @relation("FlaggedArticle")
+  resolving_cases  ChatCase[]
 
   @@unique([tenant_id, slug])
   @@index([tenant_id, status])
@@ -322,6 +323,9 @@ model KnowledgeGap {
   channel              Channel   @default(default)
   status               GapStatus @default(NEW)
   occurrences          Int       @default(1)
+  comment              String?   @db.Text
+  source               String    @default("agent")
+  flagged_article_id   String?   @db.Uuid
   reported_by          String?   @db.Uuid
   claimed_by           String?   @db.Uuid
   resolving_article_id String?   @db.Uuid
@@ -332,7 +336,8 @@ model KnowledgeGap {
   tenant            Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Restrict)
   reporter          User?    @relation("GapReporter", fields: [reported_by], references: [id], onDelete: Restrict)
   claimer           User?    @relation("GapClaimer", fields: [claimed_by], references: [id], onDelete: Restrict)
-  resolving_article Article? @relation(fields: [resolving_article_id], references: [id], onDelete: Restrict)
+  resolving_article Article? @relation("ResolvingArticle", fields: [resolving_article_id], references: [id], onDelete: Restrict)
+  flagged_article   Article? @relation("FlaggedArticle", fields: [flagged_article_id], references: [id], onDelete: SetNull)
 
   @@index([tenant_id, status])
   @@index([tenant_id])
