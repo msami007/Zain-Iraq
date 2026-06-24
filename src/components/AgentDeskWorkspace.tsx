@@ -173,7 +173,8 @@ export default function AgentDeskWorkspace({
       ]
     }
   ]);
-  const [activeChatSessionId, setActiveChatSessionId] = useState("chat-1");
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string | null>("chat-1");
+  const [mobileShowKb, setMobileShowKb] = useState(false);
   const chatSessionMounted = useRef(false);
   const [chatInputText, setChatInputText] = useState("");
 
@@ -1694,7 +1695,9 @@ export default function AgentDeskWorkspace({
         <div className="flex rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-sm text-left -mx-2" style={{ height: "calc(100vh - 9rem)" }}>
 
           {/* ── Col 1: Conversation list ── */}
-          <div className="w-72 shrink-0 flex flex-col border-r border-zinc-100 bg-zinc-50/40">
+          <div className={`w-full lg:w-72 shrink-0 flex flex-col border-r border-zinc-100 bg-zinc-50/40 ${
+            activeChatSessionId !== null ? "hidden lg:flex" : "flex"
+          }`}>
             {/* Sidebar header */}
             <div className="px-5 py-4 border-b border-zinc-100 bg-white shrink-0">
               <div className="flex items-center justify-between">
@@ -1743,7 +1746,9 @@ export default function AgentDeskWorkspace({
           </div>
 
           {/* ── Col 2: Message stream ── */}
-          <div className="flex-1 flex flex-col min-w-0 bg-[#f8f8fb]">
+          <div className={`flex-1 flex flex-col min-w-0 bg-[#f8f8fb] ${
+            activeChatSessionId === null ? "hidden lg:flex" : (mobileShowKb ? "hidden lg:flex" : "flex")
+          }`}>
             {(() => {
               const activeSession = chatSessions.find((s) => s.id === activeChatSessionId);
               if (!activeSession) return (
@@ -1763,6 +1768,18 @@ export default function AgentDeskWorkspace({
                 <>
                   {/* Chat header */}
                   <div className="flex items-center gap-3 px-5 py-3.5 bg-white border-b border-zinc-200 shrink-0 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                    {/* Back to list button on mobile */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveChatSessionId(null)}
+                      className="lg:hidden p-1.5 -ml-2 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12" />
+                        <polyline points="12 19 5 12 12 5" />
+                      </svg>
+                    </button>
+
                     <div className="relative shrink-0">
                       <div className={`h-9 w-9 rounded-full ${acColor} flex items-center justify-center text-white text-[11px] font-extrabold`}>
                         {activeSession.avatar}
@@ -1777,8 +1794,16 @@ export default function AgentDeskWorkspace({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="rounded-full bg-zinc-100 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-500">Live Chat</span>
-                      <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-600">Assigned to you</span>
+                      {/* KB Toggle on Mobile */}
+                      <button
+                        type="button"
+                        onClick={() => setMobileShowKb(true)}
+                        className="lg:hidden flex items-center gap-1 rounded-full bg-zinc-900 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white transition-colors shadow-xs"
+                      >
+                        🔍 Search KB
+                      </button>
+                      <span className="hidden sm:inline-block rounded-full bg-zinc-100 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-500">Live Chat</span>
+                      <span className="hidden sm:inline-block rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-600">Assigned to you</span>
                     </div>
                   </div>
 
@@ -1848,37 +1873,55 @@ export default function AgentDeskWorkspace({
           </div>
 
           {/* ── Col 3: KB Assistant ── */}
-          <div className="w-[420px] shrink-0 flex flex-col border-l border-zinc-200 bg-white">
+          <div className={`w-full lg:w-[420px] shrink-0 flex flex-col border-l border-zinc-200 bg-white ${
+            mobileShowKb ? "flex" : "hidden lg:flex"
+          }`}>
 
             {/* KB panel header */}
             <div className="px-5 py-3.5 border-b border-zinc-100 shrink-0 bg-white">
-              {chatPreviewArticle ? (
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {/* Back to Chat button on mobile */}
                   <button
                     type="button"
-                    onClick={() => setChatPreviewArticle(null)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors shrink-0 rounded-lg bg-zinc-100 hover:bg-zinc-200 px-2 py-1"
+                    onClick={() => setMobileShowKb(false)}
+                    className="lg:hidden flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors shrink-0 rounded-lg bg-zinc-100 hover:bg-zinc-200 px-2 py-1"
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Back
+                    Chat
                   </button>
-                  <p className="text-xs font-extrabold text-zinc-900 truncate">{chatPreviewArticle.title}</p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-lg bg-zinc-900 flex items-center justify-center">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                      </svg>
+
+                  {chatPreviewArticle ? (
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setChatPreviewArticle(null)}
+                        className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors shrink-0 rounded-lg bg-zinc-100 hover:bg-zinc-200 px-2 py-1"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Back
+                      </button>
+                      <p className="text-xs font-extrabold text-zinc-900 truncate">{chatPreviewArticle.title}</p>
                     </div>
-                    <p className="text-xs font-extrabold text-zinc-900">KB Assistant</p>
-                  </div>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Find responses</span>
+                  ) : (
+                    <div className="flex items-center gap-2 truncate">
+                      <div className="h-6 w-6 rounded-lg bg-zinc-900 flex items-center justify-center shrink-0">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                        </svg>
+                      </div>
+                      <p className="text-xs font-extrabold text-zinc-900 truncate">KB Assistant</p>
+                    </div>
+                  )}
                 </div>
-              )}
+                {!chatPreviewArticle && (
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider shrink-0">Find responses</span>
+                )}
+              </div>
             </div>
 
             {/* Search view */}

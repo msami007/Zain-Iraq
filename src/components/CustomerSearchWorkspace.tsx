@@ -160,7 +160,7 @@ export default function CustomerSearchWorkspace({
       <div className="w-full flex flex-col gap-6">
 
         {/* Search bar */}
-        <form onSubmit={handleSearchForm} className="flex gap-2">
+        <form onSubmit={handleSearchForm} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1 flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-900/5 shadow-sm transition-all">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -181,7 +181,7 @@ export default function CustomerSearchWorkspace({
           <button
             type="submit"
             disabled={searching || !query.trim()}
-            className="flex items-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-3 text-sm font-bold text-white shadow-sm transition-all"
+            className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-3 text-sm font-bold text-white shadow-sm transition-all w-full sm:w-auto"
           >
             {searching ? (
               <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" /> Searching…</>
@@ -388,7 +388,7 @@ export default function CustomerSearchWorkspace({
 
       {/* Main Search Panel */}
       <div className="max-w-2xl mx-auto space-y-6">
-        <form onSubmit={handleSearchForm} className="flex gap-2">
+        <form onSubmit={handleSearchForm} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder={`Search ${selectedTenant?.name} help resources...`}
@@ -399,7 +399,7 @@ export default function CustomerSearchWorkspace({
           <button
             type="submit"
             disabled={searching}
-            className="rounded-lg bg-zinc-950 hover:bg-zinc-850 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all disabled:opacity-50 flex items-center gap-2"
+            className="rounded-lg bg-zinc-950 hover:bg-zinc-850 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             {searching ? "Searching..." : "Search"}
           </button>

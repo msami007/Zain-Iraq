@@ -1559,13 +1559,13 @@ export default function AdminDeskWorkspace({
                   {/* Filters Toolbar Row */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200">
                     {/* Tabs */}
-                    <div className="flex bg-zinc-200/60 p-1 rounded-lg gap-1 border border-zinc-200">
+                    <div className="flex bg-zinc-200/60 p-1 rounded-lg gap-1 border border-zinc-200 overflow-x-auto no-scrollbar max-w-full">
                       {["All", "Published", "Drafts", "Pending", "Rejected", "Archived"].map((tab) => (
                         <button
                           key={tab}
                           type="button"
                           onClick={() => setSelectedStatusFilter(tab)}
-                          className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${selectedStatusFilter === tab
+                          className={`rounded px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0 ${selectedStatusFilter === tab
                               ? "bg-white text-zinc-950 shadow-2xs"
                               : "text-zinc-550 hover:text-zinc-900"
                             }`}
@@ -2875,11 +2875,11 @@ export default function AdminDeskWorkspace({
             <div className="space-y-6">
               {/* Tab Selector */}
               {currentUserRole === "SuperAdmin" && (
-                <div className="flex border-b border-zinc-200 mb-2">
+                <div className="flex border-b border-zinc-200 mb-2 overflow-x-auto no-scrollbar max-w-full whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => setWorkflowSubTab("queue")}
-                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all shrink-0 ${
                       workflowSubTab === "queue"
                         ? "border-zinc-900 text-zinc-900"
                         : "border-transparent text-zinc-450 hover:text-zinc-700"
@@ -2893,7 +2893,7 @@ export default function AdminDeskWorkspace({
                       setWorkflowSubTab("builder");
                       setEditingWorkflow(null);
                     }}
-                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all shrink-0 ${
                       workflowSubTab === "builder"
                         ? "border-zinc-900 text-zinc-900"
                         : "border-transparent text-zinc-450 hover:text-zinc-700"
@@ -3022,7 +3022,7 @@ export default function AdminDeskWorkspace({
                   {/* Workflow Pipeline Legend */}
                   <div className="rounded-xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-4">Editorial Pipeline</h4>
-                    <div className="flex items-center gap-0">
+                    <div className="flex items-center gap-0 overflow-x-auto no-scrollbar max-w-full pb-2 select-none">
                       {[
                         { label: "Draft", color: "bg-zinc-200 text-zinc-600", active: false },
                         { label: "In Review", color: "bg-blue-100 text-blue-700", active: true },
@@ -3030,14 +3030,14 @@ export default function AdminDeskWorkspace({
                         { label: "Published", color: "bg-green-100 text-green-700", active: false },
                         { label: "Archived", color: "bg-red-100 text-red-600", active: false },
                       ].map((stage, i, arr) => (
-                        <div key={stage.label} className="flex items-center">
-                          <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border ${
+                        <div key={stage.label} className="flex items-center shrink-0">
+                          <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border shrink-0 ${
                             stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
                           } ${stage.color}`}>
                             {stage.active && <span className="mr-1">👁</span>}{stage.label}
                           </div>
                           {i < arr.length - 1 && (
-                            <span className="mx-2 text-zinc-300 font-bold text-sm">→</span>
+                            <span className="mx-2 text-zinc-300 font-bold text-sm shrink-0">→</span>
                           )}
                         </div>
                       ))}
@@ -3289,12 +3289,12 @@ export default function AdminDeskWorkspace({
             <div className="space-y-6">
               {/* Status & Date range selectors */}
               <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-nowrap overflow-x-auto no-scrollbar gap-2 max-w-full pb-1">
                   {["ALL", "NEW", "IN_PROGRESS", "RESOLVED"].map((st) => (
                     <button
                       key={st}
                       onClick={() => setGapStatusFilter(st)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs ${gapStatusFilter === st
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs whitespace-nowrap shrink-0 ${gapStatusFilter === st
                           ? "bg-zinc-950 text-white border-zinc-950"
                           : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
                         }`}
@@ -3439,64 +3439,66 @@ export default function AdminDeskWorkspace({
                             <td className="p-4 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
                               {new Date(g.created_at).toLocaleString()}
                             </td>
-                            <td className="p-4 text-right space-x-2">
-                              {g.status === "NEW" && (
-                                <>
-                                  <button
-                                    onClick={() => handleClaimGap(g.id)}
-                                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs"
-                                  >
-                                    Claim Gap
-                                  </button>
-                                  <button
-                                    onClick={() => handleCreateArticleFromGap(g)}
-                                    className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
-                                  >
-                                    Create Article
-                                  </button>
-                                </>
-                              )}
-                              {g.status === "IN_PROGRESS" && (
-                                <>
-                                  <button
-                                    onClick={() => setResolvingGap(g)}
-                                    className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
-                                  >
-                                    Resolve Gap
-                                  </button>
-                                  <button
-                                    onClick={() => handleCreateArticleFromGap(g)}
-                                    className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs"
-                                  >
-                                    Create Article
-                                  </button>
-                                </>
-                              )}
-                              {g.status === "RESOLVED" && (
-                                <div className="flex items-center justify-end gap-2 text-xs">
-                                  {g.resolving_article_id ? (
-                                    <Link
-                                      href={`/articles/${g.resolving_article_id}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 hover:text-green-900 hover:underline truncate max-w-40 transition-colors"
+                            <td className="p-4 text-right">
+                              <div className="flex flex-wrap gap-2 justify-end items-center">
+                                {g.status === "NEW" && (
+                                  <>
+                                    <button
+                                      onClick={() => handleClaimGap(g.id)}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs whitespace-nowrap"
                                     >
-                                      {g.resolving_article?.title || "View Article"}
-                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                                      </svg>
-                                    </Link>
-                                  ) : (
-                                    <span className="text-[10px] text-zinc-400 font-medium">No article linked</span>
-                                  )}
-                                  <button
-                                    onClick={() => handleUnresolveGap(g.id)}
-                                    className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
-                                  >
-                                    Rollback
-                                  </button>
-                                </div>
-                              )}
+                                      Claim Gap
+                                    </button>
+                                    <button
+                                      onClick={() => handleCreateArticleFromGap(g)}
+                                      className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
+                                    >
+                                      Create Article
+                                    </button>
+                                  </>
+                                )}
+                                {g.status === "IN_PROGRESS" && (
+                                  <>
+                                    <button
+                                      onClick={() => setResolvingGap(g)}
+                                      className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
+                                    >
+                                      Resolve Gap
+                                    </button>
+                                    <button
+                                      onClick={() => handleCreateArticleFromGap(g)}
+                                      className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
+                                    >
+                                      Create Article
+                                    </button>
+                                  </>
+                                )}
+                                {g.status === "RESOLVED" && (
+                                  <div className="flex items-center justify-end gap-2 text-xs">
+                                    {g.resolving_article_id ? (
+                                      <Link
+                                        href={`/articles/${g.resolving_article_id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 hover:text-green-900 hover:underline truncate max-w-40 transition-colors"
+                                      >
+                                        {g.resolving_article?.title || "View Article"}
+                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                                        </svg>
+                                      </Link>
+                                    ) : (
+                                      <span className="text-[10px] text-zinc-400 font-medium">No article linked</span>
+                                    )}
+                                    <button
+                                      onClick={() => handleUnresolveGap(g.id)}
+                                      className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
+                                    >
+                                      Rollback
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
