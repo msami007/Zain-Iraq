@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
@@ -1291,7 +1291,7 @@ export default function AdminDeskWorkspace({
     <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full"}`}>
       {/* Sidebar - only show if hideSidebar is false */}
       {!hideSidebar && (
-        <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen">
+        <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)]">
           <div>
             {/* Brand */}
             <div className="px-5 py-5 border-b border-white/[0.06]">
@@ -3729,56 +3729,103 @@ export default function AdminDeskWorkspace({
                 <>
                   {/* KPI Row */}
                   {(() => {
-                    const totalArticles = articles.length;
-                    const publishedCount = articles.filter(a => a.status === "Published").length;
-                    const pendingCount = articles.filter(a => a.status === "InReview" || a.status === "Approved").length;
-                    const archivedCount = articles.filter(a => a.status === "Archived").length;
-                    const publishRate = totalArticles > 0 ? Math.round((publishedCount / totalArticles) * 100) : 0;
+                    const ad = analyticsData;
+                    type KpiCard = {
+                      label: string;
+                      value: string;
+                      delta: string;
+                      deltaUp: boolean | null;
+                      accentFrom: string;
+                      accentTo: string;
+                      icon: React.ReactNode;
+                    };
+                    const cards: KpiCard[] = [
+                      {
+                        label: "Total Articles",
+                        value: (ad?.totalArticles ?? articles.length).toLocaleString(),
+                        delta: ad?.articlesThisWeek != null ? `${ad.articlesThisWeek > 0 ? "+" : ""}${ad.articlesThisWeek} this week` : "Live from DB",
+                        deltaUp: ad?.articlesThisWeek != null ? ad.articlesThisWeek >= 0 : true,
+                        accentFrom: "#7c3aed",
+                        accentTo: "#a78bfa",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: "Searches Today",
+                        value: (ad?.todaySearches ?? 0).toLocaleString(),
+                        delta: ad?.searchVsYesterday != null
+                          ? `${ad.searchVsYesterday > 0 ? "+" : ""}${ad.searchVsYesterday}% vs yesterday`
+                          : "vs yesterday",
+                        deltaUp: ad?.searchVsYesterday != null ? ad.searchVsYesterday >= 0 : null,
+                        accentFrom: "#059669",
+                        accentTo: "#34d399",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: "Helpful Rate",
+                        value: ad?.helpfulRate != null ? `${(ad.helpfulRateThisMonth ?? ad.helpfulRate).toFixed(1)}%` : "—",
+                        delta: ad?.helpfulRateDelta != null
+                          ? `${ad.helpfulRateDelta > 0 ? "+" : ""}${ad.helpfulRateDelta}pp this month`
+                          : "Based on feedback",
+                        deltaUp: ad?.helpfulRateDelta != null ? ad.helpfulRateDelta >= 0 : true,
+                        accentFrom: "#0891b2",
+                        accentTo: "#22d3ee",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+                            <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: "Knowledge Gaps",
+                        value: (ad?.totalGaps ?? 0).toLocaleString(),
+                        delta: ad?.gapsThisWeek != null ? `${ad.gapsThisWeek} new this week` : "Live from DB",
+                        deltaUp: ad?.gapsThisWeek != null ? false : null,
+                        accentFrom: "#dc2626",
+                        accentTo: "#f87171",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 9v4"/><path d="M12 17h.01"/>
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                          </svg>
+                        ),
+                      },
+                    ];
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        {/* Total Articles */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between h-32">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Articles</span>
-                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{totalArticles.toLocaleString()}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                        {cards.map((card) => (
+                          <div
+                            key={card.label}
+                            className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]"
+                          >
+                            {/* Gradient accent bar at bottom */}
+                            <div
+                              className="absolute bottom-0 left-0 right-0 h-[3px]"
+                              style={{ background: `linear-gradient(90deg, ${card.accentFrom}, ${card.accentTo})` }}
+                            />
+                            {/* Icon + label */}
+                            <div className="flex items-start justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{card.label}</span>
+                              <span className="text-zinc-300" style={{ color: card.accentFrom }}>{card.icon}</span>
+                            </div>
+                            {/* Value */}
+                            <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{card.value}</div>
+                            {/* Delta */}
+                            <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${card.deltaUp === true ? "text-green-600" : card.deltaUp === false ? "text-red-500" : "text-zinc-400"}`}>
+                              {card.deltaUp === true && <span>▲</span>}
+                              {card.deltaUp === false && <span>▼</span>}
+                              {card.delta}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-green-600 mt-2">
-                            <span>▲</span> Live from DB
-                          </div>
-                        </div>
-
-                        {/* Published */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between h-32">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Published</span>
-                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{publishedCount.toLocaleString()}</span>
-                          </div>
-                          <div className="text-[11px] font-bold text-green-600 mt-2">
-                            {publishRate}% publish rate
-                          </div>
-                        </div>
-
-                        {/* Pending Review */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between h-32">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Pending Review</span>
-                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{pendingCount.toLocaleString()}</span>
-                          </div>
-                          <div className="text-[11px] font-bold text-red-650 mt-2">
-                            SLA: 24h
-                          </div>
-                        </div>
-
-                        {/* Archived */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between h-32">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Archived</span>
-                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{archivedCount.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-green-600 mt-2">
-                            <span>▲</span> Live from DB
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     );
                   })()}

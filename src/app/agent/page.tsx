@@ -60,24 +60,76 @@ export default async function AgentPage() {
     },
   });
 
-  // Calculate today's search query count for this agent
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todaySearchesCount = await db.searchQuery.count({
-    where: {
-      user_id: userId,
-      created_at: { gte: today },
-    },
-  });
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  // Calculate helpfulness rate
-  const totalFeedbackCount = await db.articleFeedback.count();
-  const helpfulFeedbackCount = await db.articleFeedback.count({
-    where: { helpful: true },
-  });
-  const helpfulnessRate = totalFeedbackCount > 0 
-    ? Math.round((helpfulFeedbackCount / totalFeedbackCount) * 100) 
+  // Run all agent-scoped stat queries in parallel
+  const [
+    todaySearchesCount,
+    weeklySearchesCount,
+    totalSearchesCount,
+    resolvedCasesCount,
+    weeklyResolvedCasesCount,
+    articlesViewedCount,
+    weeklyArticlesViewedCount,
+    macroClicksCount,
+    gapsSubmittedCount,
+    gapsResolvedCount,
+    gapsThisWeekCount,
+    todayGapsCount,
+    myArticleIds,
+  ] = await Promise.all([
+    db.searchQuery.count({ where: { user_id: userId, created_at: { gte: today } } }),
+    db.searchQuery.count({ where: { user_id: userId, created_at: { gte: weekAgo } } }),
+    db.searchQuery.count({ where: { user_id: userId } }),
+    db.chatCase.count({ where: { status: "resolved" } }),
+    db.chatCase.count({ where: { status: "resolved", wait_started_at: { gte: weekAgo } } }),
+    db.auditLog.count({ where: { actor_id: userId, action: "View Article" } }),
+    db.auditLog.count({ where: { actor_id: userId, action: "View Article", created_at: { gte: weekAgo } } }),
+    db.auditLog.count({ where: { actor_id: userId, action: { in: ["Click Macro", "Use Macro"] } } }),
+    db.knowledgeGap.count({ where: { reported_by: userId } }),
+    db.knowledgeGap.count({ where: { reported_by: userId, status: "RESOLVED" } }),
+    db.knowledgeGap.count({ where: { reported_by: userId, created_at: { gte: weekAgo } } }),
+    db.knowledgeGap.count({ where: { reported_by: userId, created_at: { gte: today } } }),
+    db.article.findMany({ where: { author_id: userId }, select: { id: true } }),
+  ]);
+
+  const myArticleIdList = myArticleIds.map((a) => a.id);
+  const [myFeedbackTotal, myFeedbackHelpful] = await Promise.all([
+    db.articleFeedback.count({ where: { article_id: { in: myArticleIdList } } }),
+    db.articleFeedback.count({ where: { article_id: { in: myArticleIdList }, helpful: true } }),
+  ]);
+
+  const myHelpfulnessRate = myFeedbackTotal > 0
+    ? Math.round((myFeedbackHelpful / myFeedbackTotal) * 100)
     : null;
+
+  // Legacy prop — tenant-wide helpfulness (kept for the KPI card on ticket tab)
+  const [totalFeedbackCount, helpfulFeedbackCount] = await Promise.all([
+    db.articleFeedback.count(),
+    db.articleFeedback.count({ where: { helpful: true } }),
+  ]);
+  const helpfulnessRate = totalFeedbackCount > 0
+    ? Math.round((helpfulFeedbackCount / totalFeedbackCount) * 100)
+    : null;
+
+  const agentStats = {
+    todaySearches: todaySearchesCount,
+    weeklySearches: weeklySearchesCount,
+    totalSearches: totalSearchesCount,
+    resolvedCases: resolvedCasesCount,
+    weeklyResolvedCases: weeklyResolvedCasesCount,
+    articlesViewed: articlesViewedCount,
+    weeklyArticlesViewed: weeklyArticlesViewedCount,
+    macroClicks: macroClicksCount,
+    gapsSubmitted: gapsSubmittedCount,
+    gapsResolved: gapsResolvedCount,
+    gapsThisWeek: gapsThisWeekCount,
+    todayGaps: todayGapsCount,
+    myHelpfulnessRate,
+    myArticlesCount: myArticleIdList.length,
+  };
 
   const serializedCases = cases.map((c) => ({
     id: c.id,
@@ -198,6 +250,7 @@ export default async function AgentPage() {
         tenantId={tenantId}
         todaySearches={todaySearchesCount}
         helpfulnessRate={helpfulnessRate}
+        agentStats={agentStats}
         tenants={serializedTenants}
         initialCategories={serializedCategories}
         userRole={role}

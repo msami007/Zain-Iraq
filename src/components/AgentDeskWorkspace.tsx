@@ -32,12 +32,30 @@ type SearchResult = {
   language: string;
 };
 
+type AgentStats = {
+  todaySearches: number;
+  weeklySearches: number;
+  totalSearches: number;
+  resolvedCases: number;
+  weeklyResolvedCases: number;
+  articlesViewed: number;
+  weeklyArticlesViewed: number;
+  macroClicks: number;
+  gapsSubmitted: number;
+  gapsResolved: number;
+  gapsThisWeek: number;
+  todayGaps: number;
+  myHelpfulnessRate: number | null;
+  myArticlesCount: number;
+};
+
 type AgentWorkspaceProps = {
   initialCases: AgentCase[];
   currentUserId: string;
   tenantId: string;
   todaySearches: number;
   helpfulnessRate: number | null;
+  agentStats?: AgentStats;
   tenants: { id: string; name: string; slug: string; branding: any }[];
   initialCategories: { id: string; name: string; slug: string; tenant_id: string }[];
   userRole?: string;
@@ -53,6 +71,7 @@ export default function AgentDeskWorkspace({
   tenantId,
   todaySearches,
   helpfulnessRate,
+  agentStats,
   tenants,
   initialCategories,
   userRole,
@@ -67,7 +86,7 @@ export default function AgentDeskWorkspace({
   const [selectedCase, setSelectedCase] = useState<AgentCase | null>(null);
 
   // Top level Console Active Tab
-  const [agentActiveTab, setAgentActiveTab] = useState<"tickets" | "chat" | "search" | "gaps">("tickets");
+  const [agentActiveTab, setAgentActiveTab] = useState<"dashboard" | "chat" | "search" | "gaps">("dashboard");
 
   // Search KB states
   const [kbQuery, setKbQuery] = useState("");
@@ -155,6 +174,7 @@ export default function AgentDeskWorkspace({
     }
   ]);
   const [activeChatSessionId, setActiveChatSessionId] = useState("chat-1");
+  const chatSessionMounted = useRef(false);
   const [chatInputText, setChatInputText] = useState("");
 
   // Integrated KB Search inside Chat Console
@@ -323,8 +343,12 @@ export default function AgentDeskWorkspace({
     }
   };
 
-  // Auto-search KB when active chat session changes
+  // Auto-search KB when active chat session changes (skip on initial mount)
   useEffect(() => {
+    if (!chatSessionMounted.current) {
+      chatSessionMounted.current = true;
+      return;
+    }
     const session = chatSessions.find((s) => s.id === activeChatSessionId);
     if (session) {
       const customerMsgs = session.messages.filter((m) => m.sender === "customer");
@@ -749,12 +773,11 @@ export default function AgentDeskWorkspace({
 
   const NAV_ITEMS = [
     {
-      key: "tickets" as const,
-      label: "Ticket Console",
+      key: "dashboard" as const,
+      label: "Dashboard",
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
-          <path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
         </svg>
       ),
     },
@@ -789,7 +812,7 @@ export default function AgentDeskWorkspace({
   ];
 
   const sectionTitle: Record<string, string> = {
-    tickets: "Ticket Console",
+    dashboard: "Dashboard",
     chat: "Customer Chat",
     search: "Knowledge Base",
     gaps: "Gap Reports",
@@ -801,7 +824,7 @@ export default function AgentDeskWorkspace({
     <div className="min-h-screen flex bg-zinc-50 w-full text-left">
 
       {/* ── Sidebar ── */}
-      <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen">
+      <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)]">
         <div>
           {/* Brand */}
           <div className="px-5 py-5 border-b border-white/[0.06]">
@@ -827,7 +850,7 @@ export default function AgentDeskWorkspace({
                 key={item.key}
                 type="button"
                 onClick={() => {
-                  setAgentActiveTab(item.key);
+                  setAgentActiveTab(item.key as any);
                   if (item.key === "gaps") { loadMyGaps(); loadMyArticles(); }
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
@@ -904,7 +927,7 @@ export default function AgentDeskWorkspace({
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-8 space-y-6">
 
-      {agentActiveTab === "tickets" && (
+      {agentActiveTab === "dashboard" && (
         <>
         {resolutionCase ? (
           /* ── RESOLUTION PAGE ── */
@@ -1292,32 +1315,177 @@ export default function AgentDeskWorkspace({
             </div>
           </div>
         ) : (
-          /* ── TICKET DASHBOARD ── */
+          /* ── DASHBOARD ── */
           <>
-          {/* KPI Stats Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">My Queue Activity</span>
-              <h3 className="mt-2 text-2xl font-extrabold text-zinc-950">
-                {cases.filter((c) => c.assigned_agent_id === currentUserId && c.status === "active").length} Active
-              </h3>
-              <p className="text-xs text-zinc-400 mt-1 font-medium">Cases assigned to you</p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Today's Searches</span>
-              <h3 className="mt-2 text-2xl font-extrabold text-zinc-950">{todaySearches} Queries</h3>
-              <p className="text-xs text-zinc-400 mt-1 font-medium">KB searches performed today</p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Helpfulness Score</span>
-              <h3 className="mt-2 text-2xl font-extrabold text-zinc-950">
-                {helpfulnessRate !== null ? `${helpfulnessRate}%` : "Pending"}
-              </h3>
-              <p className="text-xs text-zinc-400 mt-1 font-medium">
-                {helpfulnessRate !== null ? "Based on customer feedback" : "Pending integration"}
-              </p>
-            </div>
-          </div>
+          {/* ── Analytics KPI row ── */}
+          {agentStats && (() => {
+            const s = agentStats;
+            const kpiCards = [
+              {
+                label: "Queries Handled",
+                value: s.todaySearches,
+                sub: "Today",
+                week: s.weeklySearches,
+                icon: (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                ),
+                accent: "text-blue-600 bg-blue-50 border-blue-100",
+              },
+              {
+                label: "Cases Resolved",
+                value: s.resolvedCases,
+                sub: "All time",
+                week: s.weeklyResolvedCases,
+                icon: (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                ),
+                accent: "text-green-600 bg-green-50 border-green-100",
+              },
+              {
+                label: "Articles Opened",
+                value: s.articlesViewed,
+                sub: "All time",
+                week: s.weeklyArticlesViewed,
+                icon: (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                  </svg>
+                ),
+                accent: "text-indigo-600 bg-indigo-50 border-indigo-100",
+              },
+              {
+                label: "Helpful Rate",
+                value: helpfulnessRate !== null ? `${helpfulnessRate}%` : "—",
+                sub: helpfulnessRate !== null ? "Based on KB feedback" : "No feedback yet",
+                week: null as number | null,
+                icon: (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+                    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                  </svg>
+                ),
+                accent: helpfulnessRate !== null && helpfulnessRate >= 70
+                  ? "text-green-600 bg-green-50 border-green-100"
+                  : helpfulnessRate !== null && helpfulnessRate >= 40
+                  ? "text-amber-600 bg-amber-50 border-amber-100"
+                  : "text-violet-600 bg-violet-50 border-violet-100",
+              },
+            ];
+            return (
+              <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {kpiCards.map((card) => (
+                  <div key={card.label} className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{card.label}</span>
+                      <span className={`inline-flex items-center justify-center h-7 w-7 rounded-lg border ${card.accent}`}>{card.icon}</span>
+                    </div>
+                    <div className="text-3xl font-extrabold text-zinc-950 tabular-nums">{card.value}</div>
+                    <div className="mt-1 text-[11px] text-zinc-400 font-medium">{card.sub}</div>
+                    {card.week !== null && (
+                      <div className="mt-3 pt-3 border-t border-zinc-100 flex items-center justify-between">
+                        <span className="text-[10px] text-zinc-400">This week</span>
+                        <span className="text-[11px] font-bold text-zinc-700">{card.week}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Second row: quality + gaps + weekly */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Knowledge Gaps */}
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Knowledge Gaps</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+                      <path d="M12 9v4"/><path d="M12 17h.01"/>
+                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    </svg>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: "All time", val: s.gapsSubmitted, cls: "text-zinc-950" },
+                      { label: "This week", val: s.gapsThisWeek, cls: "text-amber-700" },
+                      { label: "Today", val: s.todayGaps, cls: "text-red-600" },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-zinc-500">{row.label}</span>
+                        <span className={`text-sm font-extrabold tabular-nums ${row.cls}`}>{row.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-zinc-100">
+                    <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
+                      <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: s.gapsSubmitted > 0 ? `${Math.min(100, (s.gapsResolved / s.gapsSubmitted) * 100)}%` : "0%" }} />
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-zinc-400">{s.gapsResolved} of {s.gapsSubmitted} resolved</p>
+                  </div>
+                </div>
+
+                {/* Gap Impact */}
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-4">Gap Report Impact</span>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Submitted", val: s.gapsSubmitted, dot: "bg-zinc-300", cls: "text-zinc-950" },
+                      { label: "Resolved", val: s.gapsResolved, dot: "bg-green-400", cls: "text-green-700" },
+                      { label: "Pending", val: s.gapsSubmitted - s.gapsResolved, dot: "bg-amber-400", cls: "text-amber-700" },
+                    ].map((row) => (
+                      <div key={row.label} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2 w-2 rounded-full ${row.dot}`} />
+                          <span className="text-xs font-semibold text-zinc-600">{row.label}</span>
+                        </div>
+                        <span className={`text-sm font-extrabold tabular-nums ${row.cls}`}>{row.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {s.gapsSubmitted > 0 && (
+                    <div className="mt-4 pt-3 border-t border-zinc-100">
+                      <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}%` }} />
+                      </div>
+                      <p className="mt-1.5 text-[10px] text-zinc-400">{Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}% resolution rate</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* This Week */}
+                <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-4">This Week Summary</span>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Search queries", value: s.weeklySearches },
+                      { label: "Cases resolved", value: s.weeklyResolvedCases },
+                      { label: "Articles opened", value: s.weeklyArticlesViewed },
+                    ].map((row) => {
+                      const max = Math.max(s.weeklySearches, s.weeklyResolvedCases, s.weeklyArticlesViewed, 1);
+                      return (
+                        <div key={row.label} className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-semibold text-zinc-600 w-28 shrink-0">{row.label}</span>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="h-1 rounded-full bg-zinc-100 flex-1 overflow-hidden">
+                              <div className="h-full rounded-full bg-zinc-400" style={{ width: `${Math.min(100, (row.value / max) * 100)}%` }} />
+                            </div>
+                            <span className="text-xs font-extrabold text-zinc-950 tabular-nums w-6 text-right shrink-0">{row.value}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-zinc-100">
+                    <p className="text-[10px] text-zinc-400">{s.totalSearches} total queries · {s.resolvedCases} total cases closed</p>
+                  </div>
+                </div>
+              </div>
+              </>
+            );
+          })()}
 
           {/* Main grid: queue table + sidebar */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -2479,6 +2647,8 @@ export default function AgentDeskWorkspace({
           </div>
         </div>
       )}
+
+
         </div>
       </div>
     </div>

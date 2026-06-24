@@ -78,15 +78,58 @@ export async function GET(req: NextRequest) {
 
     const db = getTenantDb(targetTenantId);
 
-    // 1. Fetch total counts
-    const totalSearches = await db.searchQuery.count();
-    const totalGaps = await db.knowledgeGap.count();
-    const totalArticles = await db.article.count();
+    // Date boundaries
+    const nowMs = Date.now();
+    const todayStart = new Date(nowMs); todayStart.setHours(0, 0, 0, 0);
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    const weekAgo = new Date(nowMs - 7 * 86400000);
+    const monthAgo = new Date(nowMs - 30 * 86400000);
+    const twoMonthsAgo = new Date(nowMs - 60 * 86400000);
 
-    // 2. Fetch feedback helpful rate
-    const totalFeedback = await db.articleFeedback.count();
-    const helpfulFeedback = await db.articleFeedback.count({ where: { helpful: true } });
+    // 1. Fetch total counts + deltas (run in parallel)
+    const [
+      totalArticles,
+      articlesThisWeek,
+      totalSearches,
+      todaySearches,
+      yesterdaySearches,
+      totalGaps,
+      gapsThisWeek,
+      totalFeedback,
+      helpfulFeedback,
+      thisMonthFeedback,
+      thisMonthHelpful,
+      lastMonthFeedback,
+      lastMonthHelpful,
+    ] = await Promise.all([
+      db.article.count(),
+      db.article.count({ where: { created_at: { gte: weekAgo } } }),
+      db.searchQuery.count(),
+      db.searchQuery.count({ where: { created_at: { gte: todayStart } } }),
+      db.searchQuery.count({ where: { created_at: { gte: yesterdayStart, lt: todayStart } } }),
+      db.knowledgeGap.count(),
+      db.knowledgeGap.count({ where: { created_at: { gte: weekAgo } } }),
+      db.articleFeedback.count(),
+      db.articleFeedback.count({ where: { helpful: true } }),
+      db.articleFeedback.count({ where: { created_at: { gte: monthAgo } } }),
+      db.articleFeedback.count({ where: { helpful: true, created_at: { gte: monthAgo } } }),
+      db.articleFeedback.count({ where: { created_at: { gte: twoMonthsAgo, lt: monthAgo } } }),
+      db.articleFeedback.count({ where: { helpful: true, created_at: { gte: twoMonthsAgo, lt: monthAgo } } }),
+    ]);
+
     const helpfulRate = totalFeedback > 0 ? parseFloat(((helpfulFeedback / totalFeedback) * 100).toFixed(1)) : 0.0;
+
+    // Search delta vs yesterday (percentage change)
+    const searchVsYesterday = yesterdaySearches > 0
+      ? parseFloat((((todaySearches - yesterdaySearches) / yesterdaySearches) * 100).toFixed(0))
+      : null;
+
+    // Helpful rate this month vs last month (pp delta)
+    const helpfulRateThisMonth = thisMonthFeedback > 0 ? parseFloat(((thisMonthHelpful / thisMonthFeedback) * 100).toFixed(1)) : null;
+    const helpfulRateLastMonth = lastMonthFeedback > 0 ? parseFloat(((lastMonthHelpful / lastMonthFeedback) * 100).toFixed(1)) : null;
+    const helpfulRateDelta = helpfulRateThisMonth !== null && helpfulRateLastMonth !== null
+      ? parseFloat((helpfulRateThisMonth - helpfulRateLastMonth).toFixed(1))
+      : null;
 
     // 3. Fetch search average confidence (match score)
     const avgConfidenceRaw = await db.searchQuery.aggregate({
@@ -330,9 +373,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       totalViews,
       totalSearches,
+      todaySearches,
+      yesterdaySearches,
+      searchVsYesterday,
       totalGaps,
+      gapsThisWeek,
       totalArticles,
+      articlesThisWeek,
       helpfulRate,
+      helpfulRateThisMonth,
+      helpfulRateDelta,
       avgConfidence,
       viewsByCategory,
       contentBreakdown,
