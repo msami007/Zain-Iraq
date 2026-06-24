@@ -1574,11 +1574,11 @@ export default function AdminDeskWorkspace({
                   </div>
 
                   {/* Articles Table */}
-                  <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+                  <div className="rounded-xl border border-zinc-100 bg-white shadow-2xs overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                         <thead>
-                          <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-extrabold tracking-wider">
+                          <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
                             <th className="p-4">ID</th>
                             <th className="p-4">Title</th>
                             <th className="p-4">Category</th>
@@ -1589,7 +1589,7 @@ export default function AdminDeskWorkspace({
                             <th className="p-4 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-150">
+                        <tbody className="divide-y divide-zinc-50">
                           {filteredArticles.length === 0 ? (
                             <tr>
                               <td colSpan={8} className="p-8 text-center text-zinc-450 font-semibold">
@@ -1606,7 +1606,7 @@ export default function AdminDeskWorkspace({
                               const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
                               return (
-                                <tr key={art.id} className="hover:bg-zinc-50/50">
+                                <tr key={art.id} className="hover:bg-zinc-50 transition-colors">
                                   <td className="p-4 font-mono text-[10px] text-zinc-400 font-semibold">{art.id.slice(0, 8)}</td>
                                   <td className="p-4 font-extrabold text-zinc-950 text-left">
                                     {art.title}
@@ -3326,15 +3326,15 @@ export default function AdminDeskWorkspace({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-                <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
+              <div className="rounded-xl border border-zinc-100 bg-white shadow-2xs overflow-hidden">
+                <div className="border-b border-zinc-100 bg-zinc-50/40 p-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Captured Search Miss Gaps</h3>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                     <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                      <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
                         <th className="p-4">Search Query / Flag</th>
                         <th className="p-4">Type</th>
                         <th className="p-4">Feedback / Comment</th>
@@ -3346,7 +3346,7 @@ export default function AdminDeskWorkspace({
                         <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-150">
+                    <tbody className="divide-y divide-zinc-50">
                       {gaps.length === 0 ? (
                         <tr>
                           <td colSpan={9} className="p-8 text-center text-zinc-400 font-semibold">
@@ -3361,7 +3361,7 @@ export default function AdminDeskWorkspace({
                             return gapSortOrder === "newest" ? tb - ta : ta - tb;
                           })
                           .map((g) => (
-                          <tr key={g.id} className="hover:bg-zinc-50/50 align-top">
+                          <tr key={g.id} className="hover:bg-zinc-50 transition-colors align-top">
                             <td className="p-4 max-w-xs">
                               <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>
                               {g.flagged_article && (
