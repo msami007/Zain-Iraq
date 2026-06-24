@@ -83,6 +83,11 @@ type WorkspaceProps = {
   hideSidebar?: boolean;
   overrideActiveTab?: "articles" | "gaps" | "audit" | "workflows";
   signOutAction?: () => Promise<void>;
+  onUpdateGaps?: (updatedGap: Gap) => void;
+  onUpdateGapsState?: (updatedGaps: Gap[]) => void;
+  onUpdateArticles?: (updatedArticles: AdminArticle[]) => void;
+  seededGap?: { id: string; query_text: string } | null;
+  onRedirectToTab?: (tab: "articles" | "gaps" | "workflows" | "audit", seededGap?: { id: string; query_text: string }) => void;
 };
 
 const SAMPLE_TROUBLESHOOTING_FLOW = {
@@ -153,12 +158,29 @@ export default function AdminDeskWorkspace({
   hideSidebar = false,
   overrideActiveTab,
   signOutAction,
+  onUpdateGaps,
+  onUpdateGapsState,
+  onUpdateArticles,
+  seededGap,
+  onRedirectToTab,
 }: WorkspaceProps) {
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows" | "analytics">("articles");
   const currentTab = overrideActiveTab || activeTab;
+
+  useEffect(() => {
+    if (onUpdateArticles) {
+      onUpdateArticles(articles);
+    }
+  }, [articles, onUpdateArticles]);
+
+  useEffect(() => {
+    if (onUpdateGapsState) {
+      onUpdateGapsState(gaps);
+    }
+  }, [gaps, onUpdateGapsState]);
 
   // Articles Filter states
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
@@ -360,6 +382,17 @@ export default function AdminDeskWorkspace({
       console.error("Failed to load workflow routes", err);
     }
   };
+
+  useEffect(() => {
+    if (seededGap) {
+      openCreator();
+      setOriginGapId(seededGap.id);
+      // Clear it in parent by signaling we've handled it
+      if (onRedirectToTab) {
+        onRedirectToTab("articles", undefined);
+      }
+    }
+  }, [seededGap]);
 
   useEffect(() => {
     fetchWorkflowRoutes();
@@ -986,6 +1019,7 @@ export default function AdminDeskWorkspace({
             team_ids: selectedTeams,
             workflow_route_id: selectedWorkflowRouteId || null,
             tags: tags,
+            origin_gap_id: originGapId || undefined,
           }),
         });
 
@@ -1037,6 +1071,9 @@ export default function AdminDeskWorkspace({
             if (resResolve.ok) {
               const updatedGap = await resResolve.json();
               setGaps(gaps.map((g) => (g.id === originGapId ? updatedGap : g)));
+              if (onUpdateGaps) {
+                onUpdateGaps(updatedGap);
+              }
             }
           } catch (e) {
             console.error("Failed to automatically resolve gap:", e);
@@ -1121,6 +1158,9 @@ export default function AdminDeskWorkspace({
       if (!res.ok) throw new Error("Failed to claim gap");
       const updated = await res.json();
       setGaps(gaps.map((g) => (g.id === gapId ? updated : g)));
+      if (onUpdateGaps) {
+        onUpdateGaps(updated);
+      }
     } catch (err: any) {
       alert(err.message);
     }
@@ -1148,6 +1188,9 @@ export default function AdminDeskWorkspace({
 
       const updated = await res.json();
       setGaps(gaps.map((g) => (g.id === resolvingGap.id ? updated : g)));
+      if (onUpdateGaps) {
+        onUpdateGaps(updated);
+      }
       setResolvingGap(null);
       setSelectedResolvingArticleId("");
       alert("Gap resolved successfully!");
@@ -1169,6 +1212,9 @@ export default function AdminDeskWorkspace({
       }
       const updated = await res.json();
       setGaps(gaps.map((g) => (g.id === gapId ? updated : g)));
+      if (onUpdateGaps) {
+        onUpdateGaps(updated);
+      }
       alert("Gap unresolved/rolled back successfully!");
     } catch (err: any) {
       alert(err.message);
@@ -1176,11 +1222,13 @@ export default function AdminDeskWorkspace({
   };
 
   const handleCreateArticleFromGap = (gap: Gap) => {
-    openCreator();
-    setTitle(gap.query_text);
-    setSlug(gap.query_text.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"));
-    setOriginGapId(gap.id);
-    setActiveTab("articles");
+    if (onRedirectToTab) {
+      onRedirectToTab("articles", { id: gap.id, query_text: gap.query_text });
+    } else {
+      openCreator();
+      setOriginGapId(gap.id);
+      setActiveTab("articles");
+    }
   };
 
   // Check if a specific variant is empty
