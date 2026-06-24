@@ -71,6 +71,12 @@ export default function CustomerSearchWorkspace({
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
+  // Agent gap-strip state (only used when agentMode=true, but hooks must be at top level)
+  const [gapOpen, setGapOpen] = useState(false);
+  const [gapComment, setGapComment] = useState("");
+  const [gapSubmitting, setGapSubmitting] = useState(false);
+  const [gapDone, setGapDone] = useState(false);
+
   // Filter categories by the active tenant
   const activeCategories = initialCategories.filter((c) => c.tenant_id === selectedTenant?.id);
   const brandingColor = selectedTenant?.branding?.primaryColor || "#09090B";
@@ -156,11 +162,6 @@ export default function CustomerSearchWorkspace({
 
   // ── Agent Mode UI ────────────────────────────────────────────────────────────
   if (agentMode) {
-    const [gapOpen, setGapOpen] = useState(false);
-    const [gapComment, setGapComment] = useState("");
-    const [gapSubmitting, setGapSubmitting] = useState(false);
-    const [gapDone, setGapDone] = useState(false);
-
     const handleQuickGap = async () => {
       if (!query.trim() || gapSubmitting) return;
       setGapSubmitting(true);

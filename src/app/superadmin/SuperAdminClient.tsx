@@ -1710,7 +1710,7 @@ export default function SuperAdminClient({
                     <p className="text-xs text-zinc-400 mt-1">Try a different keyword or clear the filters.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredSections.map(section => (
                       <div key={section.category} className={`rounded-xl border border-zinc-100 bg-white shadow-sm overflow-hidden flex flex-col border-l-[3px] ${section.borderClass}`}>
                         <div className={`flex items-center gap-2.5 px-4 py-3 border-b flex-shrink-0 ${section.badgeClass}`}>
