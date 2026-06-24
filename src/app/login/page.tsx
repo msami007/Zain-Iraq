@@ -215,48 +215,67 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 border-t border-zinc-100 pt-6 text-center">
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-3">
+        <div className="mt-8 border-t border-zinc-100 pt-6">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-4 text-center">
             Quick Demo Logins
-          </label>
-          <div className="flex flex-wrap gap-2 justify-center mb-4">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("Salman@zain.com")}
-              className="rounded bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 text-[10px] font-bold text-zinc-800 transition-colors border border-zinc-350"
-            >
-              Super Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("admin1.zain@zain.com")}
-              className="rounded bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 text-[10px] font-bold text-blue-700 transition-colors border border-blue-200"
-            >
-              Zain Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("admin.oodi@oodi.com")}
-              className="rounded bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 transition-colors border border-emerald-200"
-            >
-              OODI Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("agent1.zain@zain.com")}
-              className="rounded bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 text-[10px] font-bold text-purple-700 transition-colors border border-purple-200"
-            >
-              Zain Agent
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("agent.oodi@oodi.com")}
-              className="rounded bg-yellow-50 hover:bg-yellow-100 px-2.5 py-1.5 text-[10px] font-bold text-yellow-800 transition-colors border border-yellow-200"
-            >
-              OODI Agent
-            </button>
+          </p>
+          <div className="space-y-3">
+            {/* Super Admin */}
+            <div className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Super Admin</span>
+              <div className="flex-1 h-px bg-zinc-100" />
+              <button
+                type="button"
+                onClick={() => handleQuickLogin("Salman@zain.com")}
+                className="rounded bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 text-[10px] font-bold text-zinc-800 transition-colors border border-zinc-200"
+              >
+                Salman (Zain)
+              </button>
+            </div>
+            {/* Admins */}
+            <div className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Admin</span>
+              <div className="flex-1 h-px bg-zinc-100" />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("admin1.zain@zain.com")}
+                  className="rounded bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 text-[10px] font-bold text-blue-700 transition-colors border border-blue-200"
+                >
+                  Zain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("admin.oodi@oodi.com")}
+                  className="rounded bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 transition-colors border border-emerald-200"
+                >
+                  OODI
+                </button>
+              </div>
+            </div>
+            {/* Agents */}
+            <div className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Agent</span>
+              <div className="flex-1 h-px bg-zinc-100" />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("agent1.zain@zain.com")}
+                  className="rounded bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 text-[10px] font-bold text-purple-700 transition-colors border border-purple-200"
+                >
+                  Zain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("agent.oodi@oodi.com")}
+                  className="rounded bg-yellow-50 hover:bg-yellow-100 px-2.5 py-1.5 text-[10px] font-bold text-yellow-800 transition-colors border border-yellow-200"
+                >
+                  OODI
+                </button>
+              </div>
+            </div>
           </div>
-          <p className="text-[9px] font-semibold text-zinc-400">
+          <p className="text-[9px] font-semibold text-zinc-400 text-center mt-4">
             Default Password: <span className="font-mono text-zinc-600">password123</span>
           </p>
         </div>
