@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getTenantDb } from "@/lib/db";
+import { getTenantDb, prisma } from "@/lib/db";
 import { GapStatus, Language, Channel } from "@prisma/client";
 
 // Unauthenticated POST allowed for customer gap submissions (source: "customer")
@@ -53,11 +53,16 @@ export async function GET(req: NextRequest) {
       dateFilter.lte = end;
     }
 
-    const gaps = await db.knowledgeGap.findMany({
-      where: {
-        status: statusFilter || undefined,
-        created_at: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
-      },
+    const whereClause = {
+      status: statusFilter || undefined,
+      created_at: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+    };
+
+    // SuperAdmin queries across all tenants; Admin is scoped to their own tenant
+    const queryClient = role === "SuperAdmin" ? prisma : db;
+
+    const gaps = await queryClient.knowledgeGap.findMany({
+      where: whereClause,
       include: {
         reporter: { select: { id: true, name: true, email: true } },
         claimer: { select: { id: true, name: true, email: true } },
@@ -116,6 +121,10 @@ export async function POST(req: NextRequest) {
           occurrences: existing.occurrences + reportedOccurrences,
           // Append new comment if provided and gap doesn't have one yet
           ...(comment && !existing.comment ? { comment } : {}),
+          // Always carry through article flag info when an agent explicitly flags an article
+          ...(flagged_article_id ? { flagged_article_id, source: gapSource } : {}),
+          // If gap was auto-created (no reporter), credit the agent who explicitly submitted it
+          ...(!existing.reported_by && userId ? { reported_by: userId } : {}),
         },
       });
       return NextResponse.json(updated);
@@ -166,15 +175,25 @@ export async function PUT(req: NextRequest) {
     }
 
     const db = getTenantDb(tenantId);
+    // SuperAdmin can act on gaps from any tenant; Admin is scoped to their own
+    const gapClient = role === "SuperAdmin" ? prisma : db;
 
-    // Fetch the existing gap to ensure it belongs to this tenant
-    const existing = await db.knowledgeGap.findUnique({
+    // Fetch the existing gap — SuperAdmin looks across all tenants
+    const existing = await gapClient.knowledgeGap.findUnique({
       where: { id },
     });
 
-    if (!existing || existing.tenant_id !== tenantId) {
+    if (!existing) {
       return NextResponse.json({ error: "Knowledge gap not found" }, { status: 404 });
     }
+
+    // Admin is restricted to their own tenant
+    if (role === "Admin" && existing.tenant_id !== tenantId) {
+      return NextResponse.json({ error: "Knowledge gap not found" }, { status: 404 });
+    }
+
+    const gapTenantId = existing.tenant_id;
+    const gapDb = getTenantDb(gapTenantId);
 
     const updateData: any = {};
 
@@ -190,11 +209,11 @@ export async function PUT(req: NextRequest) {
             { status: 400 }
           );
         }
-        // Verify that the article exists and is in the same tenant
-        const article = await db.article.findUnique({
+        // Verify the article exists in the gap's own tenant
+        const article = await gapDb.article.findUnique({
           where: { id: resolving_article_id },
         });
-        if (!article || article.tenant_id !== tenantId) {
+        if (!article) {
           return NextResponse.json({ error: "Resolving article not found" }, { status: 404 });
         }
         updateData.resolving_article_id = resolving_article_id;
@@ -204,7 +223,7 @@ export async function PUT(req: NextRequest) {
       updateData.status = status as GapStatus;
     }
 
-    const updatedGap = await db.knowledgeGap.update({
+    const updatedGap = await gapClient.knowledgeGap.update({
       where: { id },
       data: updateData,
       include: {
@@ -214,7 +233,7 @@ export async function PUT(req: NextRequest) {
       },
     });
 
-    // Write audit log entry
+    // Write audit log scoped to the gap's tenant
     await db.auditLog.create({
       data: {
         tenant_id: tenantId,

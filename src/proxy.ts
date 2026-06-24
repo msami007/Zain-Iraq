@@ -19,8 +19,7 @@ export default auth((req) => {
     nextUrl.pathname.startsWith("/categories") ||
     nextUrl.pathname.startsWith("/api/v1/health") ||
     nextUrl.pathname.startsWith("/api/v1/search") ||
-    nextUrl.pathname.startsWith("/api/v1/feedback") ||
-    nextUrl.pathname.startsWith("/api/v1/gaps");
+    nextUrl.pathname.startsWith("/api/v1/feedback");
 
   // Allow authentication endpoints to go through
   if (isAuthRoute) {
@@ -35,6 +34,10 @@ export default auth((req) => {
   // Redirect to login if user is not authenticated
   if (!isLoggedIn) {
     if (isApiRoute) {
+      // Allow unauthenticated customer gap submissions only
+      if (nextUrl.pathname === "/api/v1/gaps" && req.method === "POST") {
+        return NextResponse.next();
+      }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/login", nextUrl));

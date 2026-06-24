@@ -92,13 +92,14 @@ export default async function SuperAdminPage() {
     orderBy: { name: "asc" },
   });
 
-  // Fetch knowledge gaps queue
-  const gaps = await db.knowledgeGap.findMany({
+  // Fetch knowledge gaps across ALL tenants — SuperAdmin has platform-wide visibility
+  const gaps = await prisma.knowledgeGap.findMany({
     orderBy: { occurrences: "desc" },
     include: {
       reporter: { select: { name: true } },
       claimer: { select: { name: true } },
       resolving_article: { select: { title: true } },
+      flagged_article: { select: { title: true } },
     },
   });
 
@@ -149,13 +150,17 @@ export default async function SuperAdminPage() {
     channel: g.channel,
     status: g.status,
     occurrences: g.occurrences,
+    comment: g.comment ?? null,
+    source: g.source,
     reported_by: g.reported_by,
     claimed_by: g.claimed_by,
     resolving_article_id: g.resolving_article_id,
+    flagged_article_id: g.flagged_article_id ?? null,
     created_at: g.created_at.toISOString(),
     reporter: g.reporter ? { name: g.reporter.name } : null,
     claimer: g.claimer ? { name: g.claimer.name } : null,
     resolving_article: g.resolving_article ? { title: g.resolving_article.title } : null,
+    flagged_article: g.flagged_article ? { title: g.flagged_article.title } : null,
   }));
 
   const handleSignOut = async () => {

@@ -430,7 +430,7 @@ export default function AgentDeskWorkspace({
       const res = await fetch("/api/v1/gaps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(gapForm),
+        body: JSON.stringify({ ...gapForm, tenant_id: tenantId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -495,6 +495,7 @@ export default function AgentDeskWorkspace({
           query_text: kbQuery.trim(),
           language: "en",
           channel: "agent",
+          tenant_id: tenantId,
         }),
       });
       if (res.ok) {
@@ -629,7 +630,7 @@ export default function AgentDeskWorkspace({
       const res = await fetch("/api/v1/gaps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query_text: q, language: "en", channel, comment: comment || null, source, flagged_article_id: flagged_article_id || null }),
+        body: JSON.stringify({ query_text: q, language: "en", channel, comment: comment || null, source, flagged_article_id: flagged_article_id || null, tenant_id: tenantId }),
       });
       if (res.ok) {
         setGapFlaggedQuery(q);
@@ -638,6 +639,7 @@ export default function AgentDeskWorkspace({
         setShowSearchGapForm(false);
         setShowChatSearchGapForm(false);
         toast("Flagged as knowledge gap — Admin queue notified.", "success");
+        loadMyGaps();
       } else {
         const err = await res.json();
         toast(err.error || "Failed to flag gap", "error");
