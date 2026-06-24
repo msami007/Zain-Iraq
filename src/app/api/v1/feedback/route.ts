@@ -41,28 +41,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    let actorId = session?.user?.id;
-    if (!actorId) {
-      const fallbackUser = await db.user.findFirst({
-        where: { tenant_id: tenantId },
-        select: { id: true },
-      });
-      actorId = fallbackUser?.id;
-    }
-
-    if (actorId) {
-      await db.auditLog.create({
-        data: {
-          tenant_id: tenantId,
-          actor_id: actorId,
-          action: helpful ? "Mark Article Useful" : "Flag Article Missing",
-          target_type: "Article",
-          target_id: article_id,
-          target_label: `Article Feedback: ${helpful ? "Helpful" : "Unhelpful"}${!session?.user ? " (Guest)" : ""}`,
-          after: feedback as any,
-        },
-      });
-    }
+    await db.auditLog.create({
+      data: {
+        tenant_id: tenantId,
+        actor_id: session?.user?.id || null,
+        action: helpful ? "Article Marked Useful" : "Article Marked Unhelpful",
+        target_type: "Article",
+        target_id: article_id,
+        target_label: `Article Feedback: ${helpful ? "Helpful" : "Unhelpful"}${!session?.user ? " (Guest)" : ""}`,
+        after: feedback as any,
+      },
+    });
 
     return NextResponse.json(feedback, { status: 201 });
   } catch (error: any) {

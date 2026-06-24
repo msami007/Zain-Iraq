@@ -177,6 +177,7 @@ export default function AgentDeskWorkspace({
       }
     };
     fetchPublished();
+    loadMyArticles();
 
     // Load from local storage
     if (typeof window !== "undefined") {
@@ -284,6 +285,8 @@ export default function AgentDeskWorkspace({
     setChatSearching(true);
     setChatSearched(true);
     setChatPreviewArticle(null);
+    setShowChatSearchGapForm(false);
+    setChatGapFlaggedQuery(null);
 
     try {
       const res = await fetch("/api/v1/search", {
@@ -301,7 +304,11 @@ export default function AgentDeskWorkspace({
 
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
-      setChatKbResults((data.results || []).slice(0, 5));
+      const results = (data.results || []).slice(0, 5);
+      setChatKbResults(results);
+      if (results.length === 0) {
+        setShowChatSearchGapForm(true);
+      }
     } catch (err: any) {
       console.error(err);
     } finally {
@@ -647,6 +654,7 @@ export default function AgentDeskWorkspace({
   const [chatArticleFlagComment, setChatArticleFlagComment] = useState("");
   const [showSearchGapForm, setShowSearchGapForm] = useState(false);
   const [showChatSearchGapForm, setShowChatSearchGapForm] = useState(false);
+  const [chatGapFlaggedQuery, setChatGapFlaggedQuery] = useState<string | null>(null);
 
   const flagAsGap = async (queryText: string, channel = "agent", comment?: string, source = "agent", flagged_article_id?: string) => {
     const q = queryText.trim();
@@ -804,6 +812,11 @@ export default function AgentDeskWorkspace({
           >
             {tab.icon}
             {tab.label}
+            {tab.key === "gaps" && myArticles.filter((a: any) => a.status === "Rejected").length > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-red-600 text-white text-[9px] font-extrabold px-1">
+                {myArticles.filter((a: any) => a.status === "Rejected").length}
+              </span>
+            )}
           </button>
         ))}
 
@@ -1585,11 +1598,20 @@ export default function AgentDeskWorkspace({
                     {/* Differentiated gap flag with comment fields */}
                     <div className="border-t border-zinc-100 pt-2 space-y-1.5">
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Report a Gap</p>
-                      {gapFlaggedQuery === chatKbQuery.trim() ? (
-                        <p className="flex items-center gap-1 text-[10px] font-bold text-green-700">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                          Gap reported
-                        </p>
+                      {chatGapFlaggedQuery === chatKbQuery.trim() ? (
+                        <div className="flex items-center gap-2">
+                          <p className="flex items-center gap-1 text-[10px] font-bold text-green-700">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Gap reported
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => { setChatGapFlaggedQuery(null); setShowChatSearchGapForm(true); setChatSearchGapComment(""); }}
+                            className="text-[10px] text-zinc-400 hover:text-zinc-600 underline"
+                          >
+                            Report again
+                          </button>
+                        </div>
                       ) : (
                         <div className="space-y-2">
                           {/* Chat Search Gap */}
@@ -1607,7 +1629,10 @@ export default function AgentDeskWorkspace({
                                 <button
                                   type="button"
                                   disabled={gapFlagging || !chatSearchGapComment.trim()}
-                                  onClick={() => flagAsGap(chatKbQuery, "agent", chatSearchGapComment, "agent")}
+                                  onClick={async () => {
+                                    await flagAsGap(chatKbQuery, "agent", chatSearchGapComment, "agent");
+                                    setChatGapFlaggedQuery(chatKbQuery.trim());
+                                  }}
                                   className="rounded bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-2 py-1 text-[10px] font-bold text-white"
                                 >Submit</button>
                                 <button type="button" onClick={() => setShowChatSearchGapForm(false)} className="text-[10px] text-zinc-400 hover:text-zinc-700">Cancel</button>
@@ -1640,6 +1665,7 @@ export default function AgentDeskWorkspace({
                                 onClick={async () => {
                                   await flagAsGap(chatKbQuery, "agent", chatArticleFlagComment, "article_flag", chatPreviewArticle.id);
                                   setChatArticleFlagComment("");
+                                  setChatGapFlaggedQuery(chatKbQuery.trim());
                                 }}
                                 className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
                               >
@@ -2143,16 +2169,18 @@ export default function AgentDeskWorkspace({
             ) : (
               <div className="divide-y divide-zinc-100">
                 {myArticles.map((art: any) => {
-                  const rejections = (art.status_history || []).filter((h: any) => h.to_status === "Draft" && h.comment);
+                  const rejections = (art.status_history || []).filter((h: any) => h.to_status === "Rejected" && h.comment);
+                  const isRejected = art.status === "Rejected";
                   const statusColors: Record<string, string> = {
                     Published: "bg-green-50 text-green-700 border-green-200",
                     Draft: "bg-zinc-100 text-zinc-500 border-zinc-200",
                     InReview: "bg-blue-50 text-blue-700 border-blue-200",
                     Approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                    Archived: "bg-zinc-200 text-zinc-600 border-zinc-300",
                     Rejected: "bg-red-50 text-red-700 border-red-200",
                   };
                   return (
-                    <div key={art.id} className="px-6 py-4 space-y-2">
+                    <div key={art.id} className={`px-6 py-4 space-y-2 ${isRejected ? "bg-red-50/30" : ""}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-zinc-900 leading-snug truncate">{art.title}</p>
@@ -2173,6 +2201,40 @@ export default function AgentDeskWorkspace({
                               <p className="mt-0.5 italic">"{r.comment}"</p>
                             </div>
                           ))}
+                        </div>
+                      )}
+                      {isRejected && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const res = await fetch(`/api/v1/articles/${art.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ status: "Draft" }),
+                              });
+                              if (res.ok) { toast("Article moved back to Draft for revision.", "success"); loadMyArticles(); }
+                              else toast("Failed to update article status.", "error");
+                            }}
+                            className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1 text-[10px] font-bold text-zinc-700 transition-all"
+                          >
+                            Revise (Back to Draft)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const res = await fetch(`/api/v1/articles/${art.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ status: "InReview" }),
+                              });
+                              if (res.ok) { toast("Article resubmitted for review.", "success"); loadMyArticles(); }
+                              else toast("Failed to resubmit article.", "error");
+                            }}
+                            className="rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1 text-[10px] font-bold text-blue-700 transition-all"
+                          >
+                            Resubmit for Review
+                          </button>
                         </div>
                       )}
                     </div>

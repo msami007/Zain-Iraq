@@ -69,7 +69,7 @@ type AuditLog = {
   before?: any;
   after?: any;
   created_at: string;
-  actor: { name: string; email: string };
+  actor: { name: string; email: string } | null;
 };
 
 type WorkspaceProps = {
@@ -451,6 +451,7 @@ export default function AdminDeskWorkspace({
       if (selectedStatusFilter === "Drafts" && status !== "Draft") return false;
       if (selectedStatusFilter === "Pending" && status !== "InReview" && status !== "Approved") return false;
       if (selectedStatusFilter === "Archived" && status !== "Archived") return false;
+      if (selectedStatusFilter === "Rejected" && status !== "Rejected") return false;
     }
 
     if (selectedCategoryFilter !== "All Categories") {
@@ -1252,22 +1253,25 @@ export default function AdminDeskWorkspace({
     if (currentStatus === "InReview") {
       return [
         { status: "Approved", label: "Approve Draft" },
-        { status: "Draft", label: "Reject Draft (Back to Draft)" },
+        { status: "Rejected", label: "Reject Article" },
       ];
     }
     if (currentStatus === "Approved") {
       return [
         { status: "Published", label: "Publish Article" },
-        { status: "Draft", label: "Reject & Demote to Draft" },
+        { status: "Rejected", label: "Reject Article" },
       ];
     }
     if (currentStatus === "Published") {
       return [
         { status: "Archived", label: "Archive Article" },
-        { status: "Draft", label: "Demote back to Draft" },
+        { status: "Rejected", label: "Reject Article" },
       ];
     }
     if (currentStatus === "Archived") {
+      return [{ status: "Draft", label: "Restore to Draft" }];
+    }
+    if (currentStatus === "Rejected") {
       return [{ status: "Draft", label: "Restore to Draft" }];
     }
     return [];
@@ -1463,7 +1467,7 @@ export default function AdminDeskWorkspace({
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200">
                     {/* Tabs */}
                     <div className="flex bg-zinc-200/60 p-1 rounded-lg gap-1 border border-zinc-200">
-                      {["All", "Published", "Drafts", "Pending", "Archived"].map((tab) => (
+                      {["All", "Published", "Drafts", "Pending", "Rejected", "Archived"].map((tab) => (
                         <button
                           key={tab}
                           type="button"
@@ -1555,8 +1559,10 @@ export default function AdminDeskWorkspace({
                                           : art.status === "Draft"
                                             ? "bg-zinc-100 text-zinc-650 border-zinc-200"
                                             : art.status === "Archived"
-                                              ? "bg-red-50 text-red-700 border-red-200"
-                                              : "bg-amber-50 text-amber-700 border-amber-200" // Pending
+                                              ? "bg-zinc-200 text-zinc-600 border-zinc-300"
+                                              : art.status === "Rejected"
+                                                ? "bg-red-50 text-red-700 border-red-200"
+                                                : "bg-amber-50 text-amber-700 border-amber-200" // Pending
                                         }`}
                                     >
                                       {art.status === "InReview" || art.status === "Approved" ? "PENDING" : art.status.toUpperCase()}
@@ -1777,9 +1783,9 @@ export default function AdminDeskWorkspace({
                     )}
 
                     {/* Rejection Feedback Amber Alert Box */}
-                    {!isCreating && editingArticle && editingArticle.status === "Draft" && fullArticleDetail?.status_history && (
+                    {!isCreating && editingArticle && (editingArticle.status === "Rejected" || editingArticle.status === "Draft") && fullArticleDetail?.status_history && (
                       (() => {
-                        const rejection = fullArticleDetail.status_history.find((h: any) => h.to_status === "Draft" && h.comment);
+                        const rejection = fullArticleDetail.status_history.find((h: any) => h.to_status === "Rejected" && h.comment);
                         if (rejection) {
                           return (
                             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-start gap-2.5 shadow-2xs">
@@ -2897,7 +2903,7 @@ export default function AdminDeskWorkspace({
                                       )}
                                       <button
                                         type="button"
-                                        onClick={() => handleDirectStatusTransition(art.id, "Draft")}
+                                        onClick={() => { setRejectionModalArticleId(art.id); setRejectionModalComment(""); }}
                                         className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-600 shadow-2xs transition-colors"
                                       >
                                         ✕ Reject
@@ -3235,6 +3241,7 @@ export default function AdminDeskWorkspace({
                     <thead>
                       <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
                         <th className="p-4">Search Query / Flag</th>
+                        <th className="p-4">Type</th>
                         <th className="p-4">Feedback / Comment</th>
                         <th className="p-4">Hits</th>
                         <th className="p-4">Status</th>
@@ -3247,7 +3254,7 @@ export default function AdminDeskWorkspace({
                     <tbody className="divide-y divide-zinc-150">
                       {gaps.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center text-zinc-400 font-semibold">
+                          <td colSpan={9} className="p-8 text-center text-zinc-400 font-semibold">
                             No knowledge gaps found in this queue.
                           </td>
                         </tr>
@@ -3260,6 +3267,18 @@ export default function AdminDeskWorkspace({
                                 <p className="text-[10px] text-red-600 font-semibold mt-0.5">
                                   📄 Flagged: {g.flagged_article.title}
                                 </p>
+                              )}
+                            </td>
+
+                            <td className="p-4">
+                              {g.source === "search" ? (
+                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200">Search Query</span>
+                              ) : g.source === "article_flag" ? (
+                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200">Article Flag</span>
+                              ) : g.source === "customer" ? (
+                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200">Customer</span>
+                              ) : (
+                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200">Knowledge Gap</span>
                               )}
                             </td>
 
@@ -3378,8 +3397,8 @@ export default function AdminDeskWorkspace({
                           `audit-log-${new Date().toISOString().split("T")[0]}.csv`,
                           auditLogs.map(l => [
                             new Date(l.created_at).toLocaleString(),
-                            l.actor?.name || "System",
-                            l.actor?.email || "",
+                            l.actor?.name || "Guest",
+                            l.actor?.email || "Customer",
                             l.action,
                             l.target_type,
                             l.target_label,
@@ -3430,8 +3449,10 @@ export default function AdminDeskWorkspace({
                             <tr key={log.id} className="hover:bg-zinc-50/50">
                               <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
                               <td className="p-4 font-bold text-zinc-900">
-                                {log.actor?.name || "System"}{" "}
-                                <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
+                                {log.actor?.name || "Guest"}{" "}
+                                <span className="text-[10px] text-zinc-400 font-normal">
+                                  {log.actor?.email ? `(${log.actor.email})` : "(Customer)"}
+                                </span>
                               </td>
                               <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
                               <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
@@ -4025,7 +4046,7 @@ export default function AdminDeskWorkspace({
                         alert("Please enter a rejection comment.");
                         return;
                       }
-                      handleDirectStatusTransition(rejectionModalArticleId, "Draft", rejectionModalComment);
+                      handleDirectStatusTransition(rejectionModalArticleId, "Rejected", rejectionModalComment);
                     }}
                     className="rounded bg-red-650 hover:bg-red-750 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
                   >

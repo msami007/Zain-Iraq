@@ -114,19 +114,38 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const auditAction = (src: string) => {
+      if (src === "article_flag") return "Article Flagged as Missing Information";
+      if (src === "customer") return "Knowledge Gap Reported by Customer";
+      return "Knowledge Gap Reported by Agent";
+    };
+
     if (existing) {
       const updated = await db.knowledgeGap.update({
         where: { id: existing.id },
         data: {
           occurrences: existing.occurrences + reportedOccurrences,
-          // Append new comment if provided and gap doesn't have one yet
           ...(comment && !existing.comment ? { comment } : {}),
-          // Always carry through article flag info when an agent explicitly flags an article
           ...(flagged_article_id ? { flagged_article_id, source: gapSource } : {}),
-          // If gap was auto-created (no reporter), credit the agent who explicitly submitted it
           ...(!existing.reported_by && userId ? { reported_by: userId } : {}),
         },
       });
+
+      // Only audit explicit agent actions on existing gaps — customer updates are already
+      // logged by the search route when the gap was auto-created.
+      if (gapSource !== "customer") {
+        await db.auditLog.create({
+          data: {
+            tenant_id: tenantId,
+            actor_id: userId,
+            action: auditAction(gapSource),
+            target_type: "KnowledgeGap",
+            target_id: existing.id,
+            target_label: `Gap: "${query_text.slice(0, 50)}"`,
+            after: updated as any,
+          },
+        });
+      }
       return NextResponse.json(updated);
     }
 
@@ -145,28 +164,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    let actorId = userId;
-    if (!actorId) {
-      const fallbackUser = await db.user.findFirst({
-        where: { tenant_id: tenantId },
-        select: { id: true },
-      });
-      actorId = fallbackUser?.id || null;
-    }
-
-    if (actorId) {
-      await db.auditLog.create({
-        data: {
-          tenant_id: tenantId,
-          actor_id: actorId,
-          action: "Report Knowledge Gap",
-          target_type: "KnowledgeGap",
-          target_id: newGap.id,
-          target_label: `Gap: "${query_text.slice(0, 50)}" (${gapSource === "auto" ? "Automatic" : "Manual"})`,
-          after: newGap as any,
-        },
-      });
-    }
+    await db.auditLog.create({
+      data: {
+        tenant_id: tenantId,
+        actor_id: userId,
+        action: auditAction(gapSource),
+        target_type: "KnowledgeGap",
+        target_id: newGap.id,
+        target_label: `Gap: "${query_text.slice(0, 50)}"${!userId ? " (Customer)" : ""}`,
+        after: newGap as any,
+      },
+    });
 
     return NextResponse.json(newGap, { status: 201 });
   } catch (error: any) {

@@ -183,6 +183,10 @@ export async function POST(req: NextRequest) {
       });
 
       let gapId = "";
+      let gapTargetId = "";
+
+      const auditActorId = session?.user?.id || null;
+
       if (existingGap) {
         // Increment occurrences
         const updated = await db.knowledgeGap.update({
@@ -190,6 +194,19 @@ export async function POST(req: NextRequest) {
           data: { occurrences: existingGap.occurrences + 1 },
         });
         gapId = updated.id;
+        gapTargetId = updated.id;
+
+        await db.auditLog.create({
+          data: {
+            tenant_id: tenantId,
+            actor_id: auditActorId,
+            action: "Knowledge Gap Reported",
+            target_type: "KnowledgeGap",
+            target_id: gapTargetId,
+            target_label: `Search miss: "${query.slice(0, 50)}" (${session?.user ? "Agent" : "Customer"}, repeated)`,
+            after: { gap_id: gapTargetId, occurrences: updated.occurrences } as any,
+          },
+        }).catch(() => {});
       } else {
         // Create new gap
         const created = await db.knowledgeGap.create({
@@ -199,10 +216,24 @@ export async function POST(req: NextRequest) {
             language: mappedLanguage,
             channel: mappedChannel,
             status: GapStatus.NEW,
+            source: "search",
             reported_by: session?.user?.id || null,
           },
         });
         gapId = created.id;
+        gapTargetId = created.id;
+
+        await db.auditLog.create({
+          data: {
+            tenant_id: tenantId,
+            actor_id: auditActorId,
+            action: "Knowledge Gap Reported",
+            target_type: "KnowledgeGap",
+            target_id: gapTargetId,
+            target_label: `Search miss: "${query.slice(0, 50)}" (${session?.user ? "Agent" : "Customer"})`,
+            after: created as any,
+          },
+        }).catch(() => {});
       }
 
       // Generate suggested categories based on words in query

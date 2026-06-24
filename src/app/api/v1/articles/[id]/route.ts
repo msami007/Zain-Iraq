@@ -101,6 +101,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Log article view for customer/guest requests (not for agent/admin portal traffic)
+    if (!session?.user) {
+      await db.auditLog.create({
+        data: {
+          tenant_id: tenantId,
+          actor_id: null,
+          action: "Article Viewed",
+          target_type: "Article",
+          target_id: article.id,
+          target_label: `"${article.title.slice(0, 80)}" (Guest)`,
+          after: { article_id: article.id, title: article.title, channel: "customer_kb" } as any,
+        },
+      }).catch(() => {});
+    }
+
     return NextResponse.json(article);
   } catch (error: any) {
     console.error("GET Article Detail Error:", error);
@@ -198,17 +213,16 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       if (from === ArticleStatus.Draft && to === ArticleStatus.InReview) {
         isValidTransition = true;
       } else if (from === ArticleStatus.InReview) {
-        // Can be approved or rejected back to Draft
-        isValidTransition = to === ArticleStatus.Approved || to === ArticleStatus.Draft;
+        isValidTransition = to === ArticleStatus.Approved || to === ArticleStatus.Rejected;
       } else if (from === ArticleStatus.Approved) {
-        // Can be published or demoted back to Draft
-        isValidTransition = to === ArticleStatus.Published || to === ArticleStatus.Draft;
+        isValidTransition = to === ArticleStatus.Published || to === ArticleStatus.Rejected;
       } else if (from === ArticleStatus.Published) {
-        // Can be archived or demoted back to Draft
-        isValidTransition = to === ArticleStatus.Archived || to === ArticleStatus.Draft;
+        isValidTransition = to === ArticleStatus.Archived || to === ArticleStatus.Rejected;
       } else if (from === ArticleStatus.Archived) {
-        // Can be sent back to Draft to restart the loop
         isValidTransition = to === ArticleStatus.Draft;
+      } else if (from === ArticleStatus.Rejected) {
+        // Author can revise (back to Draft) or resubmit directly (back to InReview)
+        isValidTransition = to === ArticleStatus.Draft || to === ArticleStatus.InReview;
       }
 
       if (!isValidTransition) {
@@ -313,9 +327,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             finalStatus = ArticleStatus.Approved;
             nextStepId = null;
           }
-        } else if (to === ArticleStatus.Draft) {
-          // Rejected back to Draft, reset step
-          finalStatus = ArticleStatus.Draft;
+        } else if (to === ArticleStatus.Rejected) {
+          // Rejected — keeps separate status so author can see it
+          finalStatus = ArticleStatus.Rejected;
           nextStepId = null;
         } else {
           finalStatus = to;
