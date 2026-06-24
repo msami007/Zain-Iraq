@@ -297,6 +297,7 @@ export default function AdminDeskWorkspace({
   // Date filtering state for Gaps
   const [gapStartDate, setGapStartDate] = useState("");
   const [gapEndDate, setGapEndDate] = useState("");
+  const [gapSortOrder, setGapSortOrder] = useState<"newest" | "oldest">("newest");
 
   // Analytics states
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -1672,7 +1673,15 @@ export default function AdminDeskWorkspace({
                                       Edit
                                     </button>
 
-                                    {art.status !== "Archived" && (
+                                    {art.status === "Archived" ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDirectStatusTransition(art.id, "Draft", "Restored from Archived to Draft")}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-blue-600 hover:bg-blue-50 shadow-2xs"
+                                      >
+                                        Restore
+                                      </button>
+                                    ) : (
                                       <button
                                         type="button"
                                         onClick={() => handleDirectStatusTransition(art.id, "Archived")}
@@ -3266,32 +3275,54 @@ export default function AdminDeskWorkspace({
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-zinc-650">
-                  <span>From:</span>
-                  <input
-                    type="date"
-                    value={gapStartDate}
-                    onChange={(e) => setGapStartDate(e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-800 focus:outline-hidden bg-white"
-                  />
-                  <span>To:</span>
-                  <input
-                    type="date"
-                    value={gapEndDate}
-                    onChange={(e) => setGapEndDate(e.target.value)}
-                    className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-800 focus:outline-hidden bg-white"
-                  />
-                  {(gapStartDate || gapEndDate) && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Sort toggle */}
+                  <div className="flex items-center rounded-lg border border-zinc-200 bg-zinc-50 overflow-hidden">
                     <button
-                      onClick={() => {
-                        setGapStartDate("");
-                        setGapEndDate("");
-                      }}
-                      className="text-red-500 hover:underline ml-1"
+                      type="button"
+                      onClick={() => setGapSortOrder("newest")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all ${gapSortOrder === "newest" ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
                     >
-                      Clear
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M11 12h4"/><path d="M11 16h7"/><path d="M11 20h10"/>
+                      </svg>
+                      Newest
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setGapSortOrder("oldest")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all ${gapSortOrder === "oldest" ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/>
+                      </svg>
+                      Oldest
+                    </button>
+                  </div>
+
+                  {/* Date range */}
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-650">
+                    <span>From:</span>
+                    <input
+                      type="date"
+                      value={gapStartDate}
+                      onChange={(e) => setGapStartDate(e.target.value)}
+                      className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-800 focus:outline-hidden bg-white"
+                    />
+                    <span>To:</span>
+                    <input
+                      type="date"
+                      value={gapEndDate}
+                      onChange={(e) => setGapEndDate(e.target.value)}
+                      className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-800 focus:outline-hidden bg-white"
+                    />
+                    {(gapStartDate || gapEndDate) && (
+                      <button
+                        onClick={() => { setGapStartDate(""); setGapEndDate(""); }}
+                        className="text-red-500 hover:underline ml-1"
+                      >Clear</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -3323,7 +3354,13 @@ export default function AdminDeskWorkspace({
                           </td>
                         </tr>
                       ) : (
-                        gaps.map((g) => (
+                        [...gaps]
+                          .sort((a, b) => {
+                            const ta = new Date(a.created_at).getTime();
+                            const tb = new Date(b.created_at).getTime();
+                            return gapSortOrder === "newest" ? tb - ta : ta - tb;
+                          })
+                          .map((g) => (
                           <tr key={g.id} className="hover:bg-zinc-50/50 align-top">
                             <td className="p-4 max-w-xs">
                               <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>

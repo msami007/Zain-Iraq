@@ -40,6 +40,7 @@ type SearchWorkspaceProps = {
   feedbackPlaceholder?: string;
   feedbackTitle?: string;
   feedbackSubtitle?: string;
+  agentMode?: boolean;
 };
 
 export default function CustomerSearchWorkspace({
@@ -56,6 +57,7 @@ export default function CustomerSearchWorkspace({
   feedbackPlaceholder = "Describe what you were trying to find...",
   feedbackTitle = "Help us improve",
   feedbackSubtitle = "Tell us what you were looking for — our content team will create a guide to help you.",
+  agentMode = false,
 }: SearchWorkspaceProps) {
   const [selectedTenant, setSelectedTenant] = useState<Tenant>(tenants[0] || null);
   const [query, setQuery] = useState("");
@@ -152,6 +154,201 @@ export default function CustomerSearchWorkspace({
     }
   };
 
+  // ── Agent Mode UI ────────────────────────────────────────────────────────────
+  if (agentMode) {
+    return (
+      <div className="w-full flex flex-col gap-6">
+
+        {/* Search bar */}
+        <form onSubmit={handleSearchForm} className="flex gap-2">
+          <div className="flex-1 flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-900/5 shadow-sm transition-all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder={`Search ${selectedTenant?.name || ""} knowledge base…`}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none"
+            />
+            {query && (
+              <button type="button" onClick={() => { setQuery(""); setSearched(false); setResults([]); }} className="text-zinc-300 hover:text-zinc-500 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={searching || !query.trim()}
+            className="flex items-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed px-5 py-3 text-sm font-bold text-white shadow-sm transition-all"
+          >
+            {searching ? (
+              <><span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" /> Searching…</>
+            ) : (
+              <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Search</>
+            )}
+          </button>
+        </form>
+
+        {/* Category pills */}
+        {!searched && activeCategories.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">Browse by Category</p>
+            <div className="flex flex-wrap gap-2">
+              {activeCategories.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/categories/${c.id}`}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-all"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z"/>
+                  </svg>
+                  {c.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Results */}
+        {searching && (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-700 inline-block" />
+            <p className="text-sm font-semibold text-zinc-500">Searching articles…</p>
+          </div>
+        )}
+
+        {!searching && searched && results.length === 0 && (
+          <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+            <div className="p-8 text-center space-y-3">
+              <div className="mx-auto h-12 w-12 rounded-2xl bg-zinc-100 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-zinc-800">No articles matched</p>
+                <p className="text-xs text-zinc-400 mt-1">No results for <span className="font-semibold text-zinc-600">"{query}"</span></p>
+              </div>
+              {gapLogged && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-green-50 border border-green-100 px-3 py-1 text-[10px] font-bold text-green-700">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Gap auto-logged
+                </div>
+              )}
+            </div>
+
+            {/* Report gap form */}
+            <div className="border-t border-zinc-100 bg-zinc-50/60 p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                    <path d="M12 9v4"/><path d="M12 17h.01"/>
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-extrabold text-zinc-800">{feedbackTitle}</p>
+                  <p className="text-[10px] text-zinc-400">{feedbackSubtitle}</p>
+                </div>
+              </div>
+              {feedbackSubmitted ? (
+                <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-100 px-4 py-3">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                  <p className="text-xs font-bold text-green-700">Gap report submitted successfully.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <textarea
+                    value={feedbackText}
+                    onChange={e => setFeedbackText(e.target.value)}
+                    placeholder={feedbackPlaceholder}
+                    rows={3}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-xs text-zinc-800 placeholder:text-zinc-400 resize-none focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/10 transition-all"
+                  />
+                  <button
+                    type="button"
+                    disabled={submittingFeedback || !feedbackText.trim()}
+                    onClick={handleSubmitFeedback}
+                    className="flex items-center gap-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-xs font-bold text-white transition-colors"
+                  >
+                    {submittingFeedback ? (
+                      <><span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" /> Submitting…</>
+                    ) : "Submit Gap Report"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!searching && searched && results.length > 0 && (
+          <div className="space-y-3">
+            {/* Results header */}
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
+                {results.length} result{results.length !== 1 ? "s" : ""} — ranked by relevance
+              </p>
+              <button
+                type="button"
+                onClick={() => { setSearched(false); setResults([]); setQuery(""); }}
+                className="text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors"
+              >Clear</button>
+            </div>
+
+            {/* Result cards — 2-col grid */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              {results.map((art) => {
+                const isPinned = pinnedArticleIds.includes(art.article_id);
+                const score = Math.round(art.match_score * 100);
+                const scoreColor = score >= 70 ? "bg-green-100 text-green-700" : score >= 40 ? "bg-amber-100 text-amber-700" : "bg-zinc-100 text-zinc-500";
+                return (
+                  <div key={art.article_id} className="group flex flex-col rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all">
+                    <Link href={`/articles/${art.article_id}`} className="flex-1 p-4 space-y-2.5 block">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="rounded-md bg-zinc-50 border border-zinc-200 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-zinc-500">
+                          {art.category}
+                        </span>
+                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold ${scoreColor}`}>
+                          {score}% match
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-zinc-900 group-hover:text-zinc-600 leading-snug transition-colors line-clamp-2">
+                        {art.title}
+                      </h4>
+                    </Link>
+                    <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-100">
+                      <span className="text-[9px] font-mono text-zinc-400">{art.language.toUpperCase()} · {art.status}</span>
+                      {onTogglePin && (
+                        <button
+                          type="button"
+                          onClick={() => onTogglePin(art.article_id)}
+                          className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[9px] font-extrabold transition-all ${
+                            isPinned
+                              ? "border-zinc-800 bg-zinc-900 text-white"
+                              : "border-zinc-200 bg-white text-zinc-400 hover:border-zinc-400 hover:text-zinc-700"
+                          }`}
+                        >
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill={isPinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+                          </svg>
+                          {isPinned ? "Pinned" : "Pin"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Customer Mode UI (unchanged) ─────────────────────────────────────────────
   return (
     <div className="w-full space-y-12">
       {/* Welcome & Scope Header */}

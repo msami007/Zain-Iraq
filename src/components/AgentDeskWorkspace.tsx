@@ -1325,71 +1325,88 @@ export default function AgentDeskWorkspace({
                 label: "Queries Handled",
                 value: s.todaySearches,
                 sub: "Today",
-                week: s.weeklySearches,
+                delta: `+${s.weeklySearches} this week`,
+                deltaUp: true as boolean | null,
+                accentFrom: "#2563eb",
+                accentTo: "#60a5fa",
                 icon: (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                   </svg>
                 ),
-                accent: "text-blue-600 bg-blue-50 border-blue-100",
               },
               {
                 label: "Cases Resolved",
                 value: s.resolvedCases,
                 sub: "All time",
-                week: s.weeklyResolvedCases,
+                delta: `+${s.weeklyResolvedCases} this week`,
+                deltaUp: true as boolean | null,
+                accentFrom: "#059669",
+                accentTo: "#34d399",
                 icon: (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
                 ),
-                accent: "text-green-600 bg-green-50 border-green-100",
               },
               {
                 label: "Articles Opened",
                 value: s.articlesViewed,
                 sub: "All time",
-                week: s.weeklyArticlesViewed,
+                delta: `+${s.weeklyArticlesViewed} this week`,
+                deltaUp: true as boolean | null,
+                accentFrom: "#4f46e5",
+                accentTo: "#818cf8",
                 icon: (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                   </svg>
                 ),
-                accent: "text-indigo-600 bg-indigo-50 border-indigo-100",
               },
               {
                 label: "Helpful Rate",
                 value: helpfulnessRate !== null ? `${helpfulnessRate}%` : "—",
                 sub: helpfulnessRate !== null ? "Based on KB feedback" : "No feedback yet",
-                week: null as number | null,
+                delta: helpfulnessRate !== null
+                  ? helpfulnessRate >= 70 ? "Good rating" : helpfulnessRate >= 40 ? "Average rating" : "Needs improvement"
+                  : null as string | null,
+                deltaUp: helpfulnessRate !== null
+                  ? helpfulnessRate >= 70 ? true : helpfulnessRate >= 40 ? null : false
+                  : null as boolean | null,
+                accentFrom: helpfulnessRate !== null && helpfulnessRate >= 70
+                  ? "#059669"
+                  : helpfulnessRate !== null && helpfulnessRate >= 40
+                  ? "#d97706"
+                  : "#7c3aed",
+                accentTo: helpfulnessRate !== null && helpfulnessRate >= 70
+                  ? "#34d399"
+                  : helpfulnessRate !== null && helpfulnessRate >= 40
+                  ? "#fbbf24"
+                  : "#a78bfa",
                 icon: (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
                     <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
                   </svg>
                 ),
-                accent: helpfulnessRate !== null && helpfulnessRate >= 70
-                  ? "text-green-600 bg-green-50 border-green-100"
-                  : helpfulnessRate !== null && helpfulnessRate >= 40
-                  ? "text-amber-600 bg-amber-50 border-amber-100"
-                  : "text-violet-600 bg-violet-50 border-violet-100",
               },
             ];
             return (
               <>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {kpiCards.map((card) => (
-                  <div key={card.label} className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{card.label}</span>
-                      <span className={`inline-flex items-center justify-center h-7 w-7 rounded-lg border ${card.accent}`}>{card.icon}</span>
+                  <div key={card.label} className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${card.accentFrom}, ${card.accentTo})` }} />
+                    <div className="flex items-start justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{card.label}</span>
+                      <span style={{ color: card.accentFrom }}>{card.icon}</span>
                     </div>
-                    <div className="text-3xl font-extrabold text-zinc-950 tabular-nums">{card.value}</div>
-                    <div className="mt-1 text-[11px] text-zinc-400 font-medium">{card.sub}</div>
-                    {card.week !== null && (
-                      <div className="mt-3 pt-3 border-t border-zinc-100 flex items-center justify-between">
-                        <span className="text-[10px] text-zinc-400">This week</span>
-                        <span className="text-[11px] font-bold text-zinc-700">{card.week}</span>
+                    <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{card.value}</div>
+                    {card.delta && (
+                      <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${card.deltaUp === true ? "text-green-600" : card.deltaUp === false ? "text-red-500" : "text-zinc-400"}`}>
+                        {card.deltaUp === true && <span>▲</span>}
+                        {card.deltaUp === false && <span>▼</span>}
+                        {card.delta}
                       </div>
                     )}
                   </div>
@@ -1647,39 +1664,54 @@ export default function AgentDeskWorkspace({
 
 
       {/* CUSTOMER CHAT CONSOLE VIEW */}
-      {agentActiveTab === "chat" && (
-        <div className="flex rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-sm text-left h-[680px] -mx-2">
+      {agentActiveTab === "chat" && (() => {
+        const avatarColors = ["bg-violet-500","bg-blue-500","bg-emerald-500","bg-rose-500","bg-amber-500","bg-cyan-500"];
+        const sessionColor = (id: string) => avatarColors[id.charCodeAt(id.length - 1) % avatarColors.length];
+        return (
+        <div className="flex rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-sm text-left -mx-2" style={{ height: "calc(100vh - 9rem)" }}>
 
           {/* ── Col 1: Conversation list ── */}
-          <div className="w-64 shrink-0 flex flex-col border-r border-zinc-100">
-            <div className="px-5 py-4 border-b border-zinc-100">
-              <p className="text-xs font-extrabold text-zinc-900">Conversations</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{chatSessions.length} active</p>
+          <div className="w-72 shrink-0 flex flex-col border-r border-zinc-100 bg-zinc-50/40">
+            {/* Sidebar header */}
+            <div className="px-5 py-4 border-b border-zinc-100 bg-white shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-extrabold text-zinc-900">Conversations</p>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">{chatSessions.length} active</p>
+                </div>
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-green-500 px-1.5 text-white text-[9px] font-extrabold">
+                  {chatSessions.length}
+                </span>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
+
+            {/* Session list */}
+            <div className="flex-1 overflow-y-auto py-2 px-2">
               {chatSessions.map((s) => {
                 const isActive = activeChatSessionId === s.id;
                 return (
                   <button
                     type="button"
                     key={s.id}
-                    onClick={() => {
-                      setActiveChatSessionId(s.id);
-                      setChatPreviewArticle(null);
-                    }}
-                    className={`w-full px-4 py-3.5 flex items-center gap-3 text-left transition-colors border-b border-zinc-50 ${
-                      isActive ? "bg-zinc-50 border-l-2 border-l-zinc-900" : "hover:bg-zinc-50/60 border-l-2 border-l-transparent"
+                    onClick={() => { setActiveChatSessionId(s.id); setChatPreviewArticle(null); }}
+                    className={`w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl transition-all mb-1 ${
+                      isActive
+                        ? "bg-white shadow-[0_1px_8px_rgba(0,0,0,0.08)] border border-zinc-200"
+                        : "hover:bg-white/80 border border-transparent"
                     }`}
                   >
                     <div className="relative shrink-0">
-                      <div className="h-9 w-9 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-700 text-[11px] font-extrabold">
+                      <div className={`h-10 w-10 rounded-full ${sessionColor(s.id)} flex items-center justify-center text-white text-xs font-extrabold shadow-sm`}>
                         {s.avatar}
                       </div>
-                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 border-[1.5px] border-white" />
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-xs font-bold truncate ${isActive ? "text-zinc-900" : "text-zinc-700"}`}>{s.customerName}</p>
-                      <p className="text-[10px] text-zinc-400 truncate mt-0.5">{s.lastMessage}</p>
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <p className={`text-xs font-bold truncate ${isActive ? "text-zinc-900" : "text-zinc-600"}`}>{s.customerName}</p>
+                        <span className="text-[9px] text-zinc-400 shrink-0 font-medium">{s.messages[s.messages.length - 1]?.time ?? ""}</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 truncate leading-relaxed">{s.lastMessage}</p>
                     </div>
                   </button>
                 );
@@ -1688,76 +1720,99 @@ export default function AgentDeskWorkspace({
           </div>
 
           {/* ── Col 2: Message stream ── */}
-          <div className="flex-1 flex flex-col min-w-0 bg-zinc-50/30">
+          <div className="flex-1 flex flex-col min-w-0 bg-[#f8f8fb]">
             {(() => {
               const activeSession = chatSessions.find((s) => s.id === activeChatSessionId);
               if (!activeSession) return (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-8">
-                  <div className="h-12 w-12 rounded-2xl bg-zinc-100 flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                  <div className="h-14 w-14 rounded-2xl bg-white border border-zinc-200 shadow-sm flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
                   </div>
-                  <p className="text-sm font-bold text-zinc-500">Select a conversation</p>
+                  <p className="text-sm font-bold text-zinc-600">Select a conversation</p>
                   <p className="text-xs text-zinc-400">Choose from the list on the left to start.</p>
                 </div>
               );
+
+              const acColor = sessionColor(activeSession.id);
               return (
                 <>
-                  {/* Header */}
-                  <div className="flex items-center gap-3 px-5 py-3 bg-white border-b border-zinc-100 shrink-0">
+                  {/* Chat header */}
+                  <div className="flex items-center gap-3 px-5 py-3.5 bg-white border-b border-zinc-200 shrink-0 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
                     <div className="relative shrink-0">
-                      <div className="h-8 w-8 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-700 text-[11px] font-extrabold">
+                      <div className={`h-9 w-9 rounded-full ${acColor} flex items-center justify-center text-white text-[11px] font-extrabold`}>
                         {activeSession.avatar}
                       </div>
-                      <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 border-[1.5px] border-white" />
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-extrabold text-zinc-900 leading-none">{activeSession.customerName}</p>
-                      <p className="text-[10px] text-green-600 font-semibold mt-0.5">Online</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 inline-block" />
+                        <p className="text-[10px] text-green-600 font-semibold">Online</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="rounded-full bg-zinc-100 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-500">Live Chat</span>
+                      <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-bold text-blue-600">Assigned to you</span>
                     </div>
                   </div>
 
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-1 h-px bg-zinc-200" />
-                      <span className="text-[10px] font-semibold text-zinc-400">Today</span>
-                      <div className="flex-1 h-px bg-zinc-200" />
+                  <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-zinc-200/70" />
+                      <span className="text-[10px] font-semibold text-zinc-400 bg-[#f8f8fb] px-2">Today</span>
+                      <div className="flex-1 h-px bg-zinc-200/70" />
                     </div>
                     {activeSession.messages.map((m, i) => {
                       const isAgent = m.sender === "agent";
                       return (
-                        <div key={i} className={`flex ${isAgent ? "justify-end" : "justify-start"}`}>
-                          <div className={`max-w-[68%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                            isAgent
-                              ? "bg-zinc-900 text-white rounded-br-sm"
-                              : "bg-white text-zinc-800 border border-zinc-200 rounded-bl-sm shadow-sm"
-                          }`}>
-                            <p className="whitespace-pre-wrap">{m.text}</p>
-                            <p className={`text-[10px] mt-1.5 text-right ${isAgent ? "text-zinc-500" : "text-zinc-400"}`}>{m.time}</p>
+                        <div key={i} className={`flex items-end gap-2.5 ${isAgent ? "justify-end" : "justify-start"}`}>
+                          {!isAgent && (
+                            <div className={`h-7 w-7 rounded-full ${acColor} flex items-center justify-center text-white text-[9px] font-extrabold shrink-0 mb-0.5`}>
+                              {activeSession.avatar}
+                            </div>
+                          )}
+                          <div className={`max-w-[65%] ${isAgent ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                            <div className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-sm ${
+                              isAgent
+                                ? "bg-zinc-900 text-white rounded-br-sm"
+                                : "bg-white text-zinc-800 border border-zinc-200/80 rounded-bl-sm"
+                            }`}>
+                              <p className="whitespace-pre-wrap">{m.text}</p>
+                            </div>
+                            <p className={`text-[9px] font-medium px-1 ${isAgent ? "text-right text-zinc-400" : "text-zinc-400"}`}>{m.time}</p>
                           </div>
+                          {isAgent && (
+                            <div className="h-7 w-7 rounded-full bg-zinc-800 flex items-center justify-center text-white text-[9px] font-extrabold shrink-0 mb-0.5">
+                              {(userName || "A").charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Input */}
-                  <div className="px-4 py-3 bg-white border-t border-zinc-100 shrink-0">
-                    <form onSubmit={handleSendChatMessage} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Type a message…"
-                        value={chatInputText}
-                        onChange={(e) => setChatInputText(e.target.value)}
-                        className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/5 transition-all"
-                      />
+                  {/* Input bar */}
+                  <div className="px-5 py-4 bg-white border-t border-zinc-200 shrink-0">
+                    <form onSubmit={handleSendChatMessage} className="flex items-center gap-3">
+                      <div className="flex-1 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 focus-within:border-zinc-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-zinc-900/5 transition-all">
+                        <input
+                          type="text"
+                          placeholder="Type a message…"
+                          value={chatInputText}
+                          onChange={(e) => setChatInputText(e.target.value)}
+                          className="flex-1 bg-transparent text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+                        />
+                      </div>
                       <button
                         type="submit"
                         disabled={!chatInputText.trim()}
-                        className="flex items-center gap-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 text-xs font-bold text-white transition-all"
+                        className="flex items-center gap-2 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 text-xs font-bold text-white transition-all shadow-sm"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                         </svg>
                         Send
@@ -1770,175 +1825,227 @@ export default function AgentDeskWorkspace({
           </div>
 
           {/* ── Col 3: KB Assistant ── */}
-          <div className="w-[380px] shrink-0 flex flex-col border-l border-zinc-100">
-            <div className="px-5 py-4 border-b border-zinc-100 flex items-center gap-3 shrink-0">
+          <div className="w-[420px] shrink-0 flex flex-col border-l border-zinc-200 bg-white">
+
+            {/* KB panel header */}
+            <div className="px-5 py-3.5 border-b border-zinc-100 shrink-0 bg-white">
               {chatPreviewArticle ? (
-                <>
+                <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     type="button"
                     onClick={() => setChatPreviewArticle(null)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors shrink-0"
+                    className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors shrink-0 rounded-lg bg-zinc-100 hover:bg-zinc-200 px-2 py-1"
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M15 19l-7-7 7-7"/>
                     </svg>
                     Back
                   </button>
-                  <p className="text-xs font-extrabold text-zinc-900 truncate min-w-0">{chatPreviewArticle.title}</p>
-                </>
+                  <p className="text-xs font-extrabold text-zinc-900 truncate">{chatPreviewArticle.title}</p>
+                </div>
               ) : (
-                <>
-                  <p className="text-xs font-extrabold text-zinc-900">KB Assistant</p>
-                  <p className="text-[10px] text-zinc-400 ml-auto">Find and paste responses</p>
-                </>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-lg bg-zinc-900 flex items-center justify-center">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                      </svg>
+                    </div>
+                    <p className="text-xs font-extrabold text-zinc-900">KB Assistant</p>
+                  </div>
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Find responses</span>
+                </div>
               )}
             </div>
 
             {/* Search view */}
             {!chatPreviewArticle && (
-              <div className="flex-1 overflow-y-auto flex flex-col p-4 gap-4">
-                <form onSubmit={handleChatSearchKB} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search articles…"
-                    value={chatKbQuery}
-                    onChange={(e) => setChatKbQuery(e.target.value)}
-                    className="flex-1 min-w-0 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:outline-none transition-all"
-                  />
-                  <button
-                    type="submit"
-                    disabled={chatSearching}
-                    className="shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-50 transition-all"
-                  >
-                    {chatSearching ? (
-                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" />
-                    ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="flex-1 overflow-y-auto flex flex-col">
+                {/* Search bar */}
+                <div className="p-4 border-b border-zinc-100">
+                  <form onSubmit={handleChatSearchKB} className="flex gap-2">
+                    <div className="flex-1 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 focus-within:border-zinc-400 focus-within:bg-white transition-all">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                       </svg>
-                    )}
-                  </button>
-                </form>
+                      <input
+                        type="text"
+                        placeholder="Search articles…"
+                        value={chatKbQuery}
+                        onChange={(e) => setChatKbQuery(e.target.value)}
+                        className="flex-1 bg-transparent text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={chatSearching}
+                      className="shrink-0 flex items-center justify-center h-8 w-8 rounded-xl bg-zinc-900 hover:bg-zinc-700 disabled:opacity-50 transition-all shadow-sm"
+                    >
+                      {chatSearching ? (
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" />
+                      ) : (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                      )}
+                    </button>
+                  </form>
+                </div>
 
                 {chatSearched ? (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Top {chatKbResults.length} result{chatKbResults.length !== 1 ? "s" : ""}</p>
-                    {chatKbResults.length === 0 ? (
-                      <p className="text-[11px] text-zinc-400 italic py-2">No articles matched.</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {chatKbResults.map((r) => (
-                          <button
-                            key={r.article_id}
-                            type="button"
-                            onClick={() => handleChatPreviewArticle(r.article_id)}
-                            className="w-full text-left rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 px-3 py-2.5 transition-all"
-                          >
-                            <p className="text-[11px] font-bold text-zinc-800 truncate">{r.title}</p>
-                            {r.category?.name && <p className="text-[10px] text-zinc-400 mt-0.5">{r.category.name}</p>}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {/* Differentiated gap flag with comment fields */}
-                    <div className="border-t border-zinc-100 pt-2 space-y-1.5">
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Report a Gap</p>
-                      {chatGapFlaggedQuery === chatKbQuery.trim() ? (
-                        <div className="flex items-center gap-2">
-                          <p className="flex items-center gap-1 text-[10px] font-bold text-green-700">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Gap reported
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => { setChatGapFlaggedQuery(null); setShowChatSearchGapForm(true); setChatSearchGapComment(""); }}
-                            className="text-[10px] text-zinc-400 hover:text-zinc-600 underline"
-                          >
-                            Report again
-                          </button>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {/* Results */}
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest">
+                        {chatKbResults.length} result{chatKbResults.length !== 1 ? "s" : ""}
+                      </p>
+                      {chatKbResults.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-4 text-center">
+                          <p className="text-xs text-zinc-400">No articles matched.</p>
+                          <p className="text-[10px] text-zinc-300 mt-1">Try different keywords.</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {/* Chat Search Gap */}
-                          {showChatSearchGapForm ? (
-                            <div className="rounded border border-amber-200 bg-amber-50/50 p-2 space-y-1.5">
-                              <p className="text-[10px] font-bold text-amber-700">Search Gap</p>
-                              <textarea
-                                value={chatSearchGapComment}
-                                onChange={e => setChatSearchGapComment(e.target.value)}
-                                placeholder="What were you looking for? (required)"
-                                rows={2}
-                                className="w-full rounded border border-amber-200 bg-white px-2 py-1 text-[10px] resize-none focus:outline-none"
-                              />
-                              <div className="flex gap-1.5">
-                                <button
-                                  type="button"
-                                  disabled={gapFlagging || !chatSearchGapComment.trim()}
-                                  onClick={async () => {
-                                    await flagAsGap(chatKbQuery, "agent", chatSearchGapComment, "agent");
-                                    setChatGapFlaggedQuery(chatKbQuery.trim());
-                                  }}
-                                  className="rounded bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-2 py-1 text-[10px] font-bold text-white"
-                                >Submit</button>
-                                <button type="button" onClick={() => setShowChatSearchGapForm(false)} className="text-[10px] text-zinc-400 hover:text-zinc-700">Cancel</button>
-                              </div>
-                            </div>
-                          ) : (
+                          {chatKbResults.map((r, idx) => (
                             <button
+                              key={r.article_id}
                               type="button"
-                              onClick={() => setShowChatSearchGapForm(true)}
-                              className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-amber-600 transition-colors"
+                              onClick={() => handleChatPreviewArticle(r.article_id)}
+                              className="w-full text-left rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm px-4 py-3 transition-all group"
                             >
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                              Search Gap (tagging issue)
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs font-bold text-zinc-800 group-hover:text-zinc-900 leading-snug">{r.title}</p>
+                                {r.match_score != null && (
+                                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${
+                                    r.match_score >= 0.7 ? "bg-green-100 text-green-700" : r.match_score >= 0.4 ? "bg-amber-100 text-amber-700" : "bg-zinc-100 text-zinc-500"
+                                  }`}>
+                                    {Math.round(r.match_score * 100)}%
+                                  </span>
+                                )}
+                              </div>
+                              {r.category?.name && (
+                                <span className="mt-1.5 inline-block text-[9px] font-bold uppercase tracking-wide text-zinc-400">{r.category.name}</span>
+                              )}
                             </button>
-                          )}
-
-                          {/* Chat Article Flag with comment */}
-                          {chatPreviewArticle && (
-                            <div className="space-y-1">
-                              <textarea
-                                value={chatArticleFlagComment}
-                                onChange={e => setChatArticleFlagComment(e.target.value)}
-                                placeholder="What info is missing or incorrect? (required to flag article)"
-                                rows={2}
-                                className="w-full rounded border border-red-200 bg-white px-2 py-1 text-[10px] resize-none focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                disabled={gapFlagging || !chatArticleFlagComment.trim()}
-                                onClick={async () => {
-                                  await flagAsGap(chatKbQuery, "agent", chatArticleFlagComment, "article_flag", chatPreviewArticle.id);
-                                  setChatArticleFlagComment("");
-                                  setChatGapFlaggedQuery(chatKbQuery.trim());
-                                }}
-                                className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                              >
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
-                                </svg>
-                                {gapFlagging ? "Flagging…" : "Flag Article (missing info)"}
-                              </button>
-                            </div>
-                          )}
+                          ))}
                         </div>
                       )}
                     </div>
+
+                    {/* Gap report section */}
+                    <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 overflow-hidden">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-200 bg-white">
+                        <div className="h-6 w-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                            <path d="M12 9v4"/><path d="M12 17h.01"/>
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-extrabold text-zinc-800">Report a Gap</p>
+                          <p className="text-[10px] text-zinc-400">Flag missing or inaccurate KB content</p>
+                        </div>
+                        {chatGapFlaggedQuery === chatKbQuery.trim() && (
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-green-600 bg-green-50 border border-green-100 rounded-full px-2 py-0.5 shrink-0">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Reported
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-4 space-y-3">
+                        {chatGapFlaggedQuery === chatKbQuery.trim() ? (
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-zinc-500">Gap has been submitted to the admin queue.</p>
+                            <button
+                              type="button"
+                              onClick={() => { setChatGapFlaggedQuery(null); setShowChatSearchGapForm(false); setChatSearchGapComment(""); }}
+                              className="text-[10px] font-bold text-zinc-400 hover:text-zinc-700 underline transition-colors shrink-0 ml-2"
+                            >Report again</button>
+                          </div>
+                        ) : showChatSearchGapForm ? (
+                          <div className="space-y-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider block">Query flagged</label>
+                              <div className="rounded-lg bg-white border border-zinc-200 px-3 py-2 text-[10px] text-zinc-600 font-mono truncate">
+                                "{chatKbQuery}"
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider block">What's missing?</label>
+                              <textarea
+                                value={chatSearchGapComment}
+                                onChange={e => setChatSearchGapComment(e.target.value)}
+                                placeholder="Describe what info was missing or what the correct answer should be…"
+                                rows={3}
+                                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[10px] text-zinc-800 placeholder:text-zinc-400 resize-none focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/10 transition-all"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                disabled={gapFlagging || !chatSearchGapComment.trim()}
+                                onClick={async () => {
+                                  await flagAsGap(chatKbQuery, "agent", chatSearchGapComment, "agent");
+                                  setChatGapFlaggedQuery(chatKbQuery.trim());
+                                  setShowChatSearchGapForm(false);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 text-[10px] font-bold text-white transition-colors"
+                              >
+                                {gapFlagging ? (
+                                  <><span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" /> Submitting…</>
+                                ) : (
+                                  <><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg> Submit Gap Report</>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setShowChatSearchGapForm(false); setChatSearchGapComment(""); }}
+                                className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-2 text-[10px] font-bold text-zinc-500 transition-colors"
+                              >Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowChatSearchGapForm(true)}
+                            className="w-full flex items-center gap-3 rounded-lg border border-dashed border-amber-200 bg-white hover:bg-amber-50/40 hover:border-amber-300 px-3 py-3 text-left transition-all group"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-amber-50 border border-amber-100 group-hover:bg-amber-100 flex items-center justify-center shrink-0 transition-colors">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                              </svg>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-bold text-zinc-700 group-hover:text-amber-700 transition-colors">Search gap</p>
+                              <p className="text-[9px] text-zinc-400 mt-0.5">Results don't answer the query</p>
+                            </div>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300 group-hover:text-amber-400 ml-auto shrink-0 transition-colors">
+                              <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-6">
-                    <div className="h-9 w-9 rounded-xl bg-zinc-100 flex items-center justify-center">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6 py-8">
+                    <div className="h-12 w-12 rounded-2xl bg-zinc-100 flex items-center justify-center">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
                         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                       </svg>
                     </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed max-w-[180px]">Search the knowledge base to find responses for this conversation.</p>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-500 mb-1">Search the Knowledge Base</p>
+                      <p className="text-[10px] text-zinc-400 leading-relaxed">Find articles and paste responses directly into the chat.</p>
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Article detail view — mirrors resolution panel */}
+            {/* Article detail view */}
             {chatPreviewArticle && (() => {
               const agentVar = chatPreviewArticle.variants?.find((v: any) => v.channel === "agent");
               const defVar   = chatPreviewArticle.variants?.find((v: any) => v.channel === "default");
@@ -1956,15 +2063,17 @@ export default function AgentDeskWorkspace({
 
               return (
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* Category + confidence */}
-                  <div className="flex items-center justify-between">
+                  {/* Meta row */}
+                  <div className="flex items-center gap-2 flex-wrap">
                     {chatPreviewArticle.category?.name && (
                       <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
                         {chatPreviewArticle.category.name}
                       </span>
                     )}
                     {chatPreviewArticle.match_score != null && (
-                      <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-[10px] font-bold text-zinc-600">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold ${
+                        chatPreviewArticle.match_score >= 0.7 ? "bg-green-100 text-green-700" : chatPreviewArticle.match_score >= 0.4 ? "bg-amber-100 text-amber-700" : "bg-zinc-100 text-zinc-500"
+                      }`}>
                         {Math.round(chatPreviewArticle.match_score * 100)}% match
                       </span>
                     )}
@@ -1974,19 +2083,19 @@ export default function AgentDeskWorkspace({
                   {shortAnswer && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest">Customer-Facing Response</span>
+                        <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-widest">Customer Response</span>
                         <button
                           type="button"
                           onClick={() => { setChatInputText(shortAnswer); toast("Response copied to chat input.", "success"); }}
-                          className="flex items-center gap-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 transition-colors"
+                          className="flex items-center gap-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 rounded-lg px-2 py-1 transition-all"
                         >
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                           </svg>
                           Copy to Chat
                         </button>
                       </div>
-                      <div className="rounded-lg bg-zinc-50 border border-zinc-100 p-3 text-xs text-zinc-700 leading-relaxed">
+                      <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-3 text-xs text-zinc-700 leading-relaxed">
                         {shortAnswer}
                       </div>
                     </div>
@@ -1995,8 +2104,8 @@ export default function AgentDeskWorkspace({
                   {/* Internal note */}
                   {internalNote && (
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-amber-600 tracking-widest block mb-2">Internal Note — Agents Only</span>
-                      <div className="rounded-lg bg-amber-50/60 border border-amber-100 p-3 text-xs text-zinc-700 leading-relaxed">
+                      <span className="text-[10px] font-extrabold uppercase text-amber-600 tracking-widest block mb-2">Agent Note</span>
+                      <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-xs text-zinc-700 leading-relaxed">
                         {internalNote}
                       </div>
                     </div>
@@ -2005,12 +2114,12 @@ export default function AgentDeskWorkspace({
                   {/* Numbered steps */}
                   {steps.length > 0 && (
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest block mb-2">Resolution Steps</span>
-                      <ol className="space-y-1.5">
+                      <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-widest block mb-2">Resolution Steps</span>
+                      <ol className="space-y-2">
                         {steps.slice(0, 6).map((step: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2 text-xs text-zinc-700">
-                            <span className="shrink-0 font-bold text-zinc-400 mt-0.5">{i + 1}.</span>
-                            <span>{step}</span>
+                          <li key={i} className="flex items-start gap-2.5 text-xs text-zinc-700">
+                            <span className="shrink-0 h-5 w-5 rounded-full bg-zinc-100 flex items-center justify-center text-[9px] font-extrabold text-zinc-500 mt-0.5">{i + 1}</span>
+                            <span className="leading-relaxed">{step}</span>
                           </li>
                         ))}
                       </ol>
@@ -2021,28 +2130,28 @@ export default function AgentDeskWorkspace({
                   {macro && (
                     <div className="space-y-2 border-t border-zinc-100 pt-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest">Ready-to-Paste Macro</span>
+                        <span className="text-[10px] font-extrabold uppercase text-zinc-400 tracking-widest">Ready-to-Paste Macro</span>
                         <button
                           type="button"
                           onClick={() => { setChatInputText(macro); toast("Macro pasted to chat input.", "info"); }}
-                          className="text-[10px] font-bold text-zinc-500 hover:text-zinc-900 transition-colors underline"
+                          className="text-[10px] font-bold text-zinc-500 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 rounded-lg px-2 py-1 transition-all"
                         >
                           Paste Macro
                         </button>
                       </div>
-                      <pre className="rounded-lg bg-zinc-900 px-3 py-2.5 font-mono text-[10px] text-zinc-300 overflow-x-auto max-h-[80px] whitespace-pre-wrap">
+                      <pre className="rounded-xl bg-zinc-900 px-3 py-2.5 font-mono text-[10px] text-zinc-300 overflow-x-auto max-h-[80px] whitespace-pre-wrap">
                         {macro}
                       </pre>
                     </div>
                   )}
 
                   {/* Footer actions */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-zinc-100">
+                  <div className="flex items-center gap-2 pt-3 border-t border-zinc-100">
                     <a
                       href={`/agent/articles/${chatPreviewArticle.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-700 transition-all"
+                      className="flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-700 transition-all"
                     >
                       Open Full Article
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2052,7 +2161,7 @@ export default function AgentDeskWorkspace({
                     <button
                       type="button"
                       onClick={() => handleTogglePin(chatPreviewArticle.id)}
-                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-all ${
+                      className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-bold transition-all ${
                         pinnedArticleIds.includes(chatPreviewArticle.id)
                           ? "border-zinc-800 bg-zinc-900 text-white"
                           : "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700"
@@ -2064,18 +2173,72 @@ export default function AgentDeskWorkspace({
                       {pinnedArticleIds.includes(chatPreviewArticle.id) ? "Pinned" : "Pin"}
                     </button>
                   </div>
+
+                  {/* Article flag */}
+                  {chatPreviewArticle && (
+                    <div className="rounded-xl border border-zinc-200 bg-zinc-50/60 overflow-hidden">
+                      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-200 bg-white">
+                        <div className="h-6 w-6 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-extrabold text-zinc-800">Flag This Article</p>
+                          <p className="text-[10px] text-zinc-400">Report inaccurate or missing info</p>
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        <textarea
+                          value={chatArticleFlagComment}
+                          onChange={e => setChatArticleFlagComment(e.target.value)}
+                          placeholder="Describe what's missing or incorrect in this article…"
+                          rows={3}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[10px] text-zinc-800 placeholder:text-zinc-400 resize-none focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-400/10 transition-all"
+                        />
+                        <button
+                          type="button"
+                          disabled={gapFlagging || !chatArticleFlagComment.trim()}
+                          onClick={async () => {
+                            await flagAsGap(chatKbQuery, "agent", chatArticleFlagComment, "article_flag", chatPreviewArticle.id);
+                            setChatArticleFlagComment("");
+                            setChatGapFlaggedQuery(chatKbQuery.trim());
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 text-[10px] font-bold text-white transition-colors"
+                        >
+                          {gapFlagging ? (
+                            <><span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" /> Flagging…</>
+                          ) : (
+                            <><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg> Submit Flag</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
-
           </div>
 
         </div>
-      )}
+        );
+      })()}
 
       {/* STANDALONE KB SEARCH */}
       {agentActiveTab === "search" && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6 pb-5 border-b border-zinc-100">
+            <div>
+              <h2 className="text-sm font-extrabold text-zinc-950">Knowledge Base</h2>
+              <p className="text-xs text-zinc-400 mt-0.5">Search published articles to assist customers</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-green-50 border border-green-100 px-2.5 py-1 text-[10px] font-bold text-green-700">
+                {pinnedArticleIds.length} pinned
+              </span>
+            </div>
+          </div>
           <CustomerSearchWorkspace
             tenants={tenants.filter((t) => t.id === tenantId)}
             initialCategories={initialCategories.filter((c) => c.tenant_id === tenantId)}
@@ -2087,9 +2250,10 @@ export default function AgentDeskWorkspace({
             onTogglePin={handleTogglePin}
             feedbackSource="agent"
             feedbackChannel="agent"
-            feedbackPlaceholder="Describe what Zain information is missing or search query was looking for..."
-            feedbackTitle="Report Knowledge Gap (Agent)"
-            feedbackSubtitle="Describe the specific missing information or query context so Admin can resolve this gap."
+            feedbackPlaceholder="Describe what Zain information is missing or what the customer was looking for…"
+            feedbackTitle="Report Knowledge Gap"
+            feedbackSubtitle="Describe the missing information so the admin team can create a resolving article."
+            agentMode={true}
           />
         </div>
       )}

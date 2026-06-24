@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const router = useRouter();
 
   const handleQuickLogin = (demoEmail: string) => {
@@ -32,8 +33,16 @@ export default function LoginPage() {
         setError("Invalid email or password. Please try again.");
         setLoading(false);
       } else {
-        router.push("/dashboard-redirect");
-        router.refresh();
+        setNavigating(true);
+        const session = await getSession();
+        const role = session?.user?.role;
+        if (role === "SuperAdmin") {
+          router.push("/superadmin");
+        } else if (role === "Admin") {
+          router.push("/admin");
+        } else {
+          router.push("/agent");
+        }
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -41,6 +50,50 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (navigating) {
+    return (
+      <div className="flex h-screen w-full font-sans">
+        {/* Sidebar skeleton */}
+        <aside className="w-[220px] flex-shrink-0 bg-[#0c0c14] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.35)]">
+          <div className="h-16 flex items-center px-5 border-b border-white/10">
+            <div className="h-4 w-24 rounded bg-white/10 animate-pulse" />
+          </div>
+          <div className="flex-1 px-3 pt-5 space-y-1">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-9 rounded-lg bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
+            ))}
+          </div>
+          <div className="p-4 border-t border-white/10">
+            <div className="h-8 rounded-lg bg-white/5 animate-pulse" />
+          </div>
+        </aside>
+
+        {/* Main area */}
+        <div className="flex-1 flex flex-col bg-zinc-50 overflow-hidden">
+          <header className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-8 flex-shrink-0">
+            <div className="h-4 w-40 rounded bg-zinc-200 animate-pulse" />
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-24 rounded-lg bg-zinc-100 animate-pulse" />
+              <div className="h-7 w-7 rounded-full bg-zinc-100 animate-pulse" />
+            </div>
+          </header>
+          <div className="flex-1 p-8 space-y-6">
+            <div className="grid grid-cols-4 gap-5">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-[120px] rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="h-64 rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" />
+              <div className="h-64 rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" style={{ animationDelay: "100ms" }} />
+            </div>
+            <div className="h-48 rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" style={{ animationDelay: "160ms" }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-white px-4 py-12 text-zinc-900 font-sans overflow-hidden">

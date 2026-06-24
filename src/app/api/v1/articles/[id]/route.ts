@@ -210,7 +210,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       // 1. Enforce No Status Skipping:
       // Workflow: Draft -> InReview -> Approved -> Published -> Archived
       let isValidTransition = false;
-      if (from === ArticleStatus.Draft && to === ArticleStatus.InReview) {
+      if (from === ArticleStatus.Draft && (to === ArticleStatus.InReview || to === ArticleStatus.Archived)) {
         isValidTransition = true;
       } else if (from === ArticleStatus.InReview) {
         isValidTransition = to === ArticleStatus.Approved || to === ArticleStatus.Rejected;

@@ -602,25 +602,25 @@ export default function SuperAdminClient({
             <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
               Scope: Platform Super Admin
             </span>
+            {activeTab === "dashboard" && (
+              <button
+                type="button"
+                onClick={fetchAnalytics}
+                disabled={loadingAnalytics}
+                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                  <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                {loadingAnalytics ? "Refreshing…" : "Refresh"}
+              </button>
+            )}
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === "dashboard" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={fetchAnalytics}
-                  disabled={loadingAnalytics}
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
-                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                  </svg>
-                  {loadingAnalytics ? "Refreshing…" : "Refresh"}
-                </button>
-              </div>
 
               {loadingAnalytics && !analyticsData ? (
                 <div className="text-center py-16 text-zinc-450 font-semibold animate-pulse">Loading platform metrics...</div>
@@ -628,43 +628,89 @@ export default function SuperAdminClient({
                 <div className="text-center py-16 text-zinc-400 italic">No analytics data available.</div>
               ) : (
                 <div className="space-y-6">
-                  {/* KPI Row - No colorful accents, strictly matching website design */}
+                  {/* KPI Row */}
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Views</span>
-                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
-                        {analyticsData.totalViews.toLocaleString()}
-                      </span>
+                    {/* Total Views */}
+                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#7c3aed,#a78bfa)" }} />
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Views</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      </div>
+                      <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.totalViews.toLocaleString()}</div>
+                      <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">All time</div>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Helpful Rate</span>
-                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
-                        {analyticsData.helpfulRate}%
-                      </span>
+                    {/* Helpful Rate */}
+                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#0891b2,#22d3ee)" }} />
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Helpful Rate</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0891b2" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                      </div>
+                      <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.helpfulRate}%</div>
+                      {analyticsData.helpfulRateDelta != null ? (
+                        <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${analyticsData.helpfulRateDelta >= 0 ? "text-green-600" : "text-red-500"}`}>
+                          {analyticsData.helpfulRateDelta >= 0 ? <span>▲</span> : <span>▼</span>}
+                          {analyticsData.helpfulRateDelta > 0 ? "+" : ""}{analyticsData.helpfulRateDelta}pp this month
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">Based on feedback</div>
+                      )}
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Knowledge Gaps</span>
-                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
-                        {analyticsData.totalGaps.toLocaleString()}
-                      </span>
+                    {/* Knowledge Gaps */}
+                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#dc2626,#f87171)" }} />
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Knowledge Gaps</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                      </div>
+                      <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.totalGaps.toLocaleString()}</div>
+                      {analyticsData.gapsThisWeek != null && (
+                        <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-red-500">
+                          <span>▼</span>{analyticsData.gapsThisWeek} new this week
+                        </div>
+                      )}
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Searches</span>
-                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
-                        {analyticsData.totalSearches.toLocaleString()}
-                      </span>
+                    {/* Total Searches */}
+                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#059669,#34d399)" }} />
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Searches</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                      </div>
+                      <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.totalSearches.toLocaleString()}</div>
+                      {analyticsData.searchVsYesterday != null ? (
+                        <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${analyticsData.searchVsYesterday >= 0 ? "text-green-600" : "text-red-500"}`}>
+                          {analyticsData.searchVsYesterday >= 0 ? <span>▲</span> : <span>▼</span>}
+                          {analyticsData.searchVsYesterday > 0 ? "+" : ""}{analyticsData.searchVsYesterday}% vs yesterday
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">vs yesterday</div>
+                      )}
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Avg. Confidence</span>
-                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
-                        {analyticsData.avgConfidence}%
-                      </span>
+                    {/* Avg. Confidence */}
+                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#d97706,#fbbf24)" }} />
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Avg. Confidence</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                      </div>
+                      <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.avgConfidence}%</div>
+                      <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">Match quality</div>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Articles</span>
-                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
-                        {analyticsData.totalArticles.toLocaleString()}
-                      </span>
+                    {/* Total Articles */}
+                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                      <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#2563eb,#60a5fa)" }} />
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Articles</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </div>
+                      <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.totalArticles.toLocaleString()}</div>
+                      {analyticsData.articlesThisWeek != null && (
+                        <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-green-600">
+                          <span>▲</span>+{analyticsData.articlesThisWeek} this week
+                        </div>
+                      )}
                     </div>
                   </div>
 
