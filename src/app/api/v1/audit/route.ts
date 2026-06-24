@@ -33,12 +33,13 @@ export async function GET(req: NextRequest) {
     // Filter audit logs for regular Admins to only show actions by members of their teams
     let actorFilter: any = undefined;
     if (role === "Admin" && userId) {
-      const userTeams = await prisma.userTeam.findMany({
+      const tenantDb = getTenantDb(userTenantId!);
+      const userTeams = await tenantDb.userTeam.findMany({
         where: { user_id: userId }
       });
       const teamIds = userTeams.map((ut: any) => ut.team_id);
 
-      const teamMembers = await prisma.userTeam.findMany({
+      const teamMembers = await tenantDb.userTeam.findMany({
         where: { team_id: { in: teamIds } }
       });
       const memberIds = Array.from(new Set([...teamMembers.map((ut: any) => ut.user_id), userId]));

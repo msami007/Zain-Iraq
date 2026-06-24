@@ -96,7 +96,7 @@ export async function PATCH(
 
     await prisma.auditLog.create({
       data: {
-        tenant_id: session.user.tenant_id,
+        tenant_id: before.tenant_id, // Use target user's tenant, not the SuperAdmin's tenant
         actor_id: session.user.id,
         action: "Update User Account",
         target_type: "User",
