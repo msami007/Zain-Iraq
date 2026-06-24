@@ -216,7 +216,7 @@ export async function GET(req: NextRequest) {
     const agentStats: Record<string, { id: string; name: string; email: string; views: number; clicks: number }> = {};
     logs.forEach((log) => {
       const actorId = log.actor_id;
-      if (log.actor) {
+      if (log.actor && actorId) {
         if (!agentStats[actorId]) {
           agentStats[actorId] = {
             id: actorId,
