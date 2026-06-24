@@ -33,39 +33,14 @@ export default async function AgentPage() {
 
   const db = getTenantDb(tenantId);
 
-  // Fetch tenants and categories for the KB search tab
-  const allTenants = await prisma.tenant.findMany({ orderBy: { name: "asc" } });
-  const allCategories = await prisma.category.findMany({ orderBy: { name: "asc" } });
-
-  const serializedTenants = allTenants.map((t) => ({
-    id: t.id,
-    name: t.name,
-    slug: t.slug,
-    branding: t.branding || {},
-  }));
-
-  const serializedCategories = allCategories.map((c) => ({
-    id: c.id,
-    name: c.name,
-    slug: c.slug,
-    tenant_id: c.tenant_id,
-  }));
-
-  // Fetch initial cases (waiting and assigned cases)
-  const cases = await db.chatCase.findMany({
-    orderBy: { wait_started_at: "asc" },
-    include: {
-      agent: { select: { name: true } },
-      resolving_article: { select: { title: true } },
-    },
-  });
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  // Run all agent-scoped stat queries in parallel
   const [
+    allTenants,
+    allCategories,
+    cases,
     todaySearchesCount,
     weeklySearchesCount,
     totalSearchesCount,
@@ -80,6 +55,15 @@ export default async function AgentPage() {
     todayGapsCount,
     myArticleIds,
   ] = await Promise.all([
+    prisma.tenant.findMany({ orderBy: { name: "asc" } }),
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    db.chatCase.findMany({
+      orderBy: { wait_started_at: "asc" },
+      include: {
+        agent: { select: { name: true } },
+        resolving_article: { select: { title: true } },
+      },
+    }),
     db.searchQuery.count({ where: { user_id: userId, created_at: { gte: today } } }),
     db.searchQuery.count({ where: { user_id: userId, created_at: { gte: weekAgo } } }),
     db.searchQuery.count({ where: { user_id: userId } }),
@@ -94,6 +78,20 @@ export default async function AgentPage() {
     db.knowledgeGap.count({ where: { reported_by: userId, created_at: { gte: today } } }),
     db.article.findMany({ where: { author_id: userId }, select: { id: true } }),
   ]);
+
+  const serializedTenants = allTenants.map((t) => ({
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    branding: t.branding || {},
+  }));
+
+  const serializedCategories = allCategories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    tenant_id: c.tenant_id,
+  }));
 
   const myArticleIdList = myArticleIds.map((a) => a.id);
   const [myFeedbackTotal, myFeedbackHelpful] = await Promise.all([

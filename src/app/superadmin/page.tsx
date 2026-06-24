@@ -19,30 +19,57 @@ export default async function SuperAdminPage() {
   }
 
   // Load all tenants and users (platform level)
-  const tenants = await prisma.tenant.findMany({
-    orderBy: { created_at: "desc" },
-  });
+  const db = getTenantDb(tenantId);
 
-  const users = await prisma.user.findMany({
-    orderBy: { created_at: "desc" },
-    include: {
-      tenant: {
-        select: {
-          name: true,
-          slug: true,
+  const [tenants, users, articles, categories, activeUsers, gaps] = await Promise.all([
+    prisma.tenant.findMany({
+      orderBy: { created_at: "desc" },
+    }),
+    prisma.user.findMany({
+      orderBy: { created_at: "desc" },
+      include: {
+        tenant: {
+          select: {
+            name: true,
+            slug: true,
+          },
         },
-      },
-      user_teams: {
-        select: {
-          team: {
-            select: { id: true, name: true }
+        user_teams: {
+          select: {
+            team: {
+              select: { id: true, name: true }
+            }
           }
         }
-      }
-    },
-  });
+      },
+    }),
+    db.article.findMany({
+      orderBy: { updated_at: "desc" },
+      include: {
+        category: { select: { id: true, name: true } },
+        author: { select: { id: true, name: true, email: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        variants: true,
+      },
+    }),
+    db.category.findMany({
+      orderBy: { name: "asc" },
+    }),
+    db.user.findMany({
+      where: { status: "Active" },
+      orderBy: { name: "asc" },
+    }),
+    prisma.knowledgeGap.findMany({
+      orderBy: { occurrences: "desc" },
+      include: {
+        reporter: { select: { name: true } },
+        claimer: { select: { name: true } },
+        resolving_article: { select: { title: true } },
+        flagged_article: { select: { title: true } },
+      },
+    }),
+  ]);
 
-  // Map tenants to serializable objects
   const serializedTenants = tenants.map((t) => ({
     id: t.id,
     name: t.name,
@@ -52,7 +79,6 @@ export default async function SuperAdminPage() {
     created_at: t.created_at.toISOString(),
   }));
 
-  // Map users to serializable objects
   const serializedUsers = users.map((u) => ({
     id: u.id,
     tenant_id: u.tenant_id,
@@ -67,43 +93,6 @@ export default async function SuperAdminPage() {
     })),
   }));
 
-  // Query content database for the Super Admin's tenant
-  const db = getTenantDb(tenantId);
-
-  // Fetch articles with variants & version logs
-  const articles = await db.article.findMany({
-    orderBy: { updated_at: "desc" },
-    include: {
-      category: { select: { id: true, name: true } },
-      author: { select: { id: true, name: true, email: true } },
-      owner: { select: { id: true, name: true, email: true } },
-      variants: true,
-    },
-  });
-
-  // Fetch categories
-  const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-  });
-
-  // Fetch active users for assigning article ownership
-  const activeUsers = await db.user.findMany({
-    where: { status: "Active" },
-    orderBy: { name: "asc" },
-  });
-
-  // Fetch knowledge gaps across ALL tenants — SuperAdmin has platform-wide visibility
-  const gaps = await prisma.knowledgeGap.findMany({
-    orderBy: { occurrences: "desc" },
-    include: {
-      reporter: { select: { name: true } },
-      claimer: { select: { name: true } },
-      resolving_article: { select: { title: true } },
-      flagged_article: { select: { title: true } },
-    },
-  });
-
-  // Serialization to plain JS objects for client component props
   const serializedArticles = articles.map((a) => ({
     id: a.id,
     title: a.title,

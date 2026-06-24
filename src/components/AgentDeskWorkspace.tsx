@@ -85,7 +85,9 @@ export default function AgentDeskWorkspace({
   const [activeTab, setActiveTab] = useState<"waiting" | "active" | "resolved">("waiting");
   const [selectedCase, setSelectedCase] = useState<AgentCase | null>(null);
 
-  const [agentActiveTab, setAgentActiveTab] = useState<"dashboard" | "chat" | "search" | "gaps">("dashboard");
+  const [agentActiveTab, setAgentActiveTab] = useState<"dashboard" | "chat" | "search" | "gaps" | "glossary">("dashboard");
+  const [glossarySearch, setGlossarySearch] = useState("");
+  const [glossaryCategory, setGlossaryCategory] = useState("All");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Search KB states
@@ -810,6 +812,15 @@ export default function AgentDeskWorkspace({
         </svg>
       ),
     },
+    {
+      key: "glossary" as const,
+      label: "Glossary",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+        </svg>
+      ),
+    },
   ];
 
   const sectionTitle: Record<string, string> = {
@@ -817,6 +828,7 @@ export default function AgentDeskWorkspace({
     chat: "Customer Chat",
     search: "Knowledge Base",
     gaps: "Gap Reports",
+    glossary: "Glossary",
   };
 
   const rejectedCount = myArticles.filter((a: any) => a.status === "Rejected").length;
@@ -2723,6 +2735,151 @@ export default function AgentDeskWorkspace({
           </div>
         </div>
       )}
+
+      {/* GLOSSARY TAB */}
+      {agentActiveTab === "glossary" && (() => {
+        const sections = [
+          {
+            category: "Knowledge Base & Search",
+            badgeClass: "bg-blue-50 border-blue-100 text-blue-700",
+            barClass: "bg-blue-500",
+            borderClass: "border-l-blue-300",
+            items: [
+              { term: "Match % / Confidence", def: "How closely an article answers a search query, scored by AI from 0–100%. Above 70% is a strong match; below 40% means it is loosely related and may not fully help the customer." },
+              { term: "Published Article", def: "An article that is live and approved for use. Only published articles appear in KB search results." },
+              { term: "Pinned Article", def: "An article saved for quick access during customer interactions. Pinned articles appear in the KB sidebar for fast retrieval." },
+              { term: "Browse by Category", def: "Explore the KB by topic area (e.g. Postpaid, Roaming, Billing) without typing a query — useful when you are unsure what to search for." },
+              { term: "Language filter", def: "Filter search results by article language (EN/AR). Useful when assisting Arabic-speaking customers." },
+            ],
+          },
+          {
+            category: "Performance Metrics",
+            badgeClass: "bg-violet-50 border-violet-100 text-violet-700",
+            barClass: "bg-violet-500",
+            borderClass: "border-l-violet-300",
+            items: [
+              { term: "Helpful Rate", def: "Percentage of KB article ratings marked 'helpful' across the whole tenant. Reflects KB quality overall, not individual agent performance." },
+              { term: "Queries Handled", def: "KB searches you have performed today. Resets at midnight." },
+              { term: "Cases Resolved", def: "Total customer cases marked resolved — all time." },
+              { term: "Articles Opened", def: "Total articles viewed since your account was created. Tracked for KB usage reporting." },
+              { term: "This week", def: "Activity from the last 7 days (rolling window, not the calendar week)." },
+            ],
+          },
+          {
+            category: "Chat & Cases",
+            badgeClass: "bg-green-50 border-green-100 text-green-700",
+            barClass: "bg-green-500",
+            borderClass: "border-l-green-300",
+            items: [
+              { term: "Case", def: "A customer support request. Status: Waiting (unassigned), Active (you are handling it), or Resolved (complete)." },
+              { term: "Priority", def: "Urgency level — High, Medium, or Low. Set based on the nature of the customer's issue." },
+              { term: "KB Assistant", def: "AI-powered panel inside the chat view. Automatically searches the KB based on the customer's messages and suggests relevant articles." },
+              { term: "Report a Gap (from chat)", def: "Flag that no KB article answers the customer's question. Creates a Knowledge Gap entry for admins to review and fix." },
+            ],
+          },
+          {
+            category: "Gap Reports",
+            badgeClass: "bg-amber-50 border-amber-100 text-amber-700",
+            barClass: "bg-amber-500",
+            borderClass: "border-l-amber-300",
+            items: [
+              { term: "Knowledge Gap", def: "A topic the KB has no good answer for — created when searches fail or you manually flag missing content." },
+              { term: "Gap Report", def: "A formal submission flagging a missing KB article. Includes the original query, your optional comment, and the flagged article if any." },
+              { term: "Occurrences", def: "How many times the same gap was triggered. High-occurrence gaps are prioritised by admins for new content." },
+              { term: "Resolved", def: "A gap marked done by an admin after a new article was published or an existing one improved." },
+              { term: "Pending", def: "A gap that has been submitted but not yet addressed by an admin." },
+            ],
+          },
+        ];
+        const allTerms = sections.flatMap(s => s.items.map(i => ({ ...i, category: s.category, badgeClass: s.badgeClass, barClass: s.barClass })));
+        const cats = sections.map(s => s.category);
+        const filteredSections = sections
+          .map(s => ({
+            ...s,
+            matchedItems: s.items.filter(item =>
+              !glossarySearch ||
+              item.term.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+              item.def.toLowerCase().includes(glossarySearch.toLowerCase())
+            ),
+          }))
+          .filter(s =>
+            (glossaryCategory === "All" || s.category === glossaryCategory) &&
+            s.matchedItems.length > 0
+          );
+        const totalFiltered = filteredSections.reduce((sum, s) => sum + s.matchedItems.length, 0);
+        return (
+          <div className="space-y-5">
+            {/* Toolbar */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-xs text-zinc-500">Definitions for every term, metric, and feature in this workspace.</p>
+                <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-600 flex-shrink-0">
+                  {allTerms.length} terms
+                </span>
+              </div>
+              <div className="relative">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" placeholder="Search terms or definitions…" value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-10 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none transition-colors" />
+                {glossarySearch && (
+                  <button type="button" onClick={() => setGlossarySearch("")}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-lg font-bold leading-none">×</button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {["All", ...cats].map(cat => (
+                  <button key={cat} type="button" onClick={() => setGlossaryCategory(cat)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors border ${glossaryCategory === cat ? "bg-zinc-950 text-white border-zinc-950" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900"}`}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Count + clear */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-zinc-400">
+                Showing <span className="font-semibold text-zinc-600">{totalFiltered}</span> of {allTerms.length} terms
+                {glossaryCategory !== "All" && <> in <span className="font-semibold text-zinc-600">{glossaryCategory}</span></>}
+                {glossarySearch && <> matching <span className="font-semibold text-zinc-600">&ldquo;{glossarySearch}&rdquo;</span></>}
+              </p>
+              {(glossarySearch || glossaryCategory !== "All") && (
+                <button type="button" onClick={() => { setGlossarySearch(""); setGlossaryCategory("All"); }}
+                  className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">Clear</button>
+              )}
+            </div>
+            {/* Section tables */}
+            {filteredSections.length === 0 ? (
+              <div className="rounded-xl border border-zinc-100 bg-white py-14 text-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-zinc-300"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <p className="text-sm font-semibold text-zinc-500">No terms match your search.</p>
+                <p className="text-xs text-zinc-400 mt-1">Try a different keyword or clear the filters.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {filteredSections.map(section => (
+                  <div key={section.category} className={`rounded-xl border border-zinc-100 bg-white shadow-sm overflow-hidden flex flex-col border-l-[3px] ${section.borderClass}`}>
+                    <div className={`flex items-center gap-2.5 px-4 py-3 border-b flex-shrink-0 ${section.badgeClass}`}>
+                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${section.barClass}`} />
+                      <span className="text-xs font-bold">{section.category}</span>
+                      <span className="ml-auto text-[10px] font-semibold text-zinc-400 tabular-nums">{section.matchedItems.length}</span>
+                    </div>
+                    <div className="divide-y divide-zinc-50 flex-1">
+                      {section.matchedItems.map(item => (
+                        <div key={item.term} className="px-4 py-3 flex gap-4 hover:bg-zinc-50/60 transition-colors">
+                          <div className="w-36 flex-shrink-0 pt-0.5">
+                            <span className="text-[11px] font-bold text-zinc-900 leading-snug">{item.term}</span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 leading-relaxed">{item.def}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* PINNED ARTICLES - moved to sidebar, kept as dead code */}
       {false && (

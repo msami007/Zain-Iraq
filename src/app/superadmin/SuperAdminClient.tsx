@@ -61,7 +61,9 @@ export default function SuperAdminClient({
   tenantName,
   signOutAction,
 }: SuperAdminClientProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "orgs" | "users" | "teams" | "articles" | "gaps" | "workflows" | "audit">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "orgs" | "users" | "teams" | "articles" | "gaps" | "workflows" | "audit" | "glossary">("dashboard");
+  const [glossarySearch, setGlossarySearch] = useState("");
+  const [glossaryCategory, setGlossaryCategory] = useState("All");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
@@ -555,6 +557,18 @@ export default function SuperAdminClient({
                   </svg>
                   Audit Logs
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("glossary"); setMobileSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "glossary" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+                  </svg>
+                  Glossary
+                </button>
               </div>
             </div>
           </nav>
@@ -620,6 +634,7 @@ export default function SuperAdminClient({
                 {activeTab === "gaps" && "Knowledge Gaps"}
                 {activeTab === "workflows" && "Workflows Queue"}
                 {activeTab === "audit" && "Audit Logs View"}
+                {activeTab === "glossary" && "Glossary"}
               </h2>
           </div>
           <div className="flex items-center gap-3">
@@ -1573,6 +1588,153 @@ export default function SuperAdminClient({
               />
             </div>
           )}
+
+          {/* GLOSSARY TAB */}
+          {activeTab === "glossary" && (() => {
+            const sections = [
+              {
+                category: "Platform & Tenants",
+                badgeClass: "bg-violet-50 border-violet-100 text-violet-700",
+                barClass: "bg-violet-500",
+                borderClass: "border-l-violet-300",
+                items: [
+                  { term: "Tenant / Organization", def: "A separate company using the platform (e.g. Zain Iraq, OODI). Each tenant has its own isolated KB, articles, users, and analytics — fully separated from other tenants." },
+                  { term: "Tenant ID", def: "A unique identifier assigned to each organization. Used internally to scope all database queries and prevent data leakage between tenants." },
+                  { term: "Blueprint Managed", def: "The Render deployment is managed via a render.yaml file — infrastructure changes should go through that file, not the Render dashboard manually." },
+                  { term: "Slug", def: "A URL-friendly version of a name (e.g. 'zain-iraq'). Used to identify tenants and articles in links." },
+                  { term: "NEXTAUTH_URL", def: "An environment variable set in Render that tells NextAuth the public-facing URL of the app. Must be set correctly to avoid auth redirects pointing to internal addresses." },
+                ],
+              },
+              {
+                category: "Analytics & Metrics",
+                badgeClass: "bg-blue-50 border-blue-100 text-blue-700",
+                barClass: "bg-blue-500",
+                borderClass: "border-l-blue-300",
+                items: [
+                  { term: "Total Views", def: "Times articles have been opened across all tenants. All-time cumulative." },
+                  { term: "Helpful Rate", def: "Platform-wide percentage of article feedback marked helpful. Formula: (Helpful ÷ Total rated) × 100. Reflects KB quality across all organizations." },
+                  { term: "Avg. Confidence", def: "Mean AI match score (0–100%) across all platform searches. A low average signals the KB is missing content for common queries." },
+                  { term: "Total Searches", def: "Cumulative KB searches across the entire platform, all tenants." },
+                  { term: "Knowledge Gaps count", def: "Total unresolved gap reports across all tenants. High numbers mean the KB needs more content — not an error state." },
+                  { term: "pp (percentage points)", def: "Absolute difference between two percentages. Helpful rate rising from 60% to 65% is +5pp, not +8.3%." },
+                  { term: "vs Yesterday", def: "Percentage change in today's search volume vs yesterday. Shows demand trends (+) or drops (−) across the platform." },
+                ],
+              },
+              {
+                category: "Users, Teams & Roles",
+                badgeClass: "bg-green-50 border-green-100 text-green-700",
+                barClass: "bg-green-500",
+                borderClass: "border-l-green-300",
+                items: [
+                  { term: "Super Admin", def: "Platform-wide access across all tenants. Can manage organizations, users, articles, gaps, and view cross-tenant analytics. That's you." },
+                  { term: "Admin", def: "Scoped to a single tenant. Manages articles, approves workflows, resolves gaps, and views tenant-level analytics." },
+                  { term: "Agent", def: "Front-line support staff. Uses the KB to answer customer queries, reports gaps, and handles customer chat cases." },
+                  { term: "Team", def: "A group of users within a tenant. Articles can be restricted to a team (Private), and workflow steps can require a specific team's sign-off." },
+                  { term: "Separation of Duties", def: "An article's author cannot approve or publish their own work. Enforced automatically across all roles." },
+                ],
+              },
+              {
+                category: "Content & Workflows",
+                badgeClass: "bg-amber-50 border-amber-100 text-amber-700",
+                barClass: "bg-amber-500",
+                borderClass: "border-l-amber-300",
+                items: [
+                  { term: "Article Status Flow", def: "Draft → In Review → Approved → Published → Archived. Articles must follow this sequence. Exception: Draft can go directly to Archived to discard a draft." },
+                  { term: "Workflow Route", def: "A custom multi-step approval chain for articles. Each step can require a specific role, team, or named individual before the article advances." },
+                  { term: "Audit Log", def: "Tamper-proof record of every action on the platform: who did what, to which resource, and when. Covers articles, users, gaps, and status changes." },
+                  { term: "Rollback", def: "Reverting an article to a previous saved version via the Audit Log. Available when an incorrect change was published." },
+                ],
+              },
+            ];
+            const allTerms = sections.flatMap(s => s.items.map(i => ({ ...i, category: s.category, badgeClass: s.badgeClass, barClass: s.barClass })));
+            const cats = sections.map(s => s.category);
+            const filteredSections = sections
+              .map(s => ({
+                ...s,
+                matchedItems: s.items.filter(item =>
+                  !glossarySearch ||
+                  item.term.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+                  item.def.toLowerCase().includes(glossarySearch.toLowerCase())
+                ),
+              }))
+              .filter(s =>
+                (glossaryCategory === "All" || s.category === glossaryCategory) &&
+                s.matchedItems.length > 0
+              );
+            const totalFiltered = filteredSections.reduce((sum, s) => sum + s.matchedItems.length, 0);
+            return (
+              <div className="space-y-5">
+                {/* Toolbar */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-xs text-zinc-500">Definitions for every term, metric, and feature across the platform.</p>
+                    <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-600 flex-shrink-0">
+                      {allTerms.length} terms
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" placeholder="Search terms or definitions…" value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-10 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none transition-colors" />
+                    {glossarySearch && (
+                      <button type="button" onClick={() => setGlossarySearch("")}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-lg font-bold leading-none">×</button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", ...cats].map(cat => (
+                      <button key={cat} type="button" onClick={() => setGlossaryCategory(cat)}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors border ${glossaryCategory === cat ? "bg-zinc-950 text-white border-zinc-950" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900"}`}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Count + clear */}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-zinc-400">
+                    Showing <span className="font-semibold text-zinc-600">{totalFiltered}</span> of {allTerms.length} terms
+                    {glossaryCategory !== "All" && <> in <span className="font-semibold text-zinc-600">{glossaryCategory}</span></>}
+                    {glossarySearch && <> matching <span className="font-semibold text-zinc-600">&ldquo;{glossarySearch}&rdquo;</span></>}
+                  </p>
+                  {(glossarySearch || glossaryCategory !== "All") && (
+                    <button type="button" onClick={() => { setGlossarySearch(""); setGlossaryCategory("All"); }}
+                      className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">Clear</button>
+                  )}
+                </div>
+                {/* Section tables */}
+                {filteredSections.length === 0 ? (
+                  <div className="rounded-xl border border-zinc-100 bg-white py-14 text-center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-zinc-300"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <p className="text-sm font-semibold text-zinc-500">No terms match your search.</p>
+                    <p className="text-xs text-zinc-400 mt-1">Try a different keyword or clear the filters.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {filteredSections.map(section => (
+                      <div key={section.category} className={`rounded-xl border border-zinc-100 bg-white shadow-sm overflow-hidden flex flex-col border-l-[3px] ${section.borderClass}`}>
+                        <div className={`flex items-center gap-2.5 px-4 py-3 border-b flex-shrink-0 ${section.badgeClass}`}>
+                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${section.barClass}`} />
+                          <span className="text-xs font-bold">{section.category}</span>
+                          <span className="ml-auto text-[10px] font-semibold text-zinc-400 tabular-nums">{section.matchedItems.length}</span>
+                        </div>
+                        <div className="divide-y divide-zinc-50 flex-1">
+                          {section.matchedItems.map(item => (
+                            <div key={item.term} className="px-4 py-3 flex gap-4 hover:bg-zinc-50/60 transition-colors">
+                              <div className="w-36 flex-shrink-0 pt-0.5">
+                                <span className="text-[11px] font-bold text-zinc-900 leading-snug">{item.term}</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 leading-relaxed">{item.def}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 

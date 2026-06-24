@@ -33,43 +33,38 @@ export default async function AdminPage() {
 
   const db = getTenantDb(tenantId);
 
-  // Fetch articles with variants & version logs
-  const articles = await db.article.findMany({
-    orderBy: { updated_at: "desc" },
-    include: {
-      category: { select: { id: true, name: true } },
-      author: { select: { id: true, name: true, email: true } },
-      owner: { select: { id: true, name: true, email: true } },
-      variants: true,
-      article_tags: {
-        include: {
-          tag: true,
+  const [articles, categories, users, gaps] = await Promise.all([
+    db.article.findMany({
+      orderBy: { updated_at: "desc" },
+      include: {
+        category: { select: { id: true, name: true } },
+        author: { select: { id: true, name: true, email: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        variants: true,
+        article_tags: {
+          include: {
+            tag: true,
+          },
         },
       },
-    },
-  });
-
-  // Fetch categories
-  const categories = await db.category.findMany({
-    orderBy: { name: "asc" },
-  });
-
-  // Fetch users for assigning article ownership
-  const users = await db.user.findMany({
-    where: { status: "Active" },
-    orderBy: { name: "asc" },
-  });
-
-  // Fetch knowledge gaps queue
-  const gaps = await db.knowledgeGap.findMany({
-    orderBy: { occurrences: "desc" },
-    include: {
-      reporter: { select: { name: true, email: true } },
-      claimer: { select: { name: true } },
-      resolving_article: { select: { id: true, title: true } },
-      flagged_article: { select: { id: true, title: true } },
-    },
-  });
+    }),
+    db.category.findMany({
+      orderBy: { name: "asc" },
+    }),
+    db.user.findMany({
+      where: { status: "Active" },
+      orderBy: { name: "asc" },
+    }),
+    db.knowledgeGap.findMany({
+      orderBy: { occurrences: "desc" },
+      include: {
+        reporter: { select: { name: true, email: true } },
+        claimer: { select: { name: true } },
+        resolving_article: { select: { id: true, title: true } },
+        flagged_article: { select: { id: true, title: true } },
+      },
+    }),
+  ]);
 
   // Serialization to plain JS objects for client component props
   const serializedArticles = articles.map((a) => ({

@@ -177,7 +177,9 @@ export default function AdminDeskWorkspace({
   const [auditFilterLabel, setAuditFilterLabel] = useState("");
   const [auditFilterDateFrom, setAuditFilterDateFrom] = useState("");
   const [auditFilterDateTo, setAuditFilterDateTo] = useState("");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "articles" | "gaps" | "audit" | "workflows" | "analytics">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "articles" | "gaps" | "audit" | "workflows" | "analytics" | "glossary">("dashboard");
+  const [glossarySearch, setGlossarySearch] = useState("");
+  const [glossaryCategory, setGlossaryCategory] = useState("All");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const currentTab = overrideActiveTab || activeTab;
 
@@ -1420,6 +1422,18 @@ export default function AdminDeskWorkspace({
                     </svg>
                     Audit Logs
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab("glossary"); closeEditor(); setMobileSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                      currentTab === "glossary" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+                    </svg>
+                    Glossary
+                  </button>
                 </div>
               </div>
             </nav>
@@ -1480,7 +1494,7 @@ export default function AdminDeskWorkspace({
                 </svg>
               </button>
               <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide">
-                {currentTab === "dashboard" ? "Analytics Dashboard" : currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : currentTab === "workflows" ? "Workflows" : currentTab === "audit" ? "Audit Logs" : "Analytics"}
+                {currentTab === "dashboard" ? "Analytics Dashboard" : currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : currentTab === "workflows" ? "Workflows" : currentTab === "audit" ? "Audit Logs" : currentTab === "glossary" ? "Glossary" : "Analytics"}
               </h2>
             </div>
             <div className="flex items-center gap-3">
@@ -3766,6 +3780,159 @@ export default function AdminDeskWorkspace({
                   </div>
 
                 </div>
+              </div>
+            );
+          })()}
+
+          {/* GLOSSARY TAB */}
+          {currentTab === "glossary" && (() => {
+            const sections = [
+              {
+                category: "Articles & Content",
+                badgeClass: "bg-blue-50 border-blue-100 text-blue-700",
+                barClass: "bg-blue-500",
+                borderClass: "border-l-blue-300",
+                items: [
+                  { term: "Draft", def: "An article being written and not yet submitted for review. Only the author and admins can see it." },
+                  { term: "In Review", def: "Submitted and awaiting approval. The author cannot edit it at this stage." },
+                  { term: "Approved", def: "Passed review but not yet live. A publish step is still required before agents can find it." },
+                  { term: "Published", def: "Live in the Knowledge Base and searchable by agents. The only status visible in KB search results." },
+                  { term: "Archived", def: "Removed from the live KB. Preserved for audit purposes and can be restored to Draft at any time." },
+                  { term: "Rejected", def: "Returned to the author with required feedback. The author revises and resubmits." },
+                  { term: "Separation of Duties", def: "An article's author cannot approve or publish their own work. Independent review is enforced automatically." },
+                  { term: "Visibility", def: "Controls who can find the article. Public = all agents; Private = specified team only; Internal = admin reference." },
+                  { term: "Version History", def: "Every saved change is tracked. Admins can compare versions and roll back to any prior state from the Audit Log." },
+                ],
+              },
+              {
+                category: "Analytics & Metrics",
+                badgeClass: "bg-violet-50 border-violet-100 text-violet-700",
+                barClass: "bg-violet-500",
+                borderClass: "border-l-violet-300",
+                items: [
+                  { term: "Helpful Rate", def: "Percentage of ratings marked 'Helpful'. Formula: (Helpful ÷ Total rated) × 100. Low rates signal content that needs improvement." },
+                  { term: "Confidence / Match %", def: "AI match score (0–100%) measuring how closely an article answers a search query. Above 70% is a strong match." },
+                  { term: "Avg. Confidence", def: "Mean AI match score across all searches. A low average means searches frequently fail — the KB is missing content." },
+                  { term: "Searches Today", def: "KB searches performed on the current calendar day." },
+                  { term: "vs Yesterday", def: "Percentage change in today's search volume compared to yesterday. Shows demand trends (+) or drops (−)." },
+                  { term: "pp (percentage points)", def: "Absolute difference between two percentages. Helpful rate rising from 60% to 65% is +5pp, not +8.3%." },
+                  { term: "Total Views", def: "Times articles have been opened by agents or customers since tracking began." },
+                ],
+              },
+              {
+                category: "Knowledge Gaps",
+                badgeClass: "bg-amber-50 border-amber-100 text-amber-700",
+                barClass: "bg-amber-500",
+                borderClass: "border-l-amber-300",
+                items: [
+                  { term: "Knowledge Gap", def: "A search that returned no good result — flagged automatically or by an agent. Signals missing KB content that needs a new article." },
+                  { term: "Gap Queue", def: "The list of all captured gaps awaiting review. Admins can claim, resolve, or dismiss each entry." },
+                  { term: "Occurrences / Hits", def: "How many times the same gap was triggered. Higher hits = higher priority for new content." },
+                  { term: "Claimed By", def: "The admin who has taken ownership of resolving a gap, typically by creating or improving an article." },
+                  { term: "Resolved Gap", def: "A gap marked done after content was added or updated to cover the missing topic." },
+                  { term: "Seeded Gap", def: "A gap that pre-populated when navigating here from an alert or link — appears pre-filled so you can act on it immediately." },
+                ],
+              },
+              {
+                category: "Workflows & Audit",
+                badgeClass: "bg-green-50 border-green-100 text-green-700",
+                barClass: "bg-green-500",
+                borderClass: "border-l-green-300",
+                items: [
+                  { term: "Workflow Route", def: "A custom approval chain defining who must sign off on an article. Each step can target a role, team, or specific user." },
+                  { term: "Workflow Step", def: "A single approval stage within a route. Steps run in sequence — articles cannot skip ahead." },
+                  { term: "Rejection Feedback", def: "A mandatory comment required when sending an article back to Draft. Tells the author exactly what to fix." },
+                  { term: "Audit Log", def: "A tamper-proof record of every action: who did what, to which article, and when. Used for compliance and accountability." },
+                  { term: "Rollback", def: "Restoring an article to a previous version via the Audit Log. Useful when an incorrect change was published." },
+                ],
+              },
+            ];
+            const allTerms = sections.flatMap(s => s.items.map(i => ({ ...i, category: s.category, badgeClass: s.badgeClass, barClass: s.barClass })));
+            const cats = sections.map(s => s.category);
+            const filteredSections = sections
+              .map(s => ({
+                ...s,
+                matchedItems: s.items.filter(item =>
+                  !glossarySearch ||
+                  item.term.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+                  item.def.toLowerCase().includes(glossarySearch.toLowerCase())
+                ),
+              }))
+              .filter(s =>
+                (glossaryCategory === "All" || s.category === glossaryCategory) &&
+                s.matchedItems.length > 0
+              );
+            const totalFiltered = filteredSections.reduce((sum, s) => sum + s.matchedItems.length, 0);
+            return (
+              <div className="space-y-5">
+                {/* Toolbar */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-xs text-zinc-500">Definitions for every term, metric, and feature in this workspace.</p>
+                    <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-600 flex-shrink-0">
+                      {allTerms.length} terms
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" placeholder="Search terms or definitions…" value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-10 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none transition-colors" />
+                    {glossarySearch && (
+                      <button type="button" onClick={() => setGlossarySearch("")}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-lg font-bold leading-none">×</button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", ...cats].map(cat => (
+                      <button key={cat} type="button" onClick={() => setGlossaryCategory(cat)}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors border ${glossaryCategory === cat ? "bg-zinc-950 text-white border-zinc-950" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900"}`}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Count + clear */}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-zinc-400">
+                    Showing <span className="font-semibold text-zinc-600">{totalFiltered}</span> of {allTerms.length} terms
+                    {glossaryCategory !== "All" && <> in <span className="font-semibold text-zinc-600">{glossaryCategory}</span></>}
+                    {glossarySearch && <> matching <span className="font-semibold text-zinc-600">&ldquo;{glossarySearch}&rdquo;</span></>}
+                  </p>
+                  {(glossarySearch || glossaryCategory !== "All") && (
+                    <button type="button" onClick={() => { setGlossarySearch(""); setGlossaryCategory("All"); }}
+                      className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">Clear</button>
+                  )}
+                </div>
+                {/* Section tables */}
+                {filteredSections.length === 0 ? (
+                  <div className="rounded-xl border border-zinc-100 bg-white py-14 text-center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-zinc-300"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <p className="text-sm font-semibold text-zinc-500">No terms match your search.</p>
+                    <p className="text-xs text-zinc-400 mt-1">Try a different keyword or clear the filters.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {filteredSections.map(section => (
+                      <div key={section.category} className={`rounded-xl border border-zinc-100 bg-white shadow-sm overflow-hidden flex flex-col border-l-[3px] ${section.borderClass}`}>
+                        <div className={`flex items-center gap-2.5 px-4 py-3 border-b flex-shrink-0 ${section.badgeClass}`}>
+                          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${section.barClass}`} />
+                          <span className="text-xs font-bold">{section.category}</span>
+                          <span className="ml-auto text-[10px] font-semibold text-zinc-400 tabular-nums">{section.matchedItems.length}</span>
+                        </div>
+                        <div className="divide-y divide-zinc-50 flex-1">
+                          {section.matchedItems.map(item => (
+                            <div key={item.term} className="px-4 py-3 flex gap-4 hover:bg-zinc-50/60 transition-colors">
+                              <div className="w-36 flex-shrink-0 pt-0.5">
+                                <span className="text-[11px] font-bold text-zinc-900 leading-snug">{item.term}</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-500 leading-relaxed">{item.def}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}
