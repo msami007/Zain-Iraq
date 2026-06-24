@@ -3179,7 +3179,7 @@ export default function AdminDeskWorkspace({
               {/* Status & Date range selectors */}
               <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
                 <div className="flex flex-wrap gap-2">
-                  {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "DISMISSED"].map((st) => (
+                  {["ALL", "NEW", "IN_PROGRESS", "RESOLVED"].map((st) => (
                     <button
                       key={st}
                       onClick={() => setGapStatusFilter(st)}
