@@ -65,6 +65,7 @@ export default function SuperAdminClient({
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "90d" | "all">("all");
+  const [categorySortAsc, setCategorySortAsc] = useState(false);
 
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
@@ -653,16 +654,30 @@ export default function SuperAdminClient({
                     </div>
                   </div>
 
-                  {/* Two-Column Grid */}
+                  {/* Three-Row × Two-Column Grid — each row pairs cards so CSS grid auto-equalises heights */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 text-left">
-                    {/* Left Column */}
-                    <div className="space-y-8">
-                      {/* Views by Category */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
+
+                    {/* ROW 1 — LEFT: Views by Category */}
+                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md flex flex-col">
+                      <div className="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Views by Category</h3>
-                        {analyticsData.viewsByCategory && analyticsData.viewsByCategory.length > 0 ? (
-                          <div className="max-h-[240px] overflow-y-auto pr-1 space-y-3.5 no-scrollbar">
-                            {analyticsData.viewsByCategory.map((c: any) => {
+                        <button
+                          type="button"
+                          onClick={() => setCategorySortAsc(v => !v)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 px-2.5 py-1 text-[10px] font-bold text-zinc-600 transition-colors"
+                          title={categorySortAsc ? "Sorted: Least → Most" : "Sorted: Most → Least"}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${categorySortAsc ? "rotate-180" : ""}`}>
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                          {categorySortAsc ? "Least → Most" : "Most → Least"}
+                        </button>
+                      </div>
+                      {analyticsData.viewsByCategory && analyticsData.viewsByCategory.length > 0 ? (
+                        <div className="max-h-[240px] overflow-y-auto pr-1 space-y-3.5 no-scrollbar">
+                          {[...analyticsData.viewsByCategory]
+                            .sort((a: any, b: any) => categorySortAsc ? a.count - b.count : b.count - a.count)
+                            .map((c: any) => {
                               const maxCount = Math.max(...analyticsData.viewsByCategory.map((x: any) => x.count), 1);
                               const percentage = (c.count / maxCount) * 100;
                               return (
@@ -677,139 +692,108 @@ export default function SuperAdminClient({
                                 </div>
                               );
                             })}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No views data</div>
-                        )}
-                      </div>
-
-                      {/* Top Articles by Views */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Articles by Views</h3>
-                        {analyticsData.topArticles && analyticsData.topArticles.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                              <thead>
-                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
-                                  <th className="py-2.5 px-2">#</th>
-                                  <th className="py-2.5 px-2">Article</th>
-                                  <th className="py-2.5 px-2">Views</th>
-                                  <th className="py-2.5 px-2 text-right">Helpful</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-zinc-100">
-                                {analyticsData.topArticles.map((a: any, i: number) => (
-                                  <tr key={a.id} className="hover:bg-zinc-50/50">
-                                    <td className="py-3 px-2 font-mono font-bold text-zinc-400">{i + 1}</td>
-                                    <td className="py-3 px-2 font-bold text-zinc-955 truncate max-w-[200px]" title={a.title}>{a.title}</td>
-                                    <td className="py-3 px-2 font-semibold text-zinc-650">{a.views}</td>
-                                    <td className="py-3 px-2 text-right font-bold text-green-700">{a.helpfulPct}%</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No articles views logged.</div>
-                        )}
-                      </div>
-
-                      {/* Top Search Queries */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
-                        {analyticsData.topSearchQueries && analyticsData.topSearchQueries.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                              <thead>
-                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
-                                  <th className="py-2.5 px-2">Query</th>
-                                  <th className="py-2.5 px-2 text-right">Count</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-zinc-100">
-                                {analyticsData.topSearchQueries.map((q: any) => (
-                                  <tr key={q.query} className="hover:bg-zinc-50/50">
-                                    <td className="py-3 px-2 font-bold text-zinc-955 italic">"{q.query}"</td>
-                                    <td className="py-3 px-2 text-right font-mono font-bold text-zinc-600">{q.count}x</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No search queries logged.</div>
-                        )}
-                      </div>
-
-
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-zinc-400 italic font-semibold text-sm">No views data</div>
+                      )}
                     </div>
 
-                    {/* Right Column */}
-                    <div className="space-y-8">
-                      {/* Content Breakdown */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Content Breakdown</h3>
-                        {analyticsData.contentBreakdown && analyticsData.contentBreakdown.length > 0 ? (
-                          <div className="space-y-3.5">
-                            {analyticsData.contentBreakdown.map((cb: any) => {
-                              const total = analyticsData.totalArticles || 1;
-                              const percentage = (cb.count / total) * 100;
-                              return (
-                                <div key={cb.status} className="space-y-1.5">
-                                  <div className="flex justify-between text-xs font-semibold">
-                                    <span className="text-zinc-700">{cb.status}</span>
-                                    <span className="text-zinc-900 font-bold">{cb.count} articles ({Math.round(percentage)}%)</span>
-                                  </div>
-                                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden border border-zinc-200">
-                                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${percentage}%` }} />
-                                  </div>
+                    {/* ROW 1 — RIGHT: Content Breakdown */}
+                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md flex flex-col">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455 mb-4 flex-shrink-0">Content Breakdown</h3>
+                      {analyticsData.contentBreakdown && analyticsData.contentBreakdown.length > 0 ? (
+                        <div className="flex-1 space-y-3.5">
+                          {analyticsData.contentBreakdown.map((cb: any) => {
+                            const total = analyticsData.totalArticles || 1;
+                            const percentage = (cb.count / total) * 100;
+                            return (
+                              <div key={cb.status} className="space-y-1.5">
+                                <div className="flex justify-between text-xs font-semibold">
+                                  <span className="text-zinc-700">{cb.status}</span>
+                                  <span className="text-zinc-900 font-bold">{cb.count} articles ({Math.round(percentage)}%)</span>
                                 </div>
-                              );
-                            })}
-                          </div>
+                                <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden border border-zinc-200">
+                                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${percentage}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-zinc-400 italic font-semibold text-sm">No content statistics.</div>
+                      )}
+                    </div>
+
+                    {/* ROW 2 — LEFT: Top Articles by Views */}
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-md flex flex-col overflow-hidden">
+                      <div className="px-6 pt-5 pb-3 flex-shrink-0">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Articles by Views</h3>
+                      </div>
+                      <div className="flex-1 overflow-x-auto">
+                        {analyticsData.topArticles && analyticsData.topArticles.length > 0 ? (
+                          <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
+                                <th className="py-2.5 px-4">#</th>
+                                <th className="py-2.5 px-4">Article</th>
+                                <th className="py-2.5 px-4">Views</th>
+                                <th className="py-2.5 px-4 text-right">Helpful</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-100">
+                              {analyticsData.topArticles.map((a: any, i: number) => (
+                                <tr key={a.id} className="hover:bg-zinc-50/50">
+                                  <td className="py-3 px-4 font-mono font-bold text-zinc-400">{i + 1}</td>
+                                  <td className="py-3 px-4 font-bold text-zinc-955 truncate max-w-[200px]" title={a.title}>{a.title}</td>
+                                  <td className="py-3 px-4 font-semibold text-zinc-650">{a.views}</td>
+                                  <td className="py-3 px-4 text-right font-bold text-green-700">{a.helpfulPct}%</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         ) : (
-                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No content statistics.</div>
+                          <div className="flex items-center justify-center py-10 text-zinc-400 italic font-semibold">No articles views logged.</div>
                         )}
                       </div>
+                    </div>
 
-
-
-                      {/* Recent Searches */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Recent Searches</h3>
-                          <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
-                            {analyticsData.totalGaps} gaps
-                          </span>
-                        </div>
+                    {/* ROW 2 — RIGHT: Recent Searches */}
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-md flex flex-col overflow-hidden">
+                      <div className="px-6 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Recent Searches</h3>
+                        <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
+                          {analyticsData.totalGaps} gaps
+                        </span>
+                      </div>
+                      <div className="flex-1 overflow-x-auto">
                         {analyticsData.recentSearches && analyticsData.recentSearches.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                              <thead>
-                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
-                                  <th className="py-2.5 px-2">Query</th>
-                                  <th className="py-2.5 px-2">Confidence</th>
-                                  <th className="py-2.5 px-2 text-right">Date</th>
+                          <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
+                                <th className="py-2.5 px-4">Query</th>
+                                <th className="py-2.5 px-4">Confidence</th>
+                                <th className="py-2.5 px-4 text-right">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-100">
+                              {analyticsData.recentSearches.map((s: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-zinc-50/50">
+                                  <td className="py-3 px-4 font-bold text-zinc-955 italic truncate max-w-[140px]" title={s.query}>"{s.query}"</td>
+                                  <td className="py-3 px-4 font-semibold text-zinc-650">{s.confidence}%</td>
+                                  <td className="py-3 px-4 text-right text-zinc-400 font-mono">{new Date(s.date).toLocaleDateString()}</td>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-zinc-100">
-                                {analyticsData.recentSearches.map((s: any, idx: number) => (
-                                  <tr key={idx} className="hover:bg-zinc-50/50">
-                                    <td className="py-3 px-2 font-bold text-zinc-955 italic truncate max-w-[140px]" title={s.query}>"{s.query}"</td>
-                                    <td className="py-3 px-2 font-semibold text-zinc-650">{s.confidence}%</td>
-                                    <td className="py-3 px-2 text-right text-zinc-400 font-mono">{new Date(s.date).toLocaleDateString()}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                            </tbody>
+                          </table>
                         ) : (
-                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No recent searches.</div>
+                          <div className="flex items-center justify-center py-10 text-zinc-400 italic font-semibold">No recent searches.</div>
                         )}
+                      </div>
+                      <div className="px-6 pb-5 pt-3 flex-shrink-0">
                         <button
                           type="button"
                           onClick={() => setActiveTab("gaps")}
-                          className="w-full bg-zinc-950 hover:bg-zinc-850 py-2.5 rounded-lg text-xs font-bold text-white transition-all text-center flex items-center justify-center gap-1.5 mt-4 shadow-sm"
+                          className="w-full bg-zinc-950 hover:bg-zinc-850 py-2.5 rounded-lg text-xs font-bold text-white transition-all text-center flex items-center justify-center gap-1.5 shadow-sm"
                         >
                           View All Gaps
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -817,51 +801,81 @@ export default function SuperAdminClient({
                           </svg>
                         </button>
                       </div>
+                    </div>
 
-                      {/* Articles Needing Attention */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-lg space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Articles Needing Attention</h3>
-                          <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
-                            Low helpful rate
-                          </span>
-                        </div>
-                        {analyticsData.articlesNeedingAttention && analyticsData.articlesNeedingAttention.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                              <thead>
-                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
-                                  <th className="py-3.5 px-4">Article</th>
-                                  <th className="py-3.5 px-4">Views</th>
-                                  <th className="py-3.5 px-4">Helpful</th>
-                                  <th className="py-3.5 px-4 text-right">Action</th>
+                    {/* ROW 3 — LEFT: Top Search Queries */}
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-md flex flex-col overflow-hidden">
+                      <div className="px-6 pt-5 pb-3 flex-shrink-0">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
+                      </div>
+                      <div className="flex-1 overflow-x-auto">
+                        {analyticsData.topSearchQueries && analyticsData.topSearchQueries.length > 0 ? (
+                          <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
+                                <th className="py-2.5 px-4">Query</th>
+                                <th className="py-2.5 px-4 text-right">Count</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-100">
+                              {analyticsData.topSearchQueries.map((q: any) => (
+                                <tr key={q.query} className="hover:bg-zinc-50/50">
+                                  <td className="py-3 px-4 font-bold text-zinc-955 italic">"{q.query}"</td>
+                                  <td className="py-3 px-4 text-right font-mono font-bold text-zinc-600">{q.count}x</td>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-zinc-100">
-                                {analyticsData.articlesNeedingAttention.map((a: any) => (
-                                  <tr key={a.id} className="hover:bg-zinc-50/50">
-                                    <td className="py-3.5 px-4 font-bold text-zinc-955 truncate max-w-[140px]" title={a.title}>{a.title}</td>
-                                    <td className="py-3.5 px-4 text-zinc-600 font-semibold">{a.views}</td>
-                                    <td className="py-3.5 px-4 text-red-650 font-bold">{a.helpfulPct}%</td>
-                                    <td className="py-3.5 px-4 text-right">
-                                      <button
-                                        type="button"
-                                        onClick={() => setActiveTab("articles")}
-                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[9px] font-bold text-zinc-650 transition-colors shadow-2xs"
-                                      >
-                                        Review
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                            </tbody>
+                          </table>
                         ) : (
-                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No articles needing attention.</div>
+                          <div className="flex items-center justify-center py-10 text-zinc-400 italic font-semibold">No search queries logged.</div>
                         )}
                       </div>
                     </div>
+
+                    {/* ROW 3 — RIGHT: Articles Needing Attention */}
+                    <div className="rounded-xl border border-zinc-200 bg-white shadow-md flex flex-col overflow-hidden">
+                      <div className="px-6 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Articles Needing Attention</h3>
+                        <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                          Low helpful rate
+                        </span>
+                      </div>
+                      <div className="flex-1 overflow-x-auto">
+                        {analyticsData.articlesNeedingAttention && analyticsData.articlesNeedingAttention.length > 0 ? (
+                          <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
+                                <th className="py-3 px-4">Article</th>
+                                <th className="py-3 px-4">Views</th>
+                                <th className="py-3 px-4">Helpful</th>
+                                <th className="py-3 px-4 text-right">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-100">
+                              {analyticsData.articlesNeedingAttention.map((a: any) => (
+                                <tr key={a.id} className="hover:bg-zinc-50/50">
+                                  <td className="py-3 px-4 font-bold text-zinc-955 truncate max-w-[140px]" title={a.title}>{a.title}</td>
+                                  <td className="py-3 px-4 text-zinc-600 font-semibold">{a.views}</td>
+                                  <td className="py-3 px-4 text-red-650 font-bold">{a.helpfulPct}%</td>
+                                  <td className="py-3 px-4 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveTab("articles")}
+                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[9px] font-bold text-zinc-650 transition-colors shadow-2xs"
+                                    >
+                                      Review
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div className="flex items-center justify-center py-10 text-zinc-400 italic font-semibold">No articles needing attention.</div>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               )}
