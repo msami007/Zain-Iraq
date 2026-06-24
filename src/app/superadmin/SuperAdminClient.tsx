@@ -70,7 +70,9 @@ export default function SuperAdminClient({
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
     try {
-      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}`);
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&_t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setAnalyticsData(data);
@@ -606,7 +608,19 @@ export default function SuperAdminClient({
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === "dashboard" && (
             <div className="space-y-6">
-
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={fetchAnalytics}
+                  disabled={loadingAnalytics}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                  {loadingAnalytics ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
 
               {loadingAnalytics && !analyticsData ? (
                 <div className="text-center py-16 text-zinc-450 font-semibold animate-pulse">Loading platform metrics...</div>

@@ -171,6 +171,12 @@ export default function AdminDeskWorkspace({
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditFilterActor, setAuditFilterActor] = useState("");
+  const [auditFilterAction, setAuditFilterAction] = useState("");
+  const [auditFilterTargetType, setAuditFilterTargetType] = useState("");
+  const [auditFilterLabel, setAuditFilterLabel] = useState("");
+  const [auditFilterDateFrom, setAuditFilterDateFrom] = useState("");
+  const [auditFilterDateTo, setAuditFilterDateTo] = useState("");
   const [activeTab, setActiveTab] = useState<"dashboard" | "articles" | "gaps" | "audit" | "workflows" | "analytics">("dashboard");
   const currentTab = overrideActiveTab || activeTab;
 
@@ -406,7 +412,9 @@ export default function AdminDeskWorkspace({
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
     try {
-      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}`);
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&_t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setAnalyticsData(data);
@@ -3380,6 +3388,7 @@ export default function AdminDeskWorkspace({
           )}
 
           {/* AUDIT LOGS VIEW */}
+<<<<<<< HEAD
           {currentTab === "audit" && (
             <div className="space-y-6">
               <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
@@ -3485,18 +3494,281 @@ export default function AdminDeskWorkspace({
                                 )}
                               </td>
                             </tr>
+=======
+          {currentTab === "audit" && (() => {
+            // Derive unique dropdown options from loaded logs
+            const uniqueActions = Array.from(new Set(auditLogs.map(l => l.action))).sort();
+            const uniqueTargetTypes = Array.from(new Set(auditLogs.map(l => l.target_type))).sort();
+
+            // Apply all active filters
+            const filteredLogs = auditLogs.filter(log => {
+              if (auditFilterActor) {
+                const q = auditFilterActor.toLowerCase();
+                const nameMatch = log.actor?.name?.toLowerCase().includes(q);
+                const emailMatch = log.actor?.email?.toLowerCase().includes(q);
+                if (!nameMatch && !emailMatch) return false;
+              }
+              if (auditFilterAction && log.action !== auditFilterAction) return false;
+              if (auditFilterTargetType && log.target_type !== auditFilterTargetType) return false;
+              if (auditFilterLabel && !log.target_label.toLowerCase().includes(auditFilterLabel.toLowerCase())) return false;
+              if (auditFilterDateFrom) {
+                const from = new Date(auditFilterDateFrom);
+                if (new Date(log.created_at) < from) return false;
+              }
+              if (auditFilterDateTo) {
+                const to = new Date(auditFilterDateTo);
+                to.setHours(23, 59, 59, 999);
+                if (new Date(log.created_at) > to) return false;
+              }
+              return true;
+            });
+
+            const hasActiveFilters = auditFilterActor || auditFilterAction || auditFilterTargetType || auditFilterLabel || auditFilterDateFrom || auditFilterDateTo;
+
+            return (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
+
+                  {/* Header */}
+                  <div className="border-b border-zinc-200 bg-zinc-50/50 p-4 flex justify-between items-start gap-4">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">System Audit Logs</h3>
+                      <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
+                        {hasActiveFilters ? `${filteredLogs.length} of ${auditLogs.length} entries` : `${auditLogs.length} log entries`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (filteredLogs.length === 0) return;
+                          downloadCSV(
+                            `audit-log-${new Date().toISOString().split("T")[0]}.csv`,
+                            filteredLogs.map(l => [
+                              new Date(l.created_at).toLocaleString(),
+                              l.actor?.name || "System",
+                              l.actor?.email || "",
+                              l.action,
+                              l.target_type,
+                              l.target_label,
+                            ]),
+                            ["Timestamp", "Actor Name", "Actor Email", "Action", "Target Type", "Target Label"]
+>>>>>>> 6560a16f952a222be2316b4078dc2f87ab5e7255
                           );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                        }}
+                        className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export CSV
+                      </button>
+                      <button
+                        type="button"
+                        onClick={fetchAuditLogs}
+                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filter Bar */}
+                  <div className="border-b border-zinc-100 bg-zinc-50/30 px-4 py-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
+                      {/* Date From */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">From Date</label>
+                        <input
+                          type="date"
+                          value={auditFilterDateFrom}
+                          onChange={e => setAuditFilterDateFrom(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-800 font-medium outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-200 transition-colors"
+                        />
+                      </div>
+                      {/* Date To */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">To Date</label>
+                        <input
+                          type="date"
+                          value={auditFilterDateTo}
+                          onChange={e => setAuditFilterDateTo(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-800 font-medium outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-200 transition-colors"
+                        />
+                      </div>
+                      {/* Actor */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Actor</label>
+                        <div className="relative">
+                          <svg className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-350 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Name or email..."
+                            value={auditFilterActor}
+                            onChange={e => setAuditFilterActor(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white pl-6 pr-2.5 py-1.5 text-[11px] text-zinc-800 font-medium outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-200 transition-colors placeholder:text-zinc-350"
+                          />
+                        </div>
+                      </div>
+                      {/* Action */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Action</label>
+                        <select
+                          value={auditFilterAction}
+                          onChange={e => setAuditFilterAction(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-800 font-medium outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-200 transition-colors appearance-none cursor-pointer"
+                        >
+                          <option value="">All actions</option>
+                          {uniqueActions.map(a => (
+                            <option key={a} value={a}>{a}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Target Type */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Target Type</label>
+                        <select
+                          value={auditFilterTargetType}
+                          onChange={e => setAuditFilterTargetType(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-800 font-medium outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-200 transition-colors appearance-none cursor-pointer"
+                        >
+                          <option value="">All types</option>
+                          {uniqueTargetTypes.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Target Label */}
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Target Label</label>
+                        <div className="relative">
+                          <svg className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-350 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Search label..."
+                            value={auditFilterLabel}
+                            onChange={e => setAuditFilterLabel(e.target.value)}
+                            className="w-full rounded-lg border border-zinc-200 bg-white pl-6 pr-2.5 py-1.5 text-[11px] text-zinc-800 font-medium outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-200 transition-colors placeholder:text-zinc-350"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Clear Filters */}
+                    {hasActiveFilters && (
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuditFilterActor("");
+                            setAuditFilterAction("");
+                            setAuditFilterTargetType("");
+                            setAuditFilterLabel("");
+                            setAuditFilterDateFrom("");
+                            setAuditFilterDateTo("");
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors"
+                        >
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                          Clear all filters
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                      <thead>
+                        <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                          <th className="p-4">Timestamp</th>
+                          <th className="p-4">Actor</th>
+                          <th className="p-4">Action</th>
+                          <th className="p-4">Target Type</th>
+                          <th className="p-4">Target Label</th>
+                          <th className="p-4">Rollback</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-150">
+                        {filteredLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
+                              {hasActiveFilters ? "No logs match the current filters." : "No audit logs recorded."}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredLogs.map((log) => {
+                            const canRollback = log.target_type === "Article" && log.before && Object.keys(log.before).length > 0;
+                            return (
+                              <tr key={log.id} className="hover:bg-zinc-50/50">
+                                <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
+                                <td className="p-4 font-bold text-zinc-900">
+                                  {log.actor?.name || "System"}{" "}
+                                  <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
+                                </td>
+                                <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
+                                <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
+                                <td className="p-4 text-zinc-955 font-semibold max-w-xs truncate">{log.target_label}</td>
+                                <td className="p-4">
+                                  {canRollback ? (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        if (!confirm(`Restore article to its state before "${log.action}"?`)) return;
+                                        const res = await fetch(`/api/v1/articles/${log.target_id}`, {
+                                          method: "PATCH",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ ...log.before, _rollback_from_audit: log.id }),
+                                        });
+                                        if (res.ok) {
+                                          alert("Article restored. Refreshing...");
+                                          window.location.reload();
+                                        } else {
+                                          const err = await res.json().catch(() => ({}));
+                                          alert(`Rollback failed: ${err.error || res.status}`);
+                                        }
+                                      }}
+                                      className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors whitespace-nowrap"
+                                    >
+                                      ↩ Restore
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] text-zinc-300 font-medium">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {currentTab === "dashboard" && (
             <div className="space-y-6">
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={fetchAnalytics}
+                  disabled={loadingAnalytics}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                  {loadingAnalytics ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
               {loadingAnalytics && !analyticsData ? (
                 <div className="text-center py-12 text-zinc-450 font-semibold animate-pulse">
                   Loading dashboard metrics...
@@ -3768,6 +4040,7 @@ export default function AdminDeskWorkspace({
                   {/* Time-window toolbar + export */}
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-lg">
+
                       {(["7d", "30d", "all"] as const).map(w => (
                         <button
                           key={w}
@@ -3808,6 +4081,17 @@ export default function AdminDeskWorkspace({
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                       </svg>
                       Export CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fetchAnalytics}
+                      disabled={loadingAnalytics}
+                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs disabled:opacity-50"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                      </svg>
+                      {loadingAnalytics ? "Refreshing…" : "Refresh"}
                     </button>
                   </div>
 
