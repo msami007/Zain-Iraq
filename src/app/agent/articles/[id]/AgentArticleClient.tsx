@@ -57,6 +57,8 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
   const [copied, setCopied]         = useState(false);
   const [feedback, setFeedback]     = useState<"helpful" | "missing" | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [commentText, setCommentText] = useState("");
 
   const copy = () => {
     navigator.clipboard.writeText(article.copyMacro).then(() => {
@@ -75,6 +77,37 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
         body: JSON.stringify({ article_id: article.id, helpful, channel: "agent" }),
       });
       setFeedback(helpful ? "helpful" : "missing");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitMissingFeedback = async (comment: string) => {
+    if (feedback || submitting) return;
+    setSubmitting(true);
+    try {
+      await fetch("/api/v1/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ article_id: article.id, helpful: false, comment, channel: "agent" }),
+      });
+
+      await fetch("/api/v1/gaps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query_text: `Missing info on article: ${article.title}`,
+          comment: comment.trim(),
+          source: "article_flag",
+          flagged_article_id: article.id,
+          channel: "agent",
+        }),
+      });
+
+      setFeedback("missing");
+      setShowCommentModal(false);
     } catch (e) {
       console.error(e);
     } finally {
@@ -338,7 +371,7 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
                   </button>
                   <button
                     type="button"
-                    onClick={() => submitFeedback(false)}
+                    onClick={() => setShowCommentModal(true)}
                     disabled={submitting}
                     className="flex items-center justify-center rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-2.5 text-xs font-semibold text-zinc-700 transition-all disabled:opacity-40"
                   >
@@ -362,6 +395,52 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
 
         </div>
       </div>
+      {showCommentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl space-y-4 text-left">
+            <div>
+              <h3 className="text-sm font-extrabold text-zinc-955">Flag Article: Missing Info</h3>
+              <p className="text-xs text-zinc-500 font-semibold mt-1">
+                Please describe what information is missing or needs updating in this article.
+              </p>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              await submitMissingFeedback(commentText);
+            }} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block mb-1.5">Comments / Feedback</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-250 bg-zinc-50 px-3 py-2 text-xs text-zinc-955 focus:border-zinc-955 focus:bg-white focus:outline-none"
+                  placeholder="e.g. The procedure says to use option B, but option B has been renamed to option C..."
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowCommentModal(false)}
+                  className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-4 py-2 text-xs font-bold text-zinc-700 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-lg bg-zinc-950 hover:bg-zinc-800 disabled:opacity-55 px-4 py-2 text-xs font-bold text-white transition-all"
+                >
+                  {submitting ? "Submitting..." : "Submit Feedback"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

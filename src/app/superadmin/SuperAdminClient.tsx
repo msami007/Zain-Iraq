@@ -61,7 +61,31 @@ export default function SuperAdminClient({
   tenantName,
   signOutAction,
 }: SuperAdminClientProps) {
-  const [activeTab, setActiveTab] = useState<"orgs" | "users" | "teams" | "articles" | "gaps" | "workflows" | "audit">("orgs");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "orgs" | "users" | "teams" | "articles" | "gaps" | "workflows" | "audit">("dashboard");
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "90d" | "all">("all");
+
+  const fetchAnalytics = async () => {
+    setLoadingAnalytics(true);
+    try {
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsData(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch analytics:", e);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "dashboard") {
+      fetchAnalytics();
+    }
+  }, [activeTab]);
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -391,6 +415,21 @@ export default function SuperAdminClient({
               <div className="space-y-0.5">
                 <button
                   type="button"
+                  onClick={() => setActiveTab("dashboard")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                    activeTab === "dashboard" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <rect x="3" y="3" width="7" height="9" rx="1"/>
+                    <rect x="14" y="3" width="7" height="5" rx="1"/>
+                    <rect x="14" y="12" width="7" height="9" rx="1"/>
+                    <rect x="3" y="16" width="7" height="5" rx="1"/>
+                  </svg>
+                  Dashboard
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveTab("orgs")}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "orgs" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
@@ -546,14 +585,15 @@ export default function SuperAdminClient({
         <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
           <div>
             <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide text-left">
-              {activeTab === "orgs" && "Organizations Control"}
-              {activeTab === "users" && "User Accounts & Permissions"}
-              {activeTab === "teams" && "Teams Manager"}
-              {activeTab === "articles" && "Articles Manager"}
-              {activeTab === "gaps" && "Knowledge Gaps"}
-              {activeTab === "workflows" && "Workflows Queue"}
-              {activeTab === "audit" && "Audit Logs View"}
-            </h2>
+                {activeTab === "dashboard" && "Analytics Dashboard"}
+                {activeTab === "orgs" && "Organizations Control"}
+                {activeTab === "users" && "User Accounts & Permissions"}
+                {activeTab === "teams" && "Teams Manager"}
+                {activeTab === "articles" && "Articles Manager"}
+                {activeTab === "gaps" && "Knowledge Gaps"}
+                {activeTab === "workflows" && "Workflows Queue"}
+                {activeTab === "audit" && "Audit Logs View"}
+              </h2>
           </div>
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
@@ -563,6 +603,271 @@ export default function SuperAdminClient({
         </header>
 
         <div className="flex-1 overflow-y-auto p-8">
+          {activeTab === "dashboard" && (
+            <div className="space-y-6">
+
+
+              {loadingAnalytics && !analyticsData ? (
+                <div className="text-center py-16 text-zinc-450 font-semibold animate-pulse">Loading platform metrics...</div>
+              ) : !analyticsData ? (
+                <div className="text-center py-16 text-zinc-400 italic">No analytics data available.</div>
+              ) : (
+                <div className="space-y-6">
+                  {/* KPI Row - No colorful accents, strictly matching website design */}
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Views</span>
+                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
+                        {analyticsData.totalViews.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Helpful Rate</span>
+                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
+                        {analyticsData.helpfulRate}%
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Knowledge Gaps</span>
+                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
+                        {analyticsData.totalGaps.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Searches</span>
+                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
+                        {analyticsData.totalSearches.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Avg. Confidence</span>
+                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
+                        {analyticsData.avgConfidence}%
+                      </span>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Articles</span>
+                      <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
+                        {analyticsData.totalArticles.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Two-Column Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+                    {/* Left Column */}
+                    <div className="space-y-6">
+                      {/* Views by Category */}
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Views by Category</h3>
+                        {analyticsData.viewsByCategory && analyticsData.viewsByCategory.length > 0 ? (
+                          <div className="max-h-[240px] overflow-y-auto pr-1 space-y-3.5 no-scrollbar">
+                            {analyticsData.viewsByCategory.map((c: any) => {
+                              const maxCount = Math.max(...analyticsData.viewsByCategory.map((x: any) => x.count), 1);
+                              const percentage = (c.count / maxCount) * 100;
+                              return (
+                                <div key={c.name} className="space-y-1.5">
+                                  <div className="flex justify-between text-xs font-semibold">
+                                    <span className="text-zinc-700">{c.name}</span>
+                                    <span className="text-zinc-900 font-bold">{c.count} views</span>
+                                  </div>
+                                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden border border-zinc-200">
+                                    <div className="bg-zinc-900 h-full rounded-full" style={{ width: `${percentage}%` }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No views data</div>
+                        )}
+                      </div>
+
+                      {/* Top Articles by Views */}
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Articles by Views</h3>
+                        {analyticsData.topArticles && analyticsData.topArticles.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                  <th className="py-2.5 px-2">#</th>
+                                  <th className="py-2.5 px-2">Article</th>
+                                  <th className="py-2.5 px-2">Views</th>
+                                  <th className="py-2.5 px-2 text-right">Helpful</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-150">
+                                {analyticsData.topArticles.map((a: any, i: number) => (
+                                  <tr key={a.id} className="hover:bg-zinc-50/50">
+                                    <td className="py-3 px-2 font-mono font-bold text-zinc-400">{i + 1}</td>
+                                    <td className="py-3 px-2 font-bold text-zinc-950 truncate max-w-[200px]" title={a.title}>{a.title}</td>
+                                    <td className="py-3 px-2 font-semibold text-zinc-650">{a.views}</td>
+                                    <td className="py-3 px-2 text-right font-bold text-green-700">{a.helpfulPct}%</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No articles views logged.</div>
+                        )}
+                      </div>
+
+                      {/* Top Search Queries */}
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
+                        {analyticsData.topSearchQueries && analyticsData.topSearchQueries.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                  <th className="py-2.5 px-2">Query</th>
+                                  <th className="py-2.5 px-2 text-right">Count</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-150">
+                                {analyticsData.topSearchQueries.map((q: any) => (
+                                  <tr key={q.query} className="hover:bg-zinc-50/50">
+                                    <td className="py-3 px-2 font-bold text-zinc-955 italic">"{q.query}"</td>
+                                    <td className="py-3 px-2 text-right font-mono font-bold text-zinc-600">{q.count}x</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No search queries logged.</div>
+                        )}
+                      </div>
+
+
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-6">
+                      {/* Content Breakdown */}
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Content Breakdown</h3>
+                        {analyticsData.contentBreakdown && analyticsData.contentBreakdown.length > 0 ? (
+                          <div className="space-y-3.5">
+                            {analyticsData.contentBreakdown.map((cb: any) => {
+                              const total = analyticsData.totalArticles || 1;
+                              const percentage = (cb.count / total) * 100;
+                              return (
+                                <div key={cb.status} className="space-y-1.5">
+                                  <div className="flex justify-between text-xs font-semibold">
+                                    <span className="text-zinc-700">{cb.status}</span>
+                                    <span className="text-zinc-900 font-bold">{cb.count} articles ({Math.round(percentage)}%)</span>
+                                  </div>
+                                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden border border-zinc-200">
+                                    <div className="bg-zinc-900 h-full rounded-full" style={{ width: `${percentage}%` }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No content statistics.</div>
+                        )}
+                      </div>
+
+
+
+                      {/* Recent Searches */}
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Recent Searches</h3>
+                          <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
+                            {analyticsData.totalGaps} gaps
+                          </span>
+                        </div>
+                        {analyticsData.recentSearches && analyticsData.recentSearches.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                  <th className="py-2.5 px-2">Query</th>
+                                  <th className="py-2.5 px-2">Confidence</th>
+                                  <th className="py-2.5 px-2 text-right">Date</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-150">
+                                {analyticsData.recentSearches.map((s: any, idx: number) => (
+                                  <tr key={idx} className="hover:bg-zinc-50/50">
+                                    <td className="py-3 px-2 font-bold text-zinc-955 italic truncate max-w-[140px]" title={s.query}>"{s.query}"</td>
+                                    <td className="py-3 px-2 font-semibold text-zinc-650">{s.confidence}%</td>
+                                    <td className="py-3 px-2 text-right text-zinc-400 font-mono">{new Date(s.date).toLocaleDateString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No recent searches.</div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("gaps")}
+                          className="w-full bg-zinc-950 hover:bg-zinc-850 py-2.5 rounded-lg text-xs font-bold text-white transition-all text-center flex items-center justify-center gap-1.5 mt-4 shadow-sm"
+                        >
+                          View All Gaps
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Articles Needing Attention */}
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Articles Needing Attention</h3>
+                          <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                            Low helpful rate
+                          </span>
+                        </div>
+                        {analyticsData.articlesNeedingAttention && analyticsData.articlesNeedingAttention.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                  <th className="py-2.5 px-2">Article</th>
+                                  <th className="py-2.5 px-2">Views</th>
+                                  <th className="py-2.5 px-2">Helpful</th>
+                                  <th className="py-2.5 px-2 text-right">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-150">
+                                {analyticsData.articlesNeedingAttention.map((a: any) => (
+                                  <tr key={a.id} className="hover:bg-zinc-50/50">
+                                    <td className="py-3 px-2 font-bold text-zinc-955 truncate max-w-[140px]" title={a.title}>{a.title}</td>
+                                    <td className="py-3 px-2 text-zinc-600 font-semibold">{a.views}</td>
+                                    <td className="py-3 px-2 text-red-650 font-bold">{a.helpfulPct}%</td>
+                                    <td className="py-3 px-2 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={() => setActiveTab("articles")}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[9px] font-bold text-zinc-650 transition-colors shadow-2xs"
+                                      >
+                                        Review
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-zinc-400 italic font-semibold">No articles needing attention.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "orgs" && (
             <div className="space-y-8">
               {/* Org Stats Card */}

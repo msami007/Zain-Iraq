@@ -117,12 +117,14 @@ export default async function CategoryPage({ params }: PageProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {articles.map((article) => (
-              <Link
-                key={article.id}
-                href={`/articles/${article.id}`}
-                className="group rounded-xl border border-zinc-200 bg-white p-5 shadow-xs hover:border-zinc-350 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3"
-              >
+            {articles.map((article) => {
+              const articleHref = user?.role === "Agent" ? `/agent/articles/${article.id}` : `/articles/${article.id}`;
+              return (
+                <Link
+                  key={article.id}
+                  href={articleHref}
+                  className="group rounded-xl border border-zinc-200 bg-white p-5 shadow-xs hover:border-zinc-350 hover:-translate-y-0.5 transition-all duration-200 flex flex-col gap-3"
+                >
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="rounded bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border border-zinc-200">
                     {category.name}
@@ -141,7 +143,7 @@ export default async function CategoryPage({ params }: PageProps) {
                   <span>{new Date(article.updated_at).toLocaleDateString()}</span>
                 </div>
               </Link>
-            ))}
+            );})}
           </div>
         )}
       </main>
