@@ -406,7 +406,9 @@ export default function AdminDeskWorkspace({
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true);
     try {
-      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}`);
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&_t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setAnalyticsData(data);
@@ -3476,6 +3478,19 @@ export default function AdminDeskWorkspace({
 
           {currentTab === "dashboard" && (
             <div className="space-y-6">
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={fetchAnalytics}
+                  disabled={loadingAnalytics}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                  {loadingAnalytics ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
               {loadingAnalytics && !analyticsData ? (
                 <div className="text-center py-12 text-zinc-450 font-semibold animate-pulse">
                   Loading dashboard metrics...
@@ -3747,6 +3762,7 @@ export default function AdminDeskWorkspace({
                   {/* Time-window toolbar + export */}
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-lg">
+
                       {(["7d", "30d", "all"] as const).map(w => (
                         <button
                           key={w}
@@ -3787,6 +3803,17 @@ export default function AdminDeskWorkspace({
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                       </svg>
                       Export CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fetchAnalytics}
+                      disabled={loadingAnalytics}
+                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs disabled:opacity-50"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                      </svg>
+                      {loadingAnalytics ? "Refreshing…" : "Refresh"}
                     </button>
                   </div>
 
