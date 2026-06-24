@@ -1298,6 +1298,13 @@ export default function AdminDeskWorkspace({
 
   return (
     <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full relative"}`}>
+      <style>{`
+  @keyframes tabFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tab-fade-in { animation: tabFadeIn 0.18s ease both; }
+`}</style>
       {/* Sidebar Backdrop for Mobile */}
       {!hideSidebar && mobileSidebarOpen && (
         <div
@@ -1308,10 +1315,10 @@ export default function AdminDeskWorkspace({
 
       {/* Sidebar - only show if hideSidebar is false */}
       {!hideSidebar && (
-        <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-200 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
+        <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-300 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}>
-          <div>
+          <div className="overflow-y-auto flex-1 min-h-0">
             {/* Brand */}
             <div className="px-5 py-5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
@@ -1328,7 +1335,7 @@ export default function AdminDeskWorkspace({
             {/* Navigation */}
             <nav className="px-3 pt-5 space-y-5">
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Workspace</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 px-3 mb-2">Workspace</p>
                 <div className="space-y-0.5">
                   <button
                     type="button"
@@ -1337,11 +1344,14 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "dashboard" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      currentTab === "dashboard" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      currentTab === "dashboard" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "dashboard" ? "text-amber-400/80" : ""}`}>
                       <rect x="3" y="3" width="7" height="9" rx="1"/>
                       <rect x="14" y="3" width="7" height="5" rx="1"/>
                       <rect x="14" y="12" width="7" height="9" rx="1"/>
@@ -1356,11 +1366,14 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "articles" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      currentTab === "articles" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      currentTab === "articles" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "articles" ? "text-amber-400/80" : ""}`}>
                       <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                       <polyline points="14 2 14 8 20 8"/>
                       <line x1="16" y1="13" x2="8" y2="13"/>
@@ -1376,11 +1389,14 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "gaps" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      currentTab === "gaps" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      currentTab === "gaps" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "gaps" ? "text-amber-400/80" : ""}`}>
                       <circle cx="11" cy="11" r="8"/>
                       <path d="m21 21-4.35-4.35"/>
                     </svg>
@@ -1393,11 +1409,14 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "workflows" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      currentTab === "workflows" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      currentTab === "workflows" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "workflows" ? "text-amber-400/80" : ""}`}>
                       <polyline points="17 1 21 5 17 9"/>
                       <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
                       <polyline points="7 23 3 19 7 15"/>
@@ -1417,11 +1436,14 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "audit" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      currentTab === "audit" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      currentTab === "audit" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "audit" ? "text-amber-400/80" : ""}`}>
                       <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
                       <path d="M12 6v6l4 2"/>
                     </svg>
@@ -1430,11 +1452,14 @@ export default function AdminDeskWorkspace({
                   <button
                     type="button"
                     onClick={() => { setActiveTab("glossary"); closeEditor(); setMobileSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "glossary" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      currentTab === "glossary" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      currentTab === "glossary" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "glossary" ? "text-amber-400/80" : ""}`}>
                       <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
                     </svg>
                     Glossary
@@ -1445,7 +1470,7 @@ export default function AdminDeskWorkspace({
           </div>
 
           {/* User Footer */}
-          <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3">
+          <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3 flex-shrink-0">
             <div className="flex items-center gap-2.5 px-1">
               <div className="h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
                 <span className="text-[11px] font-bold text-indigo-300">{userName?.[0]?.toUpperCase() ?? "A"}</span>
@@ -1511,7 +1536,7 @@ export default function AdminDeskWorkspace({
         )}
 
         {/* View Contents */}
-        <div className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8"}>
+        <div key={currentTab} className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8 tab-fade-in"}>
           {/* Notifications Banner — backed by Announcements API */}
           {!hideSidebar && notifications.length > 0 && (
             <div className="mb-4 space-y-2">

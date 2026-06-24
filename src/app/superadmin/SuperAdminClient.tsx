@@ -406,178 +406,108 @@ export default function SuperAdminClient({
         />
       )}
 
+      <style>{`
+        @keyframes tabFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .tab-fade-in { animation: tabFadeIn 0.18s ease both; }
+      `}</style>
+
       {/* Sidebar */}
-      <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-200 ease-in-out h-screen ${
+      <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-300 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
-        <div>
+        <div className="overflow-y-auto flex-1 min-h-0">
           {/* Brand */}
           <div className="px-5 py-5 border-b border-white/[0.06]">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-amber-400/[0.09] border border-amber-400/[0.18] flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(251 191 36 / 0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className="h-8 w-8 rounded-lg bg-amber-400/[0.12] border border-amber-400/[0.22] flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(251 191 36 / 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
               </div>
               <div>
                 <div className="text-[11px] font-extrabold text-white uppercase tracking-widest leading-none">Zain & Oodi</div>
-                <div className="text-[9px] font-semibold text-white/25 uppercase tracking-widest mt-1">Super Admin</div>
+                <div className="text-[9px] font-semibold text-white/30 uppercase tracking-widest mt-1">Super Admin</div>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="px-3 pt-5 space-y-5">
+          <nav className="px-3 pt-5 space-y-5 pb-4">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Platform</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 px-3 mb-2">Platform</p>
               <div className="space-y-0.5">
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("dashboard"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "dashboard" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <rect x="3" y="3" width="7" height="9" rx="1"/>
-                    <rect x="14" y="3" width="7" height="5" rx="1"/>
-                    <rect x="14" y="12" width="7" height="9" rx="1"/>
-                    <rect x="3" y="16" width="7" height="5" rx="1"/>
-                  </svg>
-                  Dashboard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("orgs"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "orgs" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
-                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
-                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 0-2 2h-2"/>
-                    <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
-                  </svg>
-                  Organizations
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("users"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "users" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                  User Accounts
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("teams"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "teams" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                  Teams Manager
-                </button>
+                {([
+                  { tab: "dashboard", label: "Dashboard", icon: <><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></> },
+                  { tab: "orgs", label: "Organizations", icon: <><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 0-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></> },
+                  { tab: "users", label: "User Accounts", icon: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></> },
+                  { tab: "teams", label: "Teams Manager", icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></> },
+                ] as const).map(({ tab, label, icon }) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }}
+                    className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      activeTab === tab
+                        ? "bg-white/[0.1] text-white"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      activeTab === tab ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${activeTab === tab ? "text-amber-400/80" : ""}`}>
+                      {icon}
+                    </svg>
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Content</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 px-3 mb-2">Content</p>
               <div className="space-y-0.5">
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("articles"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "articles" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <line x1="10" y1="9" x2="8" y2="9"/>
-                  </svg>
-                  Articles Manager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("gaps"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "gaps" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
-                  Gaps Queue
-                </button>
-                 <button
-                  type="button"
-                  onClick={() => { setActiveTab("workflows"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "workflows" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <polyline points="17 1 21 5 17 9"/>
-                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                    <polyline points="7 23 3 19 7 15"/>
-                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                  </svg>
-                  Workflows
-                  {articles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/20">
-                      {articles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("audit"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "audit" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                    <path d="M12 6v6l4 2"/>
-                  </svg>
-                  Audit Logs
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("glossary"); setMobileSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                    activeTab === "glossary" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                    <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
-                  </svg>
-                  Glossary
-                </button>
+                {([
+                  { tab: "articles", label: "Articles Manager", icon: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></> },
+                  { tab: "gaps", label: "Gaps Queue", icon: <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></> },
+                  { tab: "workflows", label: "Workflows", icon: <><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></> },
+                  { tab: "audit", label: "Audit Logs", icon: <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></> },
+                  { tab: "glossary", label: "Glossary", icon: <><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></> },
+                ] as const).map(({ tab, label, icon }) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }}
+                    className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                      activeTab === tab
+                        ? "bg-white/[0.1] text-white"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                      activeTab === tab ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                    }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${activeTab === tab ? "text-amber-400/80" : ""}`}>
+                      {icon}
+                    </svg>
+                    {label}
+                    {tab === "workflows" && articles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/20">
+                        {articles.filter((a: any) => a.status === "InReview" || a.status === "Approved").length}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
           </nav>
         </div>
 
         {/* User Footer */}
-        <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3">
+        <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3 flex-shrink-0">
           <div className="flex items-center gap-2.5 px-1">
             <div className="h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
               <span className="text-[11px] font-bold text-indigo-300">{userName?.[0]?.toUpperCase() ?? "S"}</span>
@@ -659,7 +589,7 @@ export default function SuperAdminClient({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
+        <div key={activeTab} className="flex-1 overflow-y-auto p-8 tab-fade-in">
           {activeTab === "dashboard" && (
             <div className="space-y-6">
 
