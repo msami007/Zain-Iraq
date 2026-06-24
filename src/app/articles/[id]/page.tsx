@@ -102,22 +102,27 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   }
 
   // Record view in audit log for analytics — runs server-side on every request (page is dynamic via auth())
-  if (user) {
-    try {
-      const db = getTenantDb(article.tenant_id);
+  try {
+    const db = getTenantDb(article.tenant_id);
+    // For guests the audit log still needs an actor — use the tenant's first user as a system stand-in
+    const actorId = user?.id ?? (await db.user.findFirst({
+      orderBy: { created_at: "asc" },
+      select: { id: true },
+    }))?.id ?? null;
+    if (actorId) {
       await db.auditLog.create({
         data: {
           tenant_id: article.tenant_id,
-          actor_id: user.id,
+          actor_id: actorId,
           action: "View Article",
           target_type: "Article",
           target_id: article.id,
           target_label: article.title,
         },
       });
-    } catch {
-      // Non-fatal — analytics failure must never break article rendering
     }
+  } catch {
+    // Non-fatal — analytics failure must never break article rendering
   }
 
   // Guest link access: token-based OR explicit ?view=guest — forces customer-only view regardless of login state
