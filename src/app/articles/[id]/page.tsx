@@ -1,10 +1,9 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma, getTenantDb } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ArticleFeedbackForm from "@/components/ArticleFeedbackForm";
 import CopyMacroButton from "./CopyMacroButton";
-import ArticleViewTracker from "./ArticleViewTracker";
 import { ArticleStatus, Channel } from "@prisma/client";
 import { parseMarkdownToHtml } from "@/lib/markdown";
 
@@ -102,6 +101,25 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     );
   }
 
+  // Record view in audit log for analytics — runs server-side on every request (page is dynamic via auth())
+  if (user) {
+    try {
+      const db = getTenantDb(article.tenant_id);
+      await db.auditLog.create({
+        data: {
+          tenant_id: article.tenant_id,
+          actor_id: user.id,
+          action: "View Article",
+          target_type: "Article",
+          target_id: article.id,
+          target_label: article.title,
+        },
+      });
+    } catch {
+      // Non-fatal — analytics failure must never break article rendering
+    }
+  }
+
   // Guest link access: token-based OR explicit ?view=guest — forces customer-only view regardless of login state
   const isGuestLinkAccess = !!token || view === "guest";
   const showAgentChannel = !isGuestLinkAccess && (user?.role === "Agent" || user?.role === "Admin" || user?.role === "SuperAdmin");
@@ -152,7 +170,6 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-10 space-y-8">
-        <ArticleViewTracker articleId={article.id} articleTitle={article.title} tenantId={article.tenant_id} />
         {/* Article Header Card */}
         <div className="rounded-xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xs space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
