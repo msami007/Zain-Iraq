@@ -1,4 +1,4 @@
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma, getTenantDb } from "@/lib/db";
 import { redirect } from "next/navigation";
 import AgentDeskWorkspace from "@/components/AgentDeskWorkspace";
@@ -191,100 +191,21 @@ export default async function AgentPage() {
   const brandingColor = (tenant.branding as any)?.primaryColor || "#09090B";
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 text-zinc-900 font-sans">
-      {/* Navbar */}
-      <header className="border-b border-zinc-200 bg-white sticky top-0 z-40 shadow-xs">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span 
-                className="h-3 w-3 rounded-full border border-black/10 shadow-xs" 
-                style={{ backgroundColor: brandingColor }} 
-              />
-              <h1 className="text-base font-extrabold tracking-tight text-zinc-950 flex items-center gap-2">
-                {tenant.name}
-                <span className="text-zinc-300 font-normal">|</span>
-                <span className="text-zinc-650 font-bold text-xs uppercase tracking-wider">Agent Desk</span>
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-semibold text-zinc-900">{name}</div>
-                <div className="text-xs text-zinc-500 font-mono">{email}</div>
-              </div>
-
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/login" });
-                }}
-              >
-                <button
-                  type="submit"
-                  className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-4 py-2 text-xs font-semibold text-zinc-700 hover:text-zinc-950 transition-all shadow-sm"
-                >
-                  Sign Out
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        
-        {/* Banner */}
-        {(() => {
-          const hour = new Date().getHours();
-          const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-          return (
-            <div className="rounded-xl border border-zinc-200 bg-white px-8 py-6 shadow-sm text-left">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-5">
-                  <div
-                    className="h-11 w-11 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm"
-                    style={{ backgroundColor: brandingColor }}
-                  >
-                    {(name ?? "A").charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2 className="text-base font-extrabold text-zinc-950 tracking-tight">
-                      {greeting}, {name?.split(" ")[0]}.
-                    </h2>
-                    <p className="text-xs text-zinc-400 font-medium mt-0.5">
-                      {role} &middot; {tenant.name} &middot; You are currently active in the support queue.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-[10px] font-bold text-green-700 uppercase tracking-wider">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                    Shift Active
-                  </span>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest border border-zinc-200 rounded-lg px-3 py-1.5">
-                    {tenant.slug.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Workspace Workspace Component */}
-        <AgentDeskWorkspace
-          initialCases={dummyCases}
-          currentUserId={userId}
-          tenantId={tenantId}
-          todaySearches={todaySearchesCount}
-          helpfulnessRate={helpfulnessRate}
-          tenants={serializedTenants}
-          initialCategories={serializedCategories}
-          userRole={role}
-          userName={name || undefined}
-        />
-      </main>
+    <div className="text-zinc-900 font-sans">
+      <AgentDeskWorkspace
+        initialCases={dummyCases}
+        currentUserId={userId}
+        tenantId={tenantId}
+        todaySearches={todaySearchesCount}
+        helpfulnessRate={helpfulnessRate}
+        tenants={serializedTenants}
+        initialCategories={serializedCategories}
+        userRole={role}
+        userName={name || undefined}
+        userEmail={email || undefined}
+        tenantName={tenant.name}
+        brandingColor={brandingColor}
+      />
     </div>
   );
 }

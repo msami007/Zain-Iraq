@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { signOut } from "next-auth/react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
 import { parseMarkdownToHtml } from "@/lib/markdown";
 import CustomerSearchWorkspace from "@/components/CustomerSearchWorkspace";
@@ -41,6 +42,9 @@ type AgentWorkspaceProps = {
   initialCategories: { id: string; name: string; slug: string; tenant_id: string }[];
   userRole?: string;
   userName?: string;
+  userEmail?: string;
+  tenantName?: string;
+  brandingColor?: string;
 };
 
 export default function AgentDeskWorkspace({
@@ -53,6 +57,9 @@ export default function AgentDeskWorkspace({
   initialCategories,
   userRole,
   userName,
+  userEmail,
+  tenantName,
+  brandingColor = "#09090B",
 }: AgentWorkspaceProps) {
   const toast = useToast();
   const [cases, setCases] = useState<AgentCase[]>(initialCases);
@@ -740,92 +747,162 @@ export default function AgentDeskWorkspace({
     autoSearch();
   }, [resolutionCase?.id]);
 
-  const TAB_KEYS = ["tickets", "chat", "search", "gaps"] as const;
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+  const NAV_ITEMS = [
+    {
+      key: "tickets" as const,
+      label: "Ticket Console",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
+          <path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>
+        </svg>
+      ),
+    },
+    {
+      key: "chat" as const,
+      label: "Customer Chat",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      ),
+    },
+    {
+      key: "search" as const,
+      label: "Knowledge Base",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      ),
+    },
+    {
+      key: "gaps" as const,
+      label: "Gap Reports",
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+          <path d="M12 9v4"/><path d="M12 17h.01"/>
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        </svg>
+      ),
+    },
+  ];
 
-  useEffect(() => {
-    const idx = TAB_KEYS.indexOf(agentActiveTab);
-    const el = tabRefs.current[idx];
-    if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
-  }, [agentActiveTab]);
+  const sectionTitle: Record<string, string> = {
+    tickets: "Ticket Console",
+    chat: "Customer Chat",
+    search: "Knowledge Base",
+    gaps: "Gap Reports",
+  };
+
+  const rejectedCount = myArticles.filter((a: any) => a.status === "Rejected").length;
 
   return (
-    <div className="space-y-6">
-      {/* Top Level Console Navigation */}
-      <div className="relative flex items-stretch border-b border-zinc-200">
-        {(
-          [
-            {
-              key: "tickets",
-              label: "Ticket Console",
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/>
-                  <path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>
-                </svg>
-              ),
-            },
-            {
-              key: "chat",
-              label: "Customer Chat",
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-              ),
-            },
-            {
-              key: "search",
-              label: "Knowledge Base",
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-              ),
-            },
-            {
-              key: "gaps",
-              label: "Gap Reports",
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 9v4"/><path d="M12 17h.01"/>
-                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                </svg>
-              ),
-            },
-          ] as const
-        ).map((tab, i) => (
-          <button
-            key={tab.key}
-            ref={(el) => { tabRefs.current[i] = el; }}
-            type="button"
-            onClick={() => {
-              setAgentActiveTab(tab.key as any);
-              if (tab.key === "gaps") { loadMyGaps(); loadMyArticles(); }
-            }}
-            className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold transition-colors whitespace-nowrap ${
-              agentActiveTab === tab.key
-                ? "text-zinc-950"
-                : "text-zinc-400 hover:text-zinc-700"
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-            {tab.key === "gaps" && myArticles.filter((a: any) => a.status === "Rejected").length > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-red-600 text-white text-[9px] font-extrabold px-1">
-                {myArticles.filter((a: any) => a.status === "Rejected").length}
-              </span>
-            )}
-          </button>
-        ))}
+    <div className="min-h-screen flex bg-zinc-50 w-full text-left">
 
-        {/* Sliding indicator */}
-        <span
-          className="absolute bottom-0 h-0.5 bg-zinc-950 transition-all duration-200 ease-out"
-          style={{ left: indicator.left, width: indicator.width }}
-        />
-      </div>
+      {/* ── Sidebar ── */}
+      <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen">
+        <div>
+          {/* Brand */}
+          <div className="px-5 py-5 border-b border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <div
+                className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: `${brandingColor}18`, borderColor: `${brandingColor}30`, borderStyle: "solid", borderWidth: "1px" }}
+              >
+                <span className="h-2.5 w-2.5 rounded-full border border-white/10 shadow-xs" style={{ backgroundColor: brandingColor }} />
+              </div>
+              <div>
+                <div className="text-[11px] font-extrabold text-white uppercase tracking-widest leading-none truncate max-w-[120px]" title={tenantName}>{tenantName}</div>
+                <div className="text-[9px] font-semibold text-white/25 uppercase tracking-widest mt-1">Agent Workspace</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="px-3 pt-5 space-y-0.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Workspace</p>
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => {
+                  setAgentActiveTab(item.key);
+                  if (item.key === "gaps") { loadMyGaps(); loadMyArticles(); }
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                  agentActiveTab === item.key
+                    ? "bg-white/[0.09] text-white"
+                    : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                }`}
+              >
+                {item.icon}
+                {item.label}
+                {item.key === "gaps" && rejectedCount > 0 && (
+                  <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-red-500/20 text-red-300 border border-red-500/20">
+                    {rejectedCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* User Footer */}
+        <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3">
+          <div className="flex items-center gap-2.5 px-1">
+            <div className="h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-[11px] font-bold text-indigo-300">{userName?.[0]?.toUpperCase() ?? "A"}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-white truncate leading-none mb-0.5">{userName}</div>
+              <div className="text-[10px] font-mono text-white/35 truncate">{userEmail}</div>
+            </div>
+          </div>
+          <div className="px-1">
+            <span className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-widest bg-amber-400/[0.08] border border-amber-400/[0.15] text-amber-400/70">
+              <span className="h-1 w-1 rounded-full bg-amber-400/70" />
+              {userRole}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/[0.13] px-3 py-2 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main Content ── */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
+
+        {/* Header Bar */}
+        <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-extrabold text-zinc-950 uppercase tracking-wide">
+              {sectionTitle[agentActiveTab]}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-green-50 border border-green-200 px-2.5 py-1 text-[10px] font-bold text-green-700 uppercase tracking-wider">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              Shift Active
+            </span>
+            <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
+              {todaySearches} searches today
+            </span>
+          </div>
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-8 space-y-6">
 
       {agentActiveTab === "tickets" && (
         <>
@@ -2015,7 +2092,7 @@ export default function AgentDeskWorkspace({
           </div>
 
           {/* My submitted gaps table */}
-          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
             <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 shrink-0">
@@ -2057,10 +2134,13 @@ export default function AgentDeskWorkspace({
                 <p className="text-xs text-zinc-400 max-w-xs">Use the form above to flag missing knowledge base content — it goes straight to the admin queue.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div
+                style={{ maxHeight: myGaps.length > 5 ? "340px" : undefined, overflowY: myGaps.length > 5 ? "auto" : undefined }}
+                className="overflow-x-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb:hover]:bg-zinc-300"
+              >
                 <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-zinc-100 bg-zinc-50/70">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-zinc-100 bg-zinc-50">
                       <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400 w-[28%]">Search Query</th>
                       <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400 w-[25%]">Your Feedback</th>
                       <th className="px-4 py-3 font-bold text-[10px] uppercase tracking-widest text-zinc-400">Hits</th>
@@ -2399,6 +2479,8 @@ export default function AgentDeskWorkspace({
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
