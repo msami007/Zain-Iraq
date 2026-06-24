@@ -229,6 +229,20 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
+              onClick={() => handleQuickLogin("admin1.zain@zain.com")}
+              className="rounded bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 text-[10px] font-bold text-blue-700 transition-colors border border-blue-200"
+            >
+              Zain Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin("admin.oodi@oodi.com")}
+              className="rounded bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 text-[10px] font-bold text-emerald-700 transition-colors border border-emerald-200"
+            >
+              OODI Admin
+            </button>
+            <button
+              type="button"
               onClick={() => handleQuickLogin("agent1.zain@zain.com")}
               className="rounded bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 text-[10px] font-bold text-purple-700 transition-colors border border-purple-200"
             >

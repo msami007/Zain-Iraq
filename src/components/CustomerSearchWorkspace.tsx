@@ -156,11 +156,42 @@ export default function CustomerSearchWorkspace({
 
   // ── Agent Mode UI ────────────────────────────────────────────────────────────
   if (agentMode) {
+    const [gapOpen, setGapOpen] = useState(false);
+    const [gapComment, setGapComment] = useState("");
+    const [gapSubmitting, setGapSubmitting] = useState(false);
+    const [gapDone, setGapDone] = useState(false);
+
+    const handleQuickGap = async () => {
+      if (!query.trim() || gapSubmitting) return;
+      setGapSubmitting(true);
+      try {
+        await fetch("/api/v1/gaps", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query_text: query.trim(),
+            comment: gapComment.trim() || undefined,
+            source: feedbackSource,
+            channel: feedbackChannel,
+            tenant_id: selectedTenant?.id,
+          }),
+        });
+        setGapDone(true);
+        setGapComment("");
+        setTimeout(() => { setGapDone(false); setGapOpen(false); }, 2500);
+      } catch {
+        // silently fail
+      } finally {
+        setGapSubmitting(false);
+      }
+    };
+
     return (
       <div className="w-full flex flex-col gap-6">
 
         {/* Search bar */}
-        <form onSubmit={handleSearchForm} className="flex flex-col sm:flex-row gap-2">
+        <form onSubmit={handleSearchForm} className="flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1 flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-900/5 shadow-sm transition-all">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -189,6 +220,60 @@ export default function CustomerSearchWorkspace({
               <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Search</>
             )}
           </button>
+        </div>
+
+        {/* Search gap — always visible below the search bar when a query exists */}
+        {query.trim() && (
+          <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-3.5 py-2.5 flex items-start gap-3">
+            <div className="mt-0.5 h-5 w-5 rounded-md bg-amber-100 flex items-center justify-center shrink-0">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                <path d="M12 9v4"/><path d="M12 17h.01"/>
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              {gapDone ? (
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-green-700">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Gap reported successfully
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-bold text-amber-800">Missing or poor results?</p>
+                    <button
+                      type="button"
+                      onClick={() => setGapOpen(v => !v)}
+                      className="text-[10px] font-bold text-amber-600 hover:text-amber-800 transition-colors shrink-0"
+                    >
+                      {gapOpen ? "Cancel" : "Report as Gap"}
+                    </button>
+                  </div>
+                  {gapOpen && (
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Optional: add context for the admin team…"
+                        value={gapComment}
+                        onChange={e => setGapComment(e.target.value)}
+                        className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-[11px] text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-amber-400 transition-colors"
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleQuickGap(); } }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleQuickGap}
+                        disabled={gapSubmitting}
+                        className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-3 py-1.5 text-[11px] font-bold text-white transition-colors"
+                      >
+                        {gapSubmitting ? "…" : "Submit"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
         </form>
 
         {/* Category pills */}
