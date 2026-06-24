@@ -16,13 +16,19 @@ export async function GET(req: NextRequest) {
     }
 
     const searchParams = req.nextUrl.searchParams;
-    const targetTenantId = role === "SuperAdmin" ? searchParams.get("tenant_id") || userTenantId : userTenantId;
+    const requestedTenantId = searchParams.get("tenant_id");
 
-    if (!targetTenantId) {
+    // SuperAdmin with no tenant_id filter → platform-wide view (all tenants)
+    const isSuperAdminAllTenants = role === "SuperAdmin" && !requestedTenantId;
+    const targetTenantId = role === "SuperAdmin"
+      ? requestedTenantId || userTenantId
+      : userTenantId;
+
+    if (!targetTenantId && !isSuperAdminAllTenants) {
       return NextResponse.json({ error: "Tenant ID is required" }, { status: 400 });
     }
 
-    const db = getTenantDb(targetTenantId);
+    const queryClient = isSuperAdminAllTenants ? prisma : getTenantDb(targetTenantId!);
 
     // Filter audit logs for regular Admins to only show actions by members of their teams
     let actorFilter: any = undefined;
@@ -31,18 +37,18 @@ export async function GET(req: NextRequest) {
         where: { user_id: userId }
       });
       const teamIds = userTeams.map((ut: any) => ut.team_id);
-      
+
       const teamMembers = await prisma.userTeam.findMany({
         where: { team_id: { in: teamIds } }
       });
       const memberIds = Array.from(new Set([...teamMembers.map((ut: any) => ut.user_id), userId]));
-      
+
       actorFilter = {
         actor_id: { in: memberIds }
       };
     }
 
-    const logs = await db.auditLog.findMany({
+    const logs = await queryClient.auditLog.findMany({
       where: actorFilter,
       orderBy: { created_at: "desc" },
       include: {

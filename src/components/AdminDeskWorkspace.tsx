@@ -526,7 +526,11 @@ export default function AdminDeskWorkspace({
 
   const fetchAuditLogs = async () => {
     try {
-      const res = await fetch(`/api/v1/audit?tenant_id=${tenantId}`);
+      // SuperAdmin omits tenant_id to receive logs from all tenants
+      const url = currentUserRole === "SuperAdmin"
+        ? "/api/v1/audit"
+        : `/api/v1/audit?tenant_id=${tenantId}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setAuditLogs(data);
