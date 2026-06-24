@@ -16,9 +16,11 @@ export default auth((req) => {
   const isPublicRoute =
     nextUrl.pathname === "/" ||
     nextUrl.pathname.startsWith("/articles") ||
+    nextUrl.pathname.startsWith("/categories") ||
     nextUrl.pathname.startsWith("/api/v1/health") ||
     nextUrl.pathname.startsWith("/api/v1/search") ||
-    nextUrl.pathname.startsWith("/api/v1/feedback");
+    nextUrl.pathname.startsWith("/api/v1/feedback") ||
+    nextUrl.pathname.startsWith("/api/v1/gaps");
 
   // Allow authentication endpoints to go through
   if (isAuthRoute) {
