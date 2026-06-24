@@ -60,7 +60,10 @@ type AuditLog = {
   id: string;
   action: string;
   target_type: string;
+  target_id: string;
   target_label: string;
+  before?: any;
+  after?: any;
   created_at: string;
   actor: { name: string; email: string };
 };
@@ -266,6 +269,67 @@ export default function AdminDeskWorkspace({
   // Analytics states
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "all">("7d");
+
+  // Notifications banner state — backed by Announcements API
+  type NotifEntry = { id: string; title: string; message: string; uiType: "info" | "warning" | "success" };
+  const annTypeToUi = (t: string): "info" | "warning" | "success" =>
+    t === "ticker" ? "warning" : t === "broadcast" ? "success" : "info";
+  const uiTypeToAnn = (t: "info" | "warning" | "success") =>
+    t === "warning" ? "ticker" : t === "success" ? "broadcast" : "banner";
+
+  const [notifications, setNotifications] = useState<NotifEntry[]>([]);
+  const [showNotifForm, setShowNotifForm] = useState(false);
+  const [newNotifTitle, setNewNotifTitle] = useState("");
+  const [newNotifMessage, setNewNotifMessage] = useState("");
+  const [newNotifType, setNewNotifType] = useState<"info" | "warning" | "success">("info");
+
+  useEffect(() => {
+    fetch("/api/v1/announcements")
+      .then(r => r.ok ? r.json() : [])
+      .then((data: any[]) =>
+        setNotifications(data.map(a => ({ id: a.id, title: a.title, message: a.body, uiType: annTypeToUi(a.type) })))
+      )
+      .catch(() => {});
+  }, []);
+
+  const dismissNotification = async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    await fetch("/api/v1/announcements", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  };
+
+  const addNotification = async () => {
+    const title = newNotifTitle.trim() || newNotifMessage.trim().slice(0, 60);
+    if (!newNotifMessage.trim()) return;
+    const res = await fetch("/api/v1/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, message: newNotifMessage.trim(), type: uiTypeToAnn(newNotifType) }),
+    }).catch(() => null);
+    if (res?.ok) {
+      const data = await res.json();
+      setNotifications(prev => [...prev, { id: data.id, title: data.title, message: data.body, uiType: annTypeToUi(data.type) }]);
+    } else {
+      // Optimistic fallback (offline / permissions)
+      setNotifications(prev => [...prev, { id: Date.now().toString(), title, message: newNotifMessage.trim(), uiType: newNotifType }]);
+    }
+    setNewNotifTitle("");
+    setNewNotifMessage("");
+    setShowNotifForm(false);
+  };
+
+  const downloadCSV = (filename: string, rows: string[][], headers: string[]) => {
+    const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -1276,6 +1340,68 @@ export default function AdminDeskWorkspace({
 
         {/* View Contents */}
         <div className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8"}>
+          {/* Notifications Banner — backed by Announcements API */}
+          {!hideSidebar && (notifications.length > 0 || showNotifForm) && (
+            <div className="mb-4 space-y-2">
+              {notifications.map(n => (
+                <div key={n.id} className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-xs font-semibold ${
+                  n.uiType === "warning" ? "border-amber-200 bg-amber-50 text-amber-800" :
+                  n.uiType === "success" ? "border-green-200 bg-green-50 text-green-800" :
+                  "border-blue-200 bg-blue-50 text-blue-800"
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <span>{n.uiType === "warning" ? "⚠️" : n.uiType === "success" ? "✅" : "ℹ️"}</span>
+                    <div>
+                      {n.title && n.title !== n.message.slice(0, 60) && (
+                        <p className="font-extrabold mb-0.5">{n.title}</p>
+                      )}
+                      <span>{n.message}</span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => dismissNotification(n.id)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity font-bold">×</button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                {showNotifForm ? (
+                  <div className="flex flex-col gap-2 flex-1 p-3 rounded-lg border border-zinc-200 bg-zinc-50">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newNotifTitle}
+                        onChange={e => setNewNotifTitle(e.target.value)}
+                        placeholder="Title (optional)..."
+                        className="w-40 shrink-0 rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-xs focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={newNotifMessage}
+                        onChange={e => setNewNotifMessage(e.target.value)}
+                        placeholder="Notification message for all agents..."
+                        className="flex-1 rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-xs focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select value={newNotifType} onChange={e => setNewNotifType(e.target.value as any)} className="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none">
+                        <option value="info">Info (blue)</option>
+                        <option value="warning">Warning (amber)</option>
+                        <option value="success">Success (green)</option>
+                      </select>
+                      <button type="button" onClick={addNotification} className="rounded bg-zinc-950 px-3 py-1.5 text-xs font-bold text-white">Broadcast</button>
+                      <button type="button" onClick={() => setShowNotifForm(false)} className="text-xs text-zinc-400 hover:text-zinc-700 font-semibold">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setShowNotifForm(true)} className="text-[10px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">+ Broadcast Notification</button>
+                )}
+              </div>
+            </div>
+          )}
+          {!hideSidebar && notifications.length === 0 && !showNotifForm && (
+            <div className="mb-4 flex justify-end">
+              <button type="button" onClick={() => setShowNotifForm(true)} className="text-[10px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">+ Broadcast Notification</button>
+            </div>
+          )}
+
           {/* Welcome Banner inside Content Panel for full-bleed Admin Workspace only */}
           {!hideSidebar && currentTab === "articles" && !editingArticle && !isCreating && (
             <div
@@ -3160,9 +3286,21 @@ export default function AdminDeskWorkspace({
                               )}
                               {g.status === "RESOLVED" && (
                                 <div className="flex items-center justify-end gap-2 text-xs">
-                                  <span className="text-[10px] text-zinc-400 font-medium truncate max-w-40">
-                                    Resolved ➔ {g.resolving_article?.title || "Linked Article"}
-                                  </span>
+                                  {g.resolving_article_id ? (
+                                    <Link
+                                      href={`/articles/${g.resolving_article_id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 hover:text-green-900 hover:underline truncate max-w-40 transition-colors"
+                                    >
+                                      {g.resolving_article?.title || "View Article"}
+                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                                      </svg>
+                                    </Link>
+                                  ) : (
+                                    <span className="text-[10px] text-zinc-400 font-medium">No article linked</span>
+                                  )}
                                   <button
                                     onClick={() => handleUnresolveGap(g.id)}
                                     className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
@@ -3187,14 +3325,43 @@ export default function AdminDeskWorkspace({
             <div className="space-y-6">
               <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
                 <div className="border-b border-zinc-200 bg-zinc-50/50 p-4 flex justify-between items-center">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">System Audit Logs</h3>
-                  <button
-                    type="button"
-                    onClick={fetchAuditLogs}
-                    className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
-                  >
-                    Refresh Logs
-                  </button>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">System Audit Logs</h3>
+                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{auditLogs.length} log entries</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (auditLogs.length === 0) return;
+                        downloadCSV(
+                          `audit-log-${new Date().toISOString().split("T")[0]}.csv`,
+                          auditLogs.map(l => [
+                            new Date(l.created_at).toLocaleString(),
+                            l.actor?.name || "System",
+                            l.actor?.email || "",
+                            l.action,
+                            l.target_type,
+                            l.target_label,
+                          ]),
+                          ["Timestamp", "Actor Name", "Actor Email", "Action", "Target Type", "Target Label"]
+                        );
+                      }}
+                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Export CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fetchAuditLogs}
+                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                    >
+                      Refresh Logs
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -3206,28 +3373,59 @@ export default function AdminDeskWorkspace({
                         <th className="p-4">Action</th>
                         <th className="p-4">Target Type</th>
                         <th className="p-4">Target Label</th>
+                        <th className="p-4">Rollback</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-150">
                       {auditLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="p-8 text-center text-zinc-400 font-semibold">
+                          <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
                             No audit logs recorded.
                           </td>
                         </tr>
                       ) : (
-                        auditLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-zinc-50/50">
-                            <td className="p-4 text-zinc-500 font-mono">{new Date(log.created_at).toLocaleString()}</td>
-                            <td className="p-4 font-bold text-zinc-900">
-                              {log.actor?.name || "System"}{" "}
-                              <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
-                            </td>
-                            <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
-                            <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
-                            <td className="p-4 text-zinc-955 font-semibold">{log.target_label}</td>
-                          </tr>
-                        ))
+                        auditLogs.map((log) => {
+                          const canRollback = log.target_type === "Article" && log.before && Object.keys(log.before).length > 0;
+                          return (
+                            <tr key={log.id} className="hover:bg-zinc-50/50">
+                              <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
+                              <td className="p-4 font-bold text-zinc-900">
+                                {log.actor?.name || "System"}{" "}
+                                <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
+                              </td>
+                              <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
+                              <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
+                              <td className="p-4 text-zinc-955 font-semibold max-w-xs truncate">{log.target_label}</td>
+                              <td className="p-4">
+                                {canRollback ? (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (!confirm(`Restore article to its state before "${log.action}"?`)) return;
+                                      const res = await fetch(`/api/v1/articles/${log.target_id}`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ ...log.before, _rollback_from_audit: log.id }),
+                                      });
+                                      if (res.ok) {
+                                        alert("Article restored. Refreshing...");
+                                        window.location.reload();
+                                      } else {
+                                        const err = await res.json().catch(() => ({}));
+                                        alert(`Rollback failed: ${err.error || res.status}`);
+                                      }
+                                    }}
+                                    className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors whitespace-nowrap"
+                                  >
+                                    ↩ Restore
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-zinc-300 font-medium">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -3245,28 +3443,95 @@ export default function AdminDeskWorkspace({
                 <div className="text-center py-12 text-zinc-400 italic">No analytics data available.</div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total KB Views</span>
-                      <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">
-                        {analyticsData.topArticles.reduce((acc: number, curr: any) => acc + curr.views, 0)}
-                      </span>
+                  {/* Time-window toolbar + export */}
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-lg">
+                      {(["7d", "30d", "all"] as const).map(w => (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => setAnalyticsWindow(w)}
+                          className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${analyticsWindow === w ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-900"}`}
+                        >
+                          {w === "7d" ? "Last 7 Days" : w === "30d" ? "Last 30 Days" : "All Time"}
+                        </button>
+                      ))}
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Macro Clicks</span>
-                      <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">
-                        {analyticsData.topArticles.reduce((acc: number, curr: any) => acc + curr.clicks, 0)}
-                      </span>
-                    </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Active Article Count</span>
-                      <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{articles.length}</span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trendRows = (() => {
+                          const days = analyticsWindow === "7d" ? 7 : analyticsWindow === "30d" ? 30 : 999;
+                          return analyticsData.dailyTrend
+                            .filter((_: any, i: number) => analyticsWindow === "all" || i >= analyticsData.dailyTrend.length - days)
+                            .map((t: any) => [t.date, String(t.views), String(t.clicks), String(t.views + t.clicks)]);
+                        })();
+                        downloadCSV(
+                          `analytics-${analyticsWindow}-${new Date().toISOString().split("T")[0]}.csv`,
+                          [
+                            ...trendRows,
+                            [],
+                            ["--- Top Articles ---"],
+                            ...analyticsData.topArticles.map((a: any) => [a.label, String(a.views), String(a.clicks), String(a.views + a.clicks)]),
+                            [],
+                            ["--- Agent Usage ---"],
+                            ...analyticsData.topAgents.map((ag: any) => [ag.name, ag.email, String(ag.views), String(ag.clicks)]),
+                          ],
+                          ["Date / Title", "Views", "Clicks", "Total"]
+                        );
+                      }}
+                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Export CSV
+                    </button>
                   </div>
 
+                  {/* Summary totals — consistent across all screens */}
+                  {(() => {
+                    const filteredTrend = analyticsData.dailyTrend.filter((_: any, i: number) => {
+                      if (analyticsWindow === "all") return true;
+                      const days = analyticsWindow === "7d" ? 7 : 30;
+                      return i >= analyticsData.dailyTrend.length - days;
+                    });
+                    const totalViews = analyticsData.topArticles.reduce((a: number, c: any) => a + c.views, 0);
+                    const totalClicks = analyticsData.topArticles.reduce((a: number, c: any) => a + c.clicks, 0);
+                    const windowViews = filteredTrend.reduce((a: any, c: any) => a + c.views, 0);
+                    const windowClicks = filteredTrend.reduce((a: any, c: any) => a + c.clicks, 0);
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total KB Views (All Time)</span>
+                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{totalViews.toLocaleString()}</span>
+                        </div>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Macro Clicks (All Time)</span>
+                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{totalClicks.toLocaleString()}</span>
+                        </div>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs border-l-4 border-l-blue-400">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Views in Window</span>
+                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{windowViews.toLocaleString()}</span>
+                          <span className="text-[10px] text-zinc-400 font-medium">{analyticsWindow === "7d" ? "Last 7 days" : analyticsWindow === "30d" ? "Last 30 days" : "All time"}</span>
+                        </div>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Published Articles</span>
+                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{articles.filter(a => a.status === "Published").length}</span>
+                          <span className="text-[10px] text-zinc-400 font-medium">of {articles.length} total</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-                    <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">7-Day Access Trends</h3>
+                    <div className="border-b border-zinc-200 bg-zinc-50/50 p-4 flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
+                        {analyticsWindow === "7d" ? "7-Day" : analyticsWindow === "30d" ? "30-Day" : "All-Time"} Access Trends
+                      </h3>
+                      <span className="text-[10px] text-zinc-400 font-medium">
+                        {analyticsWindow === "7d" ? "Showing last 7 days" : analyticsWindow === "30d" ? "Showing last 30 days" : "Showing all data"}
+                      </span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-zinc-800 text-left border-collapse">
@@ -3279,7 +3544,13 @@ export default function AdminDeskWorkspace({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-150">
-                          {analyticsData.dailyTrend.map((t: any) => (
+                          {analyticsData.dailyTrend
+                            .filter((_: any, i: number) => {
+                              if (analyticsWindow === "all") return true;
+                              const days = analyticsWindow === "7d" ? 7 : 30;
+                              return i >= analyticsData.dailyTrend.length - days;
+                            })
+                            .map((t: any) => (
                             <tr key={t.date} className="hover:bg-zinc-50/50">
                               <td className="p-4 font-mono font-bold text-zinc-650">{t.date}</td>
                               <td className="p-4 font-semibold text-zinc-800">{t.views} views</td>

@@ -530,6 +530,186 @@ async function main() {
     });
   }
 
+  // 8. Seed chat_cases for Zain (Task 42 — Day 3 QA)
+  const existingCases = await prisma.chatCase.count({ where: { tenant_id: zainTenant.id } });
+  if (existingCases === 0) {
+    const sampleCases = [
+      {
+        customer_name: "Zainab Jaafar", subject: "Cannot login to Zain app", priority: "high",
+        query_text: "I cannot login to my Zain app, it says network timeout",
+        context: { channel: "web-chat", device: "iPhone 14", os: "iOS 17" },
+      },
+      {
+        customer_name: "Ali Hussein", subject: "Check prepaid balance", priority: "normal",
+        query_text: "How do I check my Zain Iraq prepaid balance?",
+        context: { channel: "web-chat", device: "Samsung Galaxy S23", os: "Android 14" },
+      },
+      {
+        customer_name: "Mariam Abbas", subject: "Activate international roaming", priority: "high",
+        query_text: "I want to activate international roaming on my SIM before I travel tomorrow",
+        context: { channel: "web-chat", device: "iPhone 13", os: "iOS 16" },
+      },
+      {
+        customer_name: "Ahmed Al-Rashid", subject: "SIM card not working", priority: "high",
+        query_text: "My SIM shows no service after restarting. I need help urgently.",
+        context: { channel: "web-chat", device: "Xiaomi Mi 12", os: "Android 13" },
+      },
+      {
+        customer_name: "Fatima Al-Saadi", subject: "Data package not activated", priority: "normal",
+        query_text: "I purchased a 10GB data package but it has not been activated on my line",
+        context: { channel: "whatsapp", device: "Samsung A53", os: "Android 13" },
+      },
+      {
+        customer_name: "Omar Khalil", subject: "Transfer balance to family member", priority: "normal",
+        query_text: "Can I transfer credit from my prepaid account to another Zain number?",
+        context: { channel: "web-chat", device: "Huawei P50", os: "HarmonyOS" },
+      },
+    ];
+
+    for (const c of sampleCases) {
+      await prisma.chatCase.create({
+        data: {
+          tenant_id: zainTenant.id,
+          customer_name: c.customer_name,
+          subject: c.subject,
+          query_text: c.query_text,
+          priority: c.priority,
+          status: "waiting" as any,
+          context: c.context,
+          wait_started_at: new Date(Date.now() - Math.floor(Math.random() * 3600000)),
+        },
+      });
+    }
+    console.log("Seeded 6 chat cases for Zain.");
+
+    // Also seed 2 cases for OODI isolation test
+    await prisma.chatCase.create({
+      data: {
+        tenant_id: oodiTenant.id,
+        customer_name: "Hassan Mahmoud",
+        subject: "eSIM not working on new iPhone",
+        query_text: "I set up eSIM with OODI but it shows no signal on my new iPhone 15",
+        priority: "high",
+        status: "waiting" as any,
+        context: { channel: "app", device: "iPhone 15", os: "iOS 17" },
+        wait_started_at: new Date(Date.now() - 600000),
+      },
+    });
+    console.log("Seeded 1 chat case for OODI.");
+  } else {
+    console.log(`Chat cases already seeded (${existingCases} found).`);
+  }
+
+  // 9. Seed knowledge_gaps for Zain (Task 42 — Day 3 QA)
+  const existingGaps = await prisma.knowledgeGap.count({ where: { tenant_id: zainTenant.id } });
+  if (existingGaps === 0) {
+    const sampleGaps = [
+      { query_text: "turkey roaming package cost", occurrences: 12, channel: Channel.agent },
+      { query_text: "cancel data subscription mid-month refund", occurrences: 8, channel: Channel.default },
+      { query_text: "esim setup android not supported", occurrences: 5, channel: Channel.chatbot },
+      { query_text: "family share plan add member", occurrences: 3, channel: Channel.agent },
+      { query_text: "bills pay online bank transfer", occurrences: 7, channel: Channel.default },
+    ];
+
+    for (const g of sampleGaps) {
+      await prisma.knowledgeGap.create({
+        data: {
+          tenant_id: zainTenant.id,
+          query_text: g.query_text,
+          occurrences: g.occurrences,
+          channel: g.channel,
+          language: Language.en,
+          status: "NEW" as any,
+          reported_by: agent1Zain.id,
+        },
+      });
+    }
+
+    // Arabic language gap
+    await prisma.knowledgeGap.create({
+      data: {
+        tenant_id: zainTenant.id,
+        query_text: "كيف أشحن رصيد زين",
+        occurrences: 15,
+        channel: Channel.whatsapp,
+        language: Language.ar,
+        status: "NEW" as any,
+        reported_by: agent2Zain.id,
+      },
+    });
+    console.log("Seeded knowledge gaps for Zain.");
+  } else {
+    console.log(`Knowledge gaps already seeded (${existingGaps} found).`);
+  }
+
+  // 10. Seed Arabic article variant (Task 40 — RTL/Arabic seed content)
+  const firstZainArticle = await prisma.article.findFirst({
+    where: { tenant_id: zainTenant.id, status: ArticleStatus.Published },
+    include: { variants: true },
+  });
+
+  if (firstZainArticle) {
+    const hasArabicVariant = firstZainArticle.variants.some(v => v.channel === Channel.default);
+    if (!hasArabicVariant || firstZainArticle.language !== Language.ar) {
+      // Create or update an Arabic article to demonstrate RTL support
+      let arabicArticle = await prisma.article.findFirst({
+        where: { tenant_id: zainTenant.id, language: Language.ar }
+      });
+
+      if (!arabicArticle) {
+        const arabicCat = await prisma.category.findFirst({
+          where: { tenant_id: zainTenant.id }
+        });
+        if (arabicCat) {
+          arabicArticle = await prisma.article.create({
+            data: {
+              tenant_id: zainTenant.id,
+              title: "دليل تفعيل شريحة زين",
+              slug: "dalil-tafeel-shareha-zain",
+              category_id: arabicCat.id,
+              language: Language.ar,
+              status: ArticleStatus.Published,
+              owner_id: admin1Zain.id,
+              author_id: admin1Zain.id,
+              visibility: "PUBLIC",
+            },
+          });
+
+          await prisma.articleVariant.create({
+            data: {
+              article_id: arabicArticle.id,
+              channel: Channel.default,
+              short_answer: "لتفعيل شريحة زين، أدخل الشريحة في الجهاز وأعد تشغيله. ستستلم رسالة تأكيد خلال دقيقتين.",
+              detailed_steps: "1. أدخل شريحة زين في فتحة SIM في جهازك\n2. أعد تشغيل الهاتف\n3. انتظر ظهور شبكة زين العراق\n4. سيتم إرسال رسالة تأكيد التفعيل\n5. في حال عدم ظهور الشبكة، تواصل مع خدمة العملاء",
+            },
+          });
+
+          await prisma.articleVariant.create({
+            data: {
+              article_id: arabicArticle.id,
+              channel: Channel.agent,
+              short_answer: "تفعيل الشريحة: أعد إدخال الشريحة وأعد التشغيل. إذا استمرت المشكلة، افحص رقم IMEI.",
+              detailed_steps: "1. أعد إدخال الشريحة بشكل صحيح\n2. أعد تشغيل الجهاز\n3. تحقق من إعدادات شبكة الناقل (تلقائي)\n4. إذا لم تظهر الشبكة، اتصل بقسم التقنية لفحص IMEI",
+              copy_ready_macro: "عزيزي العميل، شكراً لتواصلك مع خدمة عملاء زين العراق. لتفعيل شريحتك، يرجى إعادة إدخال الشريحة وإعادة تشغيل الجهاز. سيتم الاتصال بكم خلال ساعة إذا استمرت المشكلة. مع تحيات فريق زين.",
+            },
+          });
+
+          // Assign to team
+          const firstTeam = await prisma.team.findFirst({ where: { tenant_id: zainTenant.id } });
+          if (firstTeam) {
+            await prisma.articleTeam.create({
+              data: { article_id: arabicArticle.id, team_id: firstTeam.id, tenant_id: zainTenant.id },
+            }).catch(() => {});
+          }
+
+          console.log("Arabic seed article created for RTL demo.");
+        }
+      } else {
+        console.log("Arabic article already exists.");
+      }
+    }
+  }
+
   console.log("Database seeded successfully.");
 }
 

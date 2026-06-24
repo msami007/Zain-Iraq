@@ -120,15 +120,27 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   const shortAnswer = displayVariant?.short_answer || "";
   const macroText = displayVariant?.copy_ready_macro || "";
 
+  // Role-scoped back navigation — agents go to /agent, admins to /admin, guests to /
+  const backHref = !user || isGuestLinkAccess
+    ? "/"
+    : user.role === "SuperAdmin" || user.role === "Admin"
+    ? "/admin"
+    : "/agent";
+  const backLabel = !user || isGuestLinkAccess
+    ? "Back to Home"
+    : user.role === "SuperAdmin" || user.role === "Admin"
+    ? "Admin Desk"
+    : "Agent Desk";
+
   return (
     <div className="min-h-screen bg-zinc-50/50 text-zinc-900 font-sans">
       <header className="border-b border-zinc-200 bg-white sticky top-0 z-40 shadow-xs">
         <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
           <Link
-            href="/"
+            href={backHref}
             className="inline-flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-955 transition-colors"
           >
-            ← Back to Home
+            ← {backLabel}
           </Link>
           {user && !isGuestLinkAccess && (
             <span className="rounded-full bg-zinc-100 border border-zinc-200 px-3 py-1 text-[10px] font-bold text-zinc-650 uppercase tracking-wider">

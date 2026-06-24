@@ -18,6 +18,18 @@ export default async function CategoryPage({ params }: PageProps) {
 
   const tenant = await prisma.tenant.findUnique({ where: { id: category.tenant_id } });
 
+  // Role-scoped back navigation
+  const backHref = !user
+    ? "/"
+    : user.role === "SuperAdmin" || user.role === "Admin"
+    ? "/admin"
+    : "/agent";
+  const backLabel = !user
+    ? "Back to Home"
+    : user.role === "SuperAdmin" || user.role === "Admin"
+    ? "Admin Desk"
+    : "Agent Desk";
+
   // Visibility and status rules mirror the articles list API
   const statusClause = user ? undefined : ArticleStatus.Published;
   const teamFilter: any = user
@@ -55,10 +67,10 @@ export default async function CategoryPage({ params }: PageProps) {
       <header className="border-b border-zinc-200 bg-white sticky top-0 z-40 shadow-xs">
         <div className="mx-auto max-w-4xl px-4 py-4 flex items-center justify-between">
           <Link
-            href="/"
+            href={backHref}
             className="inline-flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors"
           >
-            ← Back to Home
+            ← {backLabel}
           </Link>
           {tenant && (
             <span className="flex items-center gap-2 text-xs font-bold text-zinc-400">

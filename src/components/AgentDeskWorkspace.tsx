@@ -101,6 +101,7 @@ export default function AgentDeskWorkspace({
     created_at: string;
     reporter: { name: string } | null;
     claimer: { name: string } | null;
+    resolving_article_id: string | null;
     resolving_article: { title: string } | null;
   };
   const [myGaps, setMyGaps] = useState<GapEntry[]>([]);
@@ -289,7 +290,7 @@ export default function AgentDeskWorkspace({
 
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
-      setChatKbResults(data.results || []);
+      setChatKbResults((data.results || []).slice(0, 5));
     } catch (err: any) {
       console.error(err);
     } finally {
@@ -461,7 +462,7 @@ export default function AgentDeskWorkspace({
 
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
-      setKbResults(data.results || []);
+      setKbResults((data.results || []).slice(0, 5));
     } catch (err: any) {
       console.error(err);
     } finally {
@@ -589,6 +590,7 @@ export default function AgentDeskWorkspace({
   // Resolution page state
   const [resolutionCase, setResolutionCase] = useState<AgentCase | null>(null);
   const [resolutionArticle, setResolutionArticle] = useState<any | null>(null);
+  const [resolutionTopArticles, setResolutionTopArticles] = useState<any[]>([]);
   const [resolutionSearching, setResolutionSearching] = useState(false);
   const [resolvingCase, setResolvingCase] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -625,6 +627,7 @@ export default function AgentDeskWorkspace({
   useEffect(() => {
     if (!resolutionCase) {
       setResolutionArticle(null);
+      setResolutionTopArticles([]);
       setComposerText("");
       setGapFlaggedQuery(null);
       return;
@@ -638,17 +641,21 @@ export default function AgentDeskWorkspace({
           body: JSON.stringify({ query: resolutionCase.query_text, language: "en", channel: "agent" }),
         });
         const data = await res.json();
-        if (data.results?.length > 0) {
-          const top = data.results[0];
-          const artRes = await fetch(`/api/v1/articles/${top.article_id}`, {
-            headers: { "x-tenant-id": tenantId },
-          });
-          if (artRes.ok) {
-            const artData = await artRes.json();
-            setResolutionArticle({ ...artData, match_score: top.match_score });
-            // Seed composer with the best available agent-facing text so it's never blank
-            const agentVar = artData.variants?.find((v: any) => v.channel === "agent");
-            const defVar = artData.variants?.find((v: any) => v.channel === "default");
+        const topResults = (data.results || []).slice(0, 5);
+        if (topResults.length > 0) {
+          // Fetch full article details for all top results in parallel
+          const articleFetches = topResults.map((r: any) =>
+            fetch(`/api/v1/articles/${r.article_id}`, { headers: { "x-tenant-id": tenantId } })
+              .then(res => res.ok ? res.json().then(art => ({ ...art, match_score: r.match_score })) : null)
+              .catch(() => null)
+          );
+          const articles = (await Promise.all(articleFetches)).filter(Boolean);
+          setResolutionTopArticles(articles);
+          if (articles.length > 0) {
+            const top = articles[0];
+            setResolutionArticle(top);
+            const agentVar = top.variants?.find((v: any) => v.channel === "agent");
+            const defVar = top.variants?.find((v: any) => v.channel === "default");
             const seed =
               agentVar?.copy_ready_macro ||
               defVar?.copy_ready_macro ||
@@ -659,7 +666,7 @@ export default function AgentDeskWorkspace({
             return;
           }
         }
-        // No article found — seed a polite holding reply so the composer is never blank
+        setResolutionTopArticles([]);
         setComposerText(
           `Dear ${resolutionCase.customer_name},\n\nThank you for contacting Zain support regarding: "${resolutionCase.subject}".\n\nWe have reviewed your query and our team is looking into this for you now. We will follow up shortly with a resolution.\n\nBest regards,\nZain Customer Support`
         );
@@ -890,27 +897,61 @@ export default function AgentDeskWorkspace({
                         </>
                       )}
                     </button>
-                    <select className="rounded border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-600 focus:outline-none">
-                      <option>Transfer Queue...</option>
-                      <option>Billing &amp; Payments</option>
-                      <option>Technical Support</option>
-                      <option>Roaming Desk</option>
-                      <option>VIP Support</option>
-                    </select>
+                    <div className="flex items-center gap-2 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-400 cursor-not-allowed" title="CRM integration required — coming in next release">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      Transfer Queue (CRM — Coming Soon)
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* ── RIGHT: AI Recommendation ── */}
+              {/* ── RIGHT: AI Recommendation (Top 5) ── */}
               <div className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">AI Recommendation</h3>
-                  {resolutionArticle && (
-                    <span className="rounded border border-zinc-300 bg-white px-2.5 py-1 text-[10px] font-bold text-zinc-700 uppercase tracking-wider">
-                      {Math.round(resolutionArticle.match_score * 100)}% Match Confidence
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Top 5 Recommendations</h3>
+                  {resolutionTopArticles.length > 0 && (
+                    <span className="rounded border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-semibold text-zinc-500">
+                      {resolutionTopArticles.length} article{resolutionTopArticles.length !== 1 ? "s" : ""} found
                     </span>
                   )}
                 </div>
+
+                {/* Top-5 article selector */}
+                {!resolutionSearching && resolutionTopArticles.length > 1 && (
+                  <div className="space-y-1.5 border-b border-zinc-100 pb-4">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Select Article</p>
+                    {resolutionTopArticles.map((art, i) => (
+                      <button
+                        key={art.id}
+                        type="button"
+                        onClick={() => {
+                          setResolutionArticle(art);
+                          const agentVar = art.variants?.find((v: any) => v.channel === "agent");
+                          const defVar = art.variants?.find((v: any) => v.channel === "default");
+                          const seed = agentVar?.copy_ready_macro || defVar?.copy_ready_macro || agentVar?.short_answer || defVar?.short_answer || "";
+                          setComposerText(seed);
+                        }}
+                        className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all ${
+                          resolutionArticle?.id === art.id
+                            ? "border-zinc-900 bg-zinc-950 text-white"
+                            : "border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-800"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold truncate">{i + 1}. {art.title}</span>
+                          <span className={`shrink-0 text-[10px] font-bold ${resolutionArticle?.id === art.id ? "text-zinc-400" : "text-zinc-400"}`}>
+                            {Math.round(art.match_score * 100)}%
+                          </span>
+                        </div>
+                        {art.category?.name && (
+                          <p className={`text-[10px] mt-0.5 ${resolutionArticle?.id === art.id ? "text-zinc-500" : "text-zinc-400"}`}>{art.category.name}</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {resolutionSearching ? (
                   <div className="py-16 text-center space-y-3">
@@ -1025,28 +1066,56 @@ export default function AgentDeskWorkspace({
                   </div>
                 )}
 
-                {/* One-click gap flag — always shown after search completes */}
+                {/* Differentiated feedback — always shown after search completes */}
                 {!resolutionSearching && (
-                  <div className="border-t border-zinc-100 pt-4">
+                  <div className="border-t border-zinc-100 pt-4 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Report a Gap</p>
                     {gapFlaggedQuery === resolutionCase.query_text.trim() ? (
                       <p className="flex items-center gap-1.5 text-[10px] font-bold text-green-700">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12"/>
                         </svg>
-                        Flagged as knowledge gap
+                        Gap reported — Admin queue notified
                       </p>
                     ) : (
-                      <button
-                        type="button"
-                        disabled={gapFlagging}
-                        onClick={() => flagAsGap(resolutionCase.query_text)}
-                        className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                      >
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
-                        </svg>
-                        {gapFlagging ? "Flagging…" : "Flag this query as a knowledge gap"}
-                      </button>
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          type="button"
+                          disabled={gapFlagging}
+                          onClick={() => flagAsGap(resolutionCase.query_text, "agent")}
+                          className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 hover:text-amber-600 disabled:opacity-50 transition-colors"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                          </svg>
+                          {gapFlagging ? "Flagging…" : "Search Gap — article exists but hard to find (tagging issue)"}
+                        </button>
+                        {resolutionArticle && (
+                          <button
+                            type="button"
+                            disabled={gapFlagging}
+                            onClick={async () => {
+                              setGapFlagging(true);
+                              try {
+                                await fetch("/api/v1/feedback", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ article_id: resolutionArticle.id, helpful: false, comment: `Agent feedback: content issue — "${resolutionCase.query_text}"`, channel: "agent" }),
+                                });
+                                setGapFlaggedQuery(resolutionCase.query_text.trim());
+                                toast("Article content issue reported to content team.", "success");
+                              } catch { toast("Could not submit feedback.", "error"); }
+                              finally { setGapFlagging(false); }
+                            }}
+                            className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="10" y1="13" x2="14" y2="13"/><line x1="12" y1="11" x2="12" y2="15"/>
+                            </svg>
+                            Article Feedback — content is incorrect or missing
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -1419,7 +1488,7 @@ export default function AgentDeskWorkspace({
 
                 {chatSearched ? (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{chatKbResults.length} result{chatKbResults.length !== 1 ? "s" : ""}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Top {chatKbResults.length} result{chatKbResults.length !== 1 ? "s" : ""}</p>
                     {chatKbResults.length === 0 ? (
                       <p className="text-[11px] text-zinc-400 italic py-2">No articles matched.</p>
                     ) : (
@@ -1437,27 +1506,55 @@ export default function AgentDeskWorkspace({
                         ))}
                       </div>
                     )}
-                    {/* One-click gap flag */}
-                    <div className="border-t border-zinc-100 pt-2">
+                    {/* Differentiated gap flag */}
+                    <div className="border-t border-zinc-100 pt-2 space-y-1.5">
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Report a Gap</p>
                       {gapFlaggedQuery === chatKbQuery.trim() ? (
                         <p className="flex items-center gap-1 text-[10px] font-bold text-green-700">
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"/>
                           </svg>
-                          Flagged as gap
+                          Gap reported
                         </p>
                       ) : (
-                        <button
-                          type="button"
-                          disabled={gapFlagging}
-                          onClick={() => flagAsGap(chatKbQuery)}
-                          className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                        >
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
-                          </svg>
-                          {gapFlagging ? "Flagging…" : "Flag as gap"}
-                        </button>
+                        <div className="space-y-1">
+                          <button
+                            type="button"
+                            disabled={gapFlagging}
+                            onClick={() => flagAsGap(chatKbQuery, "agent")}
+                            className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-amber-600 disabled:opacity-50 transition-colors"
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            Search Gap (tagging issue)
+                          </button>
+                          {chatPreviewArticle && (
+                            <button
+                              type="button"
+                              disabled={gapFlagging}
+                              onClick={async () => {
+                                setGapFlagging(true);
+                                try {
+                                  await fetch("/api/v1/feedback", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ article_id: chatPreviewArticle.id, helpful: false, comment: `Chat KB: content issue — "${chatKbQuery}"`, channel: "agent" }),
+                                  });
+                                  setGapFlaggedQuery(chatKbQuery.trim());
+                                  toast("Article content issue reported.", "success");
+                                } catch { toast("Could not submit feedback.", "error"); }
+                                finally { setGapFlagging(false); }
+                              }}
+                              className="flex items-center gap-1 text-[10px] font-semibold text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                              </svg>
+                              Article Feedback (content issue)
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1872,9 +1969,21 @@ export default function AgentDeskWorkspace({
                               : <span className="text-zinc-400 italic">Unassigned</span>}
                           </td>
                           <td className="px-4 py-4 max-w-[200px]">
-                            {gap.resolving_article
-                              ? <span className="font-semibold text-green-700 truncate block">{gap.resolving_article.title}</span>
-                              : <span className="text-zinc-400 italic">Pending</span>}
+                            {gap.resolving_article && gap.resolving_article_id ? (
+                              <a
+                                href={`/articles/${gap.resolving_article_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-semibold text-green-700 hover:text-green-900 hover:underline truncate transition-colors"
+                              >
+                                {gap.resolving_article.title}
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                                </svg>
+                              </a>
+                            ) : (
+                              <span className="text-zinc-400 italic">Pending</span>
+                            )}
                           </td>
                         </tr>
                       );
