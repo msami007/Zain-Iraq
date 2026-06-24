@@ -171,7 +171,7 @@ export default function AdminDeskWorkspace({
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [activeTab, setActiveTab] = useState<"articles" | "gaps" | "audit" | "workflows" | "analytics">("articles");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "articles" | "gaps" | "audit" | "workflows" | "analytics">("dashboard");
   const currentTab = overrideActiveTab || activeTab;
 
   useEffect(() => {
@@ -491,11 +491,10 @@ export default function AdminDeskWorkspace({
 
 
 
-  // Fetch Audit Logs and Analytics when tab changes
   useEffect(() => {
     if (currentTab === "audit") {
       fetchAuditLogs();
-    } else if (currentTab === "analytics") {
+    } else if (currentTab === "analytics" || currentTab === "dashboard") {
       fetchAnalytics();
     }
   }, [currentTab]);
@@ -1291,6 +1290,17 @@ export default function AdminDeskWorkspace({
               <button
                 type="button"
                 onClick={() => {
+                  setActiveTab("dashboard");
+                  closeEditor();
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "dashboard" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
+                  }`}
+              >
+                <span>📊</span> Dashboard
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   setActiveTab("articles");
                   closeEditor();
                 }}
@@ -1337,17 +1347,6 @@ export default function AdminDeskWorkspace({
               >
                 <span>📋</span> Audit Logs
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("analytics");
-                  closeEditor();
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-lg transition-all text-left ${currentTab === "analytics" ? "bg-zinc-900 text-white shadow-2xs" : "hover:bg-zinc-900/40 hover:text-zinc-200"
-                  }`}
-              >
-                <span>📊</span> Analytics
-              </button>
             </div>
           </div>
 
@@ -1378,8 +1377,8 @@ export default function AdminDeskWorkspace({
         {!hideSidebar && (
           <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-extrabold text-zinc-950 uppercase tracking-wide">
-                {currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : currentTab === "workflows" ? "Workflows" : currentTab === "audit" ? "Audit Logs" : "Analytics"}
+              <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide">
+                {currentTab === "dashboard" ? "Analytics Dashboard" : currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : currentTab === "workflows" ? "Workflows" : currentTab === "audit" ? "Audit Logs" : "Analytics"}
               </h2>
             </div>
             <div className="flex items-center gap-3">
@@ -1393,7 +1392,7 @@ export default function AdminDeskWorkspace({
         {/* View Contents */}
         <div className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8"}>
           {/* Notifications Banner — backed by Announcements API */}
-          {!hideSidebar && (notifications.length > 0 || showNotifForm) && (
+          {!hideSidebar && notifications.length > 0 && (
             <div className="mb-4 space-y-2">
               {notifications.map(n => (
                 <div key={n.id} className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-xs font-semibold ${
@@ -1413,44 +1412,6 @@ export default function AdminDeskWorkspace({
                   <button type="button" onClick={() => dismissNotification(n.id)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity font-bold">×</button>
                 </div>
               ))}
-              <div className="flex items-center gap-2">
-                {showNotifForm ? (
-                  <div className="flex flex-col gap-2 flex-1 p-3 rounded-lg border border-zinc-200 bg-zinc-50">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newNotifTitle}
-                        onChange={e => setNewNotifTitle(e.target.value)}
-                        placeholder="Title (optional)..."
-                        className="w-40 shrink-0 rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-xs focus:outline-none"
-                      />
-                      <input
-                        type="text"
-                        value={newNotifMessage}
-                        onChange={e => setNewNotifMessage(e.target.value)}
-                        placeholder="Notification message for all agents..."
-                        className="flex-1 rounded border border-zinc-200 bg-white px-2.5 py-1.5 text-xs focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select value={newNotifType} onChange={e => setNewNotifType(e.target.value as any)} className="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs focus:outline-none">
-                        <option value="info">Info (blue)</option>
-                        <option value="warning">Warning (amber)</option>
-                        <option value="success">Success (green)</option>
-                      </select>
-                      <button type="button" onClick={addNotification} className="rounded bg-zinc-950 px-3 py-1.5 text-xs font-bold text-white">Broadcast</button>
-                      <button type="button" onClick={() => setShowNotifForm(false)} className="text-xs text-zinc-400 hover:text-zinc-700 font-semibold">Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setShowNotifForm(true)} className="text-[10px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">+ Broadcast Notification</button>
-                )}
-              </div>
-            </div>
-          )}
-          {!hideSidebar && notifications.length === 0 && !showNotifForm && (
-            <div className="mb-4 flex justify-end">
-              <button type="button" onClick={() => setShowNotifForm(true)} className="text-[10px] font-semibold text-zinc-400 hover:text-zinc-700 transition-colors">+ Broadcast Notification</button>
             </div>
           )}
 
@@ -3218,7 +3179,7 @@ export default function AdminDeskWorkspace({
               {/* Status & Date range selectors */}
               <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-2xs">
                 <div className="flex flex-wrap gap-2">
-                  {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "DISMISSED"].map((st) => (
+                  {["ALL", "NEW", "IN_PROGRESS", "RESOLVED"].map((st) => (
                     <button
                       key={st}
                       onClick={() => setGapStatusFilter(st)}
@@ -3270,12 +3231,12 @@ export default function AdminDeskWorkspace({
                     <thead>
                       <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
                         <th className="p-4">Search Query / Flag</th>
-                        <th className="p-4">Source</th>
                         <th className="p-4">Feedback / Comment</th>
                         <th className="p-4">Hits</th>
                         <th className="p-4">Status</th>
                         <th className="p-4">Reported By</th>
                         <th className="p-4">Claimed By</th>
+                        <th className="p-4">Date/Time</th>
                         <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -3297,16 +3258,7 @@ export default function AdminDeskWorkspace({
                                 </p>
                               )}
                             </td>
-                            <td className="p-4">
-                              <span className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${
-                                g.source === "customer" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                g.source === "article_flag" ? "bg-red-50 text-red-700 border-red-200" :
-                                g.source === "auto" ? "bg-zinc-50 text-zinc-500 border-zinc-200" :
-                                "bg-amber-50 text-amber-700 border-amber-200"
-                              }`}>
-                                {g.source || "agent"}
-                              </span>
-                            </td>
+
                             <td className="p-4 max-w-xs">
                               {g.comment ? (
                                 <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-3">"{g.comment}"</p>
@@ -3332,6 +3284,9 @@ export default function AdminDeskWorkspace({
                               {g.reporter?.email && <p className="text-[9px] text-zinc-400">{g.reporter.email}</p>}
                             </td>
                             <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
+                            <td className="p-4 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
+                              {new Date(g.created_at).toLocaleString()}
+                            </td>
                             <td className="p-4 text-right space-x-2">
                               {g.status === "NEW" && (
                                 <>
@@ -3512,6 +3467,267 @@ export default function AdminDeskWorkspace({
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {currentTab === "dashboard" && (
+            <div className="space-y-6">
+              {loadingAnalytics && !analyticsData ? (
+                <div className="text-center py-12 text-zinc-450 font-semibold animate-pulse">
+                  Loading dashboard metrics...
+                </div>
+              ) : !analyticsData ? (
+                <div className="text-center py-12 text-zinc-400 italic">
+                  No dashboard data available.
+                </div>
+              ) : (
+                <>
+                  {/* KPI Row */}
+                  {(() => {
+                    const totalArticles = articles.length;
+                    const publishedCount = articles.filter(a => a.status === "Published").length;
+                    const pendingCount = articles.filter(a => a.status === "InReview" || a.status === "Approved").length;
+                    const archivedCount = articles.filter(a => a.status === "Archived").length;
+                    const publishRate = totalArticles > 0 ? Math.round((publishedCount / totalArticles) * 100) : 0;
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {/* Total Articles */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Articles</span>
+                            <span className="text-3xl font-extrabold text-zinc-950 mt-2 block">{totalArticles.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-green-600 mt-2">
+                            <span>▲</span> Live from DB
+                          </div>
+                        </div>
+
+                        {/* Published */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Published</span>
+                            <span className="text-3xl font-extrabold text-zinc-950 mt-2 block">{publishedCount.toLocaleString()}</span>
+                          </div>
+                          <div className="text-[11px] font-bold text-green-600 mt-2">
+                            {publishRate}% publish rate
+                          </div>
+                        </div>
+
+                        {/* Pending Review */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Pending Review</span>
+                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{pendingCount.toLocaleString()}</span>
+                          </div>
+                          <div className="text-[11px] font-bold text-red-650 mt-2">
+                            SLA: 24h
+                          </div>
+                        </div>
+
+                        {/* Archived */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Archived</span>
+                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{archivedCount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-green-600 mt-2">
+                            <span>▲</span> Live from DB
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Section Heading */}
+                  <div className="text-left pt-4">
+                    <h3 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide">Article Performance</h3>
+                    <p className="text-[11px] text-zinc-550 font-semibold mt-0.5">Content utilization and feedback metrics</p>
+                  </div>
+
+                  {/* Highlights Row */}
+                  {(() => {
+                    const topHelpful = analyticsData?.topHelpful;
+                    const mostViewed = analyticsData?.mostViewed;
+                    const needsAttention = analyticsData?.needsAttention;
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Top Helpful */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
+                          <div className="flex justify-between items-start gap-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Top Helpful</span>
+                            {topHelpful && (
+                              <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {topHelpful.helpfulPct.toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                          <div className="my-3">
+                            <h4 className="text-sm font-bold text-zinc-900 truncate" title={topHelpful?.title || "No data"}>
+                              {topHelpful?.title || "No helpful feedback logged yet"}
+                            </h4>
+                          </div>
+                          <div className="text-[11px] text-zinc-450 font-semibold">
+                            {topHelpful ? (
+                              `${topHelpful.views.toLocaleString()} views · ${topHelpful.helpfulCount} helpful votes`
+                            ) : (
+                              "No feedback views or votes logged"
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Most Viewed */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
+                          <div className="flex justify-between items-start gap-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Most Viewed</span>
+                            {mostViewed && (
+                              <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {mostViewed.views.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          <div className="my-3">
+                            <h4 className="text-sm font-bold text-zinc-900 truncate" title={mostViewed?.title || "No data"}>
+                              {mostViewed?.title || "No articles found"}
+                            </h4>
+                          </div>
+                          <div className="text-[11px] text-zinc-450 font-semibold">
+                            {mostViewed ? (
+                              `${mostViewed.views.toLocaleString()} views · ${mostViewed.helpfulPct.toFixed(0)}% helpful rate`
+                            ) : (
+                              "No views recorded yet"
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Needs Attention */}
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
+                          <div className="flex justify-between items-start gap-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Needs Attention</span>
+                            {needsAttention && (
+                              <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {needsAttention.helpfulPct.toFixed(0)}% helpful
+                              </span>
+                            )}
+                          </div>
+                          <div className="my-3">
+                            <h4 className="text-sm font-bold text-zinc-900 truncate" title={needsAttention?.title || "No data"}>
+                              {needsAttention ? needsAttention.title : "All articles performing well!"}
+                            </h4>
+                          </div>
+                          <div className="text-[11px] text-zinc-450 font-semibold">
+                            {needsAttention ? (
+                              `${needsAttention.views.toLocaleString()} views · ${needsAttention.unhelpfulCount} unhelpful votes`
+                            ) : (
+                              "No negative feedback received"
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Two-Column Grid */}
+                  {(() => {
+                    const topPerformingArticles = analyticsData?.topArticles || [];
+                    const topQueries = analyticsData?.topSearchQueries || [];
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+                        {/* Top Performing Articles */}
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden flex flex-col">
+                          <div className="py-3 px-4 border-b border-zinc-150">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Performing Articles</h3>
+                          </div>
+                          <div className="overflow-x-auto flex-1">
+                            {topPerformingArticles.length > 0 ? (
+                              <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                                <thead>
+                                  <tr className="border-b border-zinc-200 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
+                                    <th className="py-2.5 px-4">Title</th>
+                                    <th className="py-2.5 px-4">Views</th>
+                                    <th className="py-2.5 px-4">Helpful Rate</th>
+                                    <th className="py-2.5 px-4 text-right">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-150">
+                                  {topPerformingArticles.map((a: any) => (
+                                    <tr key={a.id} className="hover:bg-zinc-50/50 transition-colors">
+                                      <td className="py-2.5 px-4">
+                                        <div className="font-bold text-zinc-900 truncate max-w-[280px] block" title={a.title || a.label}>
+                                          {a.title || a.label || "Untitled Article"}
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 px-4 font-semibold text-zinc-650">
+                                        {a.views.toLocaleString()}
+                                      </td>
+                                      <td className="py-2.5 px-4 font-bold text-green-700">
+                                        {a.helpfulPct.toFixed(0)}%
+                                      </td>
+                                      <td className="py-2.5 px-4 text-right">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const articleObj = articles.find(art => art.id === a.id);
+                                            if (articleObj) {
+                                              setActiveTab("articles");
+                                              openEditor(articleObj);
+                                            }
+                                          }}
+                                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs transition-colors cursor-pointer"
+                                        >
+                                          Edit
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <div className="text-center py-8 text-zinc-400 font-semibold italic">
+                                No articles views logged.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Top Search Queries */}
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden flex flex-col">
+                          <div className="py-3 px-4 border-b border-zinc-150">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
+                          </div>
+                          <div className="overflow-x-auto flex-1">
+                            {topQueries.length > 0 ? (
+                              <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                                <thead>
+                                  <tr className="border-b border-zinc-200 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
+                                    <th className="py-2.5 px-4">Query</th>
+                                    <th className="py-2.5 px-4 text-right">Searches</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-150">
+                                  {topQueries.map((q: any) => (
+                                    <tr key={q.query} className="hover:bg-zinc-50/50 transition-colors">
+                                      <td className="py-2.5 px-4 font-bold text-zinc-900 italic">
+                                        "{q.query}"
+                                      </td>
+                                      <td className="py-2.5 px-4 text-right font-mono font-bold text-zinc-600">
+                                        {q.count}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <div className="text-center py-8 text-zinc-400 font-semibold italic">
+                                No search queries logged.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </div>
           )}
 

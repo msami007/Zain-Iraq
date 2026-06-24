@@ -145,6 +145,29 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    let actorId = userId;
+    if (!actorId) {
+      const fallbackUser = await db.user.findFirst({
+        where: { tenant_id: tenantId },
+        select: { id: true },
+      });
+      actorId = fallbackUser?.id || null;
+    }
+
+    if (actorId) {
+      await db.auditLog.create({
+        data: {
+          tenant_id: tenantId,
+          actor_id: actorId,
+          action: "Report Knowledge Gap",
+          target_type: "KnowledgeGap",
+          target_id: newGap.id,
+          target_label: `Gap: "${query_text.slice(0, 50)}" (${gapSource === "auto" ? "Automatic" : "Manual"})`,
+          after: newGap as any,
+        },
+      });
+    }
+
     return NextResponse.json(newGap, { status: 201 });
   } catch (error: any) {
     console.error("POST Gap Error:", error);

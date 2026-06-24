@@ -35,6 +35,11 @@ type SearchWorkspaceProps = {
   hideBrandSelector?: boolean;
   pinnedArticleIds?: string[];
   onTogglePin?: (articleId: string) => void;
+  feedbackSource?: string;
+  feedbackChannel?: string;
+  feedbackPlaceholder?: string;
+  feedbackTitle?: string;
+  feedbackSubtitle?: string;
 };
 
 export default function CustomerSearchWorkspace({
@@ -46,6 +51,11 @@ export default function CustomerSearchWorkspace({
   hideBrandSelector = false,
   pinnedArticleIds = [],
   onTogglePin,
+  feedbackSource = "customer",
+  feedbackChannel = "default",
+  feedbackPlaceholder = "Describe what you were trying to find...",
+  feedbackTitle = "Help us improve",
+  feedbackSubtitle = "Tell us what you were looking for — our content team will create a guide to help you.",
 }: SearchWorkspaceProps) {
   const [selectedTenant, setSelectedTenant] = useState<Tenant>(tenants[0] || null);
   const [query, setQuery] = useState("");
@@ -129,8 +139,8 @@ export default function CustomerSearchWorkspace({
         body: JSON.stringify({
           query_text: query.trim(),
           comment: feedbackText.trim(),
-          source: "customer",
-          channel: "default",
+          source: feedbackSource,
+          channel: feedbackChannel,
           tenant_id: selectedTenant.id,
         }),
       });
@@ -256,8 +266,8 @@ export default function CustomerSearchWorkspace({
 
             {/* Customer feedback form — always shown after zero-result search */}
             <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
-              <p className="text-xs font-bold text-zinc-800">Help us improve</p>
-              <p className="text-[11px] text-zinc-500 font-medium">Tell us what you were looking for — our content team will create a guide to help you.</p>
+              <p className="text-xs font-bold text-zinc-800">{feedbackTitle}</p>
+              <p className="text-[11px] text-zinc-500 font-medium">{feedbackSubtitle}</p>
               {feedbackSubmitted ? (
                 <div className="flex items-center gap-2 text-xs font-semibold text-green-700">
                   <span className="text-green-500">✔</span> Thank you for your feedback!
@@ -267,7 +277,7 @@ export default function CustomerSearchWorkspace({
                   <textarea
                     value={feedbackText}
                     onChange={e => setFeedbackText(e.target.value)}
-                    placeholder="Describe what you were trying to find..."
+                    placeholder={feedbackPlaceholder}
                     rows={2}
                     className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs resize-none focus:outline-none focus:border-zinc-400"
                   />
@@ -275,7 +285,7 @@ export default function CustomerSearchWorkspace({
                     type="button"
                     disabled={submittingFeedback || !feedbackText.trim()}
                     onClick={handleSubmitFeedback}
-                    className="rounded-lg bg-zinc-950 hover:bg-zinc-800 disabled:opacity-50 px-4 py-1.5 text-xs font-bold text-white"
+                    className="rounded-lg bg-zinc-950 hover:bg-zinc-850 disabled:opacity-50 px-4 py-1.5 text-xs font-bold text-white"
                   >
                     {submittingFeedback ? "Sending…" : "Send Feedback"}
                   </button>

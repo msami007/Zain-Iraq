@@ -268,9 +268,10 @@ export default function AgentDeskWorkspace({
     }, 1500);
   };
 
-  const handleChatSearchKB = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatKbQuery.trim()) return;
+  const handleChatSearchKB = async (e?: React.FormEvent, queryOverride?: string) => {
+    if (e) e.preventDefault();
+    const query = queryOverride !== undefined ? queryOverride : chatKbQuery;
+    if (!query.trim()) return;
 
     setChatSearching(true);
     setChatSearched(true);
@@ -284,7 +285,7 @@ export default function AgentDeskWorkspace({
           "x-tenant-id": tenantId,
         },
         body: JSON.stringify({
-          query: chatKbQuery.trim(),
+          query: query.trim(),
           language: "en",
           channel: "agent",
         }),
@@ -299,6 +300,23 @@ export default function AgentDeskWorkspace({
       setChatSearching(false);
     }
   };
+
+  // Auto-search KB when active chat session changes
+  useEffect(() => {
+    const session = chatSessions.find((s) => s.id === activeChatSessionId);
+    if (session) {
+      const customerMsgs = session.messages.filter((m) => m.sender === "customer");
+      const queryText = customerMsgs.length > 0 ? customerMsgs[customerMsgs.length - 1].text : session.lastMessage;
+      setChatKbQuery(queryText || "");
+      if (queryText && queryText.trim()) {
+        handleChatSearchKB(undefined, queryText);
+      } else {
+        setChatKbResults([]);
+        setChatSearched(false);
+        setChatPreviewArticle(null);
+      }
+    }
+  }, [activeChatSessionId]);
 
   const handleChatPreviewArticle = async (articleId: string) => {
     try {
@@ -1382,9 +1400,6 @@ export default function AgentDeskWorkspace({
                     onClick={() => {
                       setActiveChatSessionId(s.id);
                       setChatPreviewArticle(null);
-                      setChatKbResults([]);
-                      setChatKbQuery("");
-                      setChatSearched(false);
                     }}
                     className={`w-full px-4 py-3.5 flex items-center gap-3 text-left transition-colors border-b border-zinc-50 ${
                       isActive ? "bg-zinc-50 border-l-2 border-l-zinc-900" : "hover:bg-zinc-50/60 border-l-2 border-l-transparent"
@@ -1791,6 +1806,11 @@ export default function AgentDeskWorkspace({
             hideBrandSelector={true}
             pinnedArticleIds={pinnedArticleIds}
             onTogglePin={handleTogglePin}
+            feedbackSource="agent"
+            feedbackChannel="agent"
+            feedbackPlaceholder="Describe what Zain information is missing or search query was looking for..."
+            feedbackTitle="Report Knowledge Gap (Agent)"
+            feedbackSubtitle="Describe the specific missing information or query context so Admin can resolve this gap."
           />
         </div>
       )}
