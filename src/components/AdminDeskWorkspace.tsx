@@ -3388,113 +3388,6 @@ export default function AdminDeskWorkspace({
           )}
 
           {/* AUDIT LOGS VIEW */}
-<<<<<<< HEAD
-          {currentTab === "audit" && (
-            <div className="space-y-6">
-              <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-                <div className="border-b border-zinc-200 bg-zinc-50/50 p-4 flex justify-between items-center">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">System Audit Logs</h3>
-                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{auditLogs.length} log entries</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (auditLogs.length === 0) return;
-                        downloadCSV(
-                          `audit-log-${new Date().toISOString().split("T")[0]}.csv`,
-                          auditLogs.map(l => [
-                            new Date(l.created_at).toLocaleString(),
-                            l.actor?.name || "Guest",
-                            l.actor?.email || "Customer",
-                            l.action,
-                            l.target_type,
-                            l.target_label,
-                          ]),
-                          ["Timestamp", "Actor Name", "Actor Email", "Action", "Target Type", "Target Label"]
-                        );
-                      }}
-                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                      </svg>
-                      Export CSV
-                    </button>
-                    <button
-                      type="button"
-                      onClick={fetchAuditLogs}
-                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
-                    >
-                      Refresh Logs
-                    </button>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                    <thead>
-                      <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
-                        <th className="p-4">Timestamp</th>
-                        <th className="p-4">Actor</th>
-                        <th className="p-4">Action</th>
-                        <th className="p-4">Target Type</th>
-                        <th className="p-4">Target Label</th>
-                        <th className="p-4">Rollback</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-150">
-                      {auditLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
-                            No audit logs recorded.
-                          </td>
-                        </tr>
-                      ) : (
-                        auditLogs.map((log) => {
-                          const canRollback = log.target_type === "Article" && log.before && Object.keys(log.before).length > 0;
-                          return (
-                            <tr key={log.id} className="hover:bg-zinc-50/50">
-                              <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
-                              <td className="p-4 font-bold text-zinc-900">
-                                {log.actor?.name || "Guest"}{" "}
-                                <span className="text-[10px] text-zinc-400 font-normal">
-                                  {log.actor?.email ? `(${log.actor.email})` : "(Customer)"}
-                                </span>
-                              </td>
-                              <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
-                              <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
-                              <td className="p-4 text-zinc-955 font-semibold max-w-xs truncate">{log.target_label}</td>
-                              <td className="p-4">
-                                {canRollback ? (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      if (!confirm(`Restore article to its state before "${log.action}"?`)) return;
-                                      const res = await fetch(`/api/v1/articles/${log.target_id}`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ ...log.before, _rollback_from_audit: log.id }),
-                                      });
-                                      if (res.ok) {
-                                        alert("Article restored. Refreshing...");
-                                        window.location.reload();
-                                      } else {
-                                        const err = await res.json().catch(() => ({}));
-                                        alert(`Rollback failed: ${err.error || res.status}`);
-                                      }
-                                    }}
-                                    className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors whitespace-nowrap"
-                                  >
-                                    ↩ Restore
-                                  </button>
-                                ) : (
-                                  <span className="text-[10px] text-zinc-300 font-medium">—</span>
-                                )}
-                              </td>
-                            </tr>
-=======
           {currentTab === "audit" && (() => {
             // Derive unique dropdown options from loaded logs
             const uniqueActions = Array.from(new Set(auditLogs.map(l => l.action))).sort();
@@ -3553,7 +3446,6 @@ export default function AdminDeskWorkspace({
                               l.target_label,
                             ]),
                             ["Timestamp", "Actor Name", "Actor Email", "Action", "Target Type", "Target Label"]
->>>>>>> 6560a16f952a222be2316b4078dc2f87ab5e7255
                           );
                         }}
                         className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
