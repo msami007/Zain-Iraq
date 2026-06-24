@@ -615,37 +615,37 @@ export default function SuperAdminClient({
                 <div className="space-y-6">
                   {/* KPI Row - No colorful accents, strictly matching website design */}
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Views</span>
                       <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
                         {analyticsData.totalViews.toLocaleString()}
                       </span>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Helpful Rate</span>
                       <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
                         {analyticsData.helpfulRate}%
                       </span>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Knowledge Gaps</span>
                       <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
                         {analyticsData.totalGaps.toLocaleString()}
                       </span>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Searches</span>
                       <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
                         {analyticsData.totalSearches.toLocaleString()}
                       </span>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Avg. Confidence</span>
                       <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
                         {analyticsData.avgConfidence}%
                       </span>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs text-left border-b-2 border-b-zinc-400">
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Articles</span>
                       <span className="text-2xl font-extrabold text-zinc-955 mt-1 block">
                         {analyticsData.totalArticles.toLocaleString()}
@@ -654,11 +654,11 @@ export default function SuperAdminClient({
                   </div>
 
                   {/* Two-Column Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 text-left">
                     {/* Left Column */}
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {/* Views by Category */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Views by Category</h3>
                         {analyticsData.viewsByCategory && analyticsData.viewsByCategory.length > 0 ? (
                           <div className="max-h-[240px] overflow-y-auto pr-1 space-y-3.5 no-scrollbar">
@@ -672,7 +672,7 @@ export default function SuperAdminClient({
                                     <span className="text-zinc-900 font-bold">{c.count} views</span>
                                   </div>
                                   <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden border border-zinc-200">
-                                    <div className="bg-zinc-900 h-full rounded-full" style={{ width: `${percentage}%` }} />
+                                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${percentage}%` }} />
                                   </div>
                                 </div>
                               );
@@ -684,24 +684,24 @@ export default function SuperAdminClient({
                       </div>
 
                       {/* Top Articles by Views */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Articles by Views</h3>
                         {analyticsData.topArticles && analyticsData.topArticles.length > 0 ? (
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                               <thead>
-                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
                                   <th className="py-2.5 px-2">#</th>
                                   <th className="py-2.5 px-2">Article</th>
                                   <th className="py-2.5 px-2">Views</th>
                                   <th className="py-2.5 px-2 text-right">Helpful</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-zinc-150">
+                              <tbody className="divide-y divide-zinc-100">
                                 {analyticsData.topArticles.map((a: any, i: number) => (
                                   <tr key={a.id} className="hover:bg-zinc-50/50">
                                     <td className="py-3 px-2 font-mono font-bold text-zinc-400">{i + 1}</td>
-                                    <td className="py-3 px-2 font-bold text-zinc-950 truncate max-w-[200px]" title={a.title}>{a.title}</td>
+                                    <td className="py-3 px-2 font-bold text-zinc-955 truncate max-w-[200px]" title={a.title}>{a.title}</td>
                                     <td className="py-3 px-2 font-semibold text-zinc-650">{a.views}</td>
                                     <td className="py-3 px-2 text-right font-bold text-green-700">{a.helpfulPct}%</td>
                                   </tr>
@@ -715,18 +715,18 @@ export default function SuperAdminClient({
                       </div>
 
                       {/* Top Search Queries */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
                         {analyticsData.topSearchQueries && analyticsData.topSearchQueries.length > 0 ? (
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                               <thead>
-                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
                                   <th className="py-2.5 px-2">Query</th>
                                   <th className="py-2.5 px-2 text-right">Count</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-zinc-150">
+                              <tbody className="divide-y divide-zinc-100">
                                 {analyticsData.topSearchQueries.map((q: any) => (
                                   <tr key={q.query} className="hover:bg-zinc-50/50">
                                     <td className="py-3 px-2 font-bold text-zinc-955 italic">"{q.query}"</td>
@@ -745,9 +745,9 @@ export default function SuperAdminClient({
                     </div>
 
                     {/* Right Column */}
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {/* Content Breakdown */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Content Breakdown</h3>
                         {analyticsData.contentBreakdown && analyticsData.contentBreakdown.length > 0 ? (
                           <div className="space-y-3.5">
@@ -761,7 +761,7 @@ export default function SuperAdminClient({
                                     <span className="text-zinc-900 font-bold">{cb.count} articles ({Math.round(percentage)}%)</span>
                                   </div>
                                   <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden border border-zinc-200">
-                                    <div className="bg-zinc-900 h-full rounded-full" style={{ width: `${percentage}%` }} />
+                                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${percentage}%` }} />
                                   </div>
                                 </div>
                               );
@@ -775,7 +775,7 @@ export default function SuperAdminClient({
 
 
                       {/* Recent Searches */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Recent Searches</h3>
                           <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
@@ -786,13 +786,13 @@ export default function SuperAdminClient({
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                               <thead>
-                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
+                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
                                   <th className="py-2.5 px-2">Query</th>
                                   <th className="py-2.5 px-2">Confidence</th>
                                   <th className="py-2.5 px-2 text-right">Date</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-zinc-150">
+                              <tbody className="divide-y divide-zinc-100">
                                 {analyticsData.recentSearches.map((s: any, idx: number) => (
                                   <tr key={idx} className="hover:bg-zinc-50/50">
                                     <td className="py-3 px-2 font-bold text-zinc-955 italic truncate max-w-[140px]" title={s.query}>"{s.query}"</td>
@@ -819,7 +819,7 @@ export default function SuperAdminClient({
                       </div>
 
                       {/* Articles Needing Attention */}
-                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+                      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-lg space-y-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Articles Needing Attention</h3>
                           <span className="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[9px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
@@ -830,20 +830,20 @@ export default function SuperAdminClient({
                           <div className="overflow-x-auto">
                             <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                               <thead>
-                                <tr className="border-b border-zinc-200 text-zinc-400 uppercase text-[10px] font-bold">
-                                  <th className="py-2.5 px-2">Article</th>
-                                  <th className="py-2.5 px-2">Views</th>
-                                  <th className="py-2.5 px-2">Helpful</th>
-                                  <th className="py-2.5 px-2 text-right">Action</th>
+                                <tr className="border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
+                                  <th className="py-3.5 px-4">Article</th>
+                                  <th className="py-3.5 px-4">Views</th>
+                                  <th className="py-3.5 px-4">Helpful</th>
+                                  <th className="py-3.5 px-4 text-right">Action</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-zinc-150">
+                              <tbody className="divide-y divide-zinc-100">
                                 {analyticsData.articlesNeedingAttention.map((a: any) => (
                                   <tr key={a.id} className="hover:bg-zinc-50/50">
-                                    <td className="py-3 px-2 font-bold text-zinc-955 truncate max-w-[140px]" title={a.title}>{a.title}</td>
-                                    <td className="py-3 px-2 text-zinc-600 font-semibold">{a.views}</td>
-                                    <td className="py-3 px-2 text-red-650 font-bold">{a.helpfulPct}%</td>
-                                    <td className="py-3 px-2 text-right">
+                                    <td className="py-3.5 px-4 font-bold text-zinc-955 truncate max-w-[140px]" title={a.title}>{a.title}</td>
+                                    <td className="py-3.5 px-4 text-zinc-600 font-semibold">{a.views}</td>
+                                    <td className="py-3.5 px-4 text-red-650 font-bold">{a.helpfulPct}%</td>
+                                    <td className="py-3.5 px-4 text-right">
                                       <button
                                         type="button"
                                         onClick={() => setActiveTab("articles")}

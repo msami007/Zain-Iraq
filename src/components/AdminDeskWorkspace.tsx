@@ -3492,10 +3492,10 @@ export default function AdminDeskWorkspace({
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         {/* Total Articles */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Articles</span>
-                            <span className="text-3xl font-extrabold text-zinc-950 mt-2 block">{totalArticles.toLocaleString()}</span>
+                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{totalArticles.toLocaleString()}</span>
                           </div>
                           <div className="flex items-center gap-1 text-[11px] font-bold text-green-600 mt-2">
                             <span>▲</span> Live from DB
@@ -3503,10 +3503,10 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Published */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Published</span>
-                            <span className="text-3xl font-extrabold text-zinc-950 mt-2 block">{publishedCount.toLocaleString()}</span>
+                            <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{publishedCount.toLocaleString()}</span>
                           </div>
                           <div className="text-[11px] font-bold text-green-600 mt-2">
                             {publishRate}% publish rate
@@ -3514,7 +3514,7 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Pending Review */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Pending Review</span>
                             <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{pendingCount.toLocaleString()}</span>
@@ -3525,7 +3525,7 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Archived */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-b-3 flex flex-col justify-between h-32" style={{ borderBottomColor: brandingColor }}>
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Archived</span>
                             <span className="text-3xl font-extrabold text-zinc-955 mt-2 block">{archivedCount.toLocaleString()}</span>
@@ -3552,7 +3552,7 @@ export default function AdminDeskWorkspace({
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Top Helpful */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
                           <div className="flex justify-between items-start gap-4">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Top Helpful</span>
                             {topHelpful && (
@@ -3566,7 +3566,7 @@ export default function AdminDeskWorkspace({
                               {topHelpful?.title || "No helpful feedback logged yet"}
                             </h4>
                           </div>
-                          <div className="text-[11px] text-zinc-450 font-semibold">
+                          <div className="text-[11px] text-zinc-455 font-semibold">
                             {topHelpful ? (
                               `${topHelpful.views.toLocaleString()} views · ${topHelpful.helpfulCount} helpful votes`
                             ) : (
@@ -3576,7 +3576,7 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Most Viewed */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
                           <div className="flex justify-between items-start gap-4">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Most Viewed</span>
                             {mostViewed && (
@@ -3590,7 +3590,7 @@ export default function AdminDeskWorkspace({
                               {mostViewed?.title || "No articles found"}
                             </h4>
                           </div>
-                          <div className="text-[11px] text-zinc-450 font-semibold">
+                          <div className="text-[11px] text-zinc-455 font-semibold">
                             {mostViewed ? (
                               `${mostViewed.views.toLocaleString()} views · ${mostViewed.helpfulPct.toFixed(0)}% helpful rate`
                             ) : (
@@ -3600,7 +3600,7 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Needs Attention */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
+                        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-md text-left border-t-3 flex flex-col justify-between min-h-[140px]" style={{ borderTopColor: brandingColor }}>
                           <div className="flex justify-between items-start gap-4">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Needs Attention</span>
                             {needsAttention && (
@@ -3614,7 +3614,7 @@ export default function AdminDeskWorkspace({
                               {needsAttention ? needsAttention.title : "All articles performing well!"}
                             </h4>
                           </div>
-                          <div className="text-[11px] text-zinc-450 font-semibold">
+                          <div className="text-[11px] text-zinc-455 font-semibold">
                             {needsAttention ? (
                               `${needsAttention.views.toLocaleString()} views · ${needsAttention.unhelpfulCount} unhelpful votes`
                             ) : (
@@ -3631,38 +3631,38 @@ export default function AdminDeskWorkspace({
                     const topPerformingArticles = analyticsData?.topArticles || [];
                     const topQueries = analyticsData?.topSearchQueries || [];
                     return (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 text-left">
                         {/* Top Performing Articles */}
-                        <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden flex flex-col">
-                          <div className="py-3 px-4 border-b border-zinc-150">
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-md overflow-hidden flex flex-col">
+                          <div className="py-3 px-4 border-b border-zinc-100">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Performing Articles</h3>
                           </div>
                           <div className="overflow-x-auto flex-1">
                             {topPerformingArticles.length > 0 ? (
                               <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                                 <thead>
-                                  <tr className="border-b border-zinc-200 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
-                                    <th className="py-2.5 px-4">Title</th>
-                                    <th className="py-2.5 px-4">Views</th>
-                                    <th className="py-2.5 px-4">Helpful Rate</th>
-                                    <th className="py-2.5 px-4 text-right">Actions</th>
+                                  <tr className="border-b border-zinc-100 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
+                                    <th className="py-3.5 px-5">Title</th>
+                                    <th className="py-3.5 px-5">Views</th>
+                                    <th className="py-3.5 px-5">Helpful Rate</th>
+                                    <th className="py-3.5 px-5 text-right">Actions</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-zinc-150">
+                                <tbody className="divide-y divide-zinc-100">
                                   {topPerformingArticles.map((a: any) => (
                                     <tr key={a.id} className="hover:bg-zinc-50/50 transition-colors">
-                                      <td className="py-2.5 px-4">
+                                      <td className="py-3.5 px-5">
                                         <div className="font-bold text-zinc-900 truncate max-w-[280px] block" title={a.title || a.label}>
                                           {a.title || a.label || "Untitled Article"}
                                         </div>
                                       </td>
-                                      <td className="py-2.5 px-4 font-semibold text-zinc-650">
+                                      <td className="py-3.5 px-5 font-semibold text-zinc-650">
                                         {a.views.toLocaleString()}
                                       </td>
-                                      <td className="py-2.5 px-4 font-bold text-green-700">
+                                      <td className="py-3.5 px-5 font-bold text-green-700">
                                         {a.helpfulPct.toFixed(0)}%
                                       </td>
-                                      <td className="py-2.5 px-4 text-right">
+                                      <td className="py-3.5 px-5 text-right">
                                         <button
                                           type="button"
                                           onClick={() => {
@@ -3690,26 +3690,26 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Top Search Queries */}
-                        <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden flex flex-col">
-                          <div className="py-3 px-4 border-b border-zinc-150">
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-md overflow-hidden flex flex-col">
+                          <div className="py-3 px-4 border-b border-zinc-100">
                             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
                           </div>
                           <div className="overflow-x-auto flex-1">
                             {topQueries.length > 0 ? (
                               <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                                 <thead>
-                                  <tr className="border-b border-zinc-200 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
-                                    <th className="py-2.5 px-4">Query</th>
-                                    <th className="py-2.5 px-4 text-right">Searches</th>
+                                  <tr className="border-b border-zinc-100 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
+                                    <th className="py-3.5 px-5">Query</th>
+                                    <th className="py-3.5 px-5 text-right">Searches</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-zinc-150">
+                                <tbody className="divide-y divide-zinc-100">
                                   {topQueries.map((q: any) => (
                                     <tr key={q.query} className="hover:bg-zinc-50/50 transition-colors">
-                                      <td className="py-2.5 px-4 font-bold text-zinc-900 italic">
+                                      <td className="py-3.5 px-5 font-bold text-zinc-900 italic">
                                         "{q.query}"
                                       </td>
-                                      <td className="py-2.5 px-4 text-right font-mono font-bold text-zinc-600">
+                                      <td className="py-3.5 px-5 text-right font-mono font-bold text-zinc-600">
                                         {q.count}
                                       </td>
                                     </tr>
