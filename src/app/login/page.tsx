@@ -55,7 +55,7 @@ export default function LoginPage() {
     return (
       <div className="flex h-screen w-full font-sans">
         {/* Sidebar skeleton */}
-        <aside className="w-[220px] flex-shrink-0 bg-[#0c0c14] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.35)]">
+        <aside className="hidden md:flex w-[220px] flex-shrink-0 bg-[#0c0c14] flex-col shadow-[4px_0_24px_rgba(0,0,0,0.35)]">
           <div className="h-16 flex items-center px-5 border-b border-white/10">
             <div className="h-4 w-24 rounded bg-white/10 animate-pulse" />
           </div>
@@ -71,20 +71,20 @@ export default function LoginPage() {
 
         {/* Main area */}
         <div className="flex-1 flex flex-col bg-zinc-50 overflow-hidden">
-          <header className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-8 flex-shrink-0">
+          <header className="h-16 bg-white border-b border-zinc-200 flex items-center justify-between px-4 md:px-8 flex-shrink-0">
             <div className="h-4 w-40 rounded bg-zinc-200 animate-pulse" />
             <div className="flex items-center gap-3">
               <div className="h-7 w-24 rounded-lg bg-zinc-100 animate-pulse" />
               <div className="h-7 w-7 rounded-full bg-zinc-100 animate-pulse" />
             </div>
           </header>
-          <div className="flex-1 p-8 space-y-6">
-            <div className="grid grid-cols-4 gap-5">
+          <div className="flex-1 p-4 md:p-8 space-y-6 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="h-[120px] rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="h-64 rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" />
               <div className="h-64 rounded-xl bg-white border border-zinc-200 shadow-sm animate-pulse" style={{ animationDelay: "100ms" }} />
             </div>
@@ -100,7 +100,7 @@ export default function LoginPage() {
       {/* Premium subtle grid background */}
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] bg-[size:20px_20px]" />
       
-      <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-8 shadow-2xl shadow-zinc-200/60 transition-all duration-300 hover:border-zinc-300">
+      <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-2xl shadow-zinc-200/60 transition-all duration-300 hover:border-zinc-300">
         {/* Back to home */}
         <button
           type="button"

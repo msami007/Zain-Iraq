@@ -178,6 +178,7 @@ export default function AdminDeskWorkspace({
   const [auditFilterDateFrom, setAuditFilterDateFrom] = useState("");
   const [auditFilterDateTo, setAuditFilterDateTo] = useState("");
   const [activeTab, setActiveTab] = useState<"dashboard" | "articles" | "gaps" | "audit" | "workflows" | "analytics">("dashboard");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const currentTab = overrideActiveTab || activeTab;
 
   useEffect(() => {
@@ -1289,10 +1290,20 @@ export default function AdminDeskWorkspace({
 
 
   return (
-    <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full"}`}>
+    <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full relative"}`}>
+      {/* Sidebar Backdrop for Mobile */}
+      {!hideSidebar && mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-zinc-950/60 backdrop-blur-xs md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar - only show if hideSidebar is false */}
       {!hideSidebar && (
-        <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)]">
+        <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-200 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
+          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}>
           <div>
             {/* Brand */}
             <div className="px-5 py-5 border-b border-white/[0.06]">
@@ -1317,6 +1328,7 @@ export default function AdminDeskWorkspace({
                     onClick={() => {
                       setActiveTab("dashboard");
                       closeEditor();
+                      setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                       currentTab === "dashboard" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
@@ -1335,6 +1347,7 @@ export default function AdminDeskWorkspace({
                     onClick={() => {
                       setActiveTab("articles");
                       closeEditor();
+                      setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                       currentTab === "articles" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
@@ -1354,6 +1367,7 @@ export default function AdminDeskWorkspace({
                     onClick={() => {
                       setActiveTab("gaps");
                       closeEditor();
+                      setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                       currentTab === "gaps" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
@@ -1370,6 +1384,7 @@ export default function AdminDeskWorkspace({
                     onClick={() => {
                       setActiveTab("workflows");
                       closeEditor();
+                      setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                       currentTab === "workflows" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
@@ -1393,6 +1408,7 @@ export default function AdminDeskWorkspace({
                     onClick={() => {
                       setActiveTab("audit");
                       closeEditor();
+                      setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                       currentTab === "audit" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
@@ -1448,8 +1464,20 @@ export default function AdminDeskWorkspace({
       <div className={`flex-1 flex flex-col ${hideSidebar ? "" : "h-screen overflow-hidden bg-zinc-50"}`}>
         {/* Header Bar - only show if hideSidebar is false */}
         {!hideSidebar && (
-          <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
+          <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-4 md:px-8 flex-shrink-0">
             <div className="flex items-center gap-3">
+              {/* Hamburger Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="md:hidden p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+              </button>
               <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide">
                 {currentTab === "dashboard" ? "Analytics Dashboard" : currentTab === "articles" ? "Articles Manager" : currentTab === "gaps" ? "Gaps Queue" : currentTab === "workflows" ? "Workflows" : currentTab === "audit" ? "Audit Logs" : "Analytics"}
               </h2>
@@ -3837,7 +3865,7 @@ export default function AdminDeskWorkspace({
                       },
                     ];
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         {cards.map((card) => (
                           <div
                             key={card.label}

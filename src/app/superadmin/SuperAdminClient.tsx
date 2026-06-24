@@ -62,6 +62,7 @@ export default function SuperAdminClient({
   signOutAction,
 }: SuperAdminClientProps) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "orgs" | "users" | "teams" | "articles" | "gaps" | "workflows" | "audit">("dashboard");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "90d" | "all">("all");
@@ -392,9 +393,19 @@ export default function SuperAdminClient({
   };
 
   return (
-    <div className="min-h-screen flex bg-zinc-50 w-full text-left">
+    <div className="min-h-screen flex bg-zinc-50 w-full text-left relative">
+      {/* Sidebar Backdrop for Mobile */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-zinc-950/60 backdrop-blur-xs md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between sticky top-0 h-screen">
+      <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-200 ease-in-out h-screen ${
+        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
         <div>
           {/* Brand */}
           <div className="px-5 py-5 border-b border-white/[0.06]">
@@ -418,7 +429,7 @@ export default function SuperAdminClient({
               <div className="space-y-0.5">
                 <button
                   type="button"
-                  onClick={() => setActiveTab("dashboard")}
+                  onClick={() => { setActiveTab("dashboard"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "dashboard" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -433,7 +444,7 @@ export default function SuperAdminClient({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("orgs")}
+                  onClick={() => { setActiveTab("orgs"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "orgs" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -448,7 +459,7 @@ export default function SuperAdminClient({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("users")}
+                  onClick={() => { setActiveTab("users"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "users" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -463,7 +474,7 @@ export default function SuperAdminClient({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("teams")}
+                  onClick={() => { setActiveTab("teams"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "teams" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -484,7 +495,7 @@ export default function SuperAdminClient({
               <div className="space-y-0.5">
                 <button
                   type="button"
-                  onClick={() => setActiveTab("articles")}
+                  onClick={() => { setActiveTab("articles"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "articles" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -500,7 +511,7 @@ export default function SuperAdminClient({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("gaps")}
+                  onClick={() => { setActiveTab("gaps"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "gaps" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -513,7 +524,7 @@ export default function SuperAdminClient({
                 </button>
                  <button
                   type="button"
-                  onClick={() => setActiveTab("workflows")}
+                  onClick={() => { setActiveTab("workflows"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "workflows" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -533,7 +544,7 @@ export default function SuperAdminClient({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("audit")}
+                  onClick={() => { setActiveTab("audit"); setMobileSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
                     activeTab === "audit" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
                   }`}
@@ -585,8 +596,20 @@ export default function SuperAdminClient({
 
       {/* Content panel - right */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50">
-        <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-8 flex-shrink-0">
-          <div>
+        <header className="h-16 border-b border-zinc-200 bg-white flex items-center justify-between px-4 md:px-8 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Hamburger Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </svg>
+            </button>
             <h2 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide text-left">
                 {activeTab === "dashboard" && "Analytics Dashboard"}
                 {activeTab === "orgs" && "Organizations Control"}
@@ -629,7 +652,7 @@ export default function SuperAdminClient({
               ) : (
                 <div className="space-y-6">
                   {/* KPI Row */}
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                     {/* Total Views */}
                     <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
                       <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#7c3aed,#a78bfa)" }} />
