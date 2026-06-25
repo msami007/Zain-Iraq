@@ -81,8 +81,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Search across both languages so Arabic queries can find Arabic articles
+    // and English queries can find all content
     const whereClause: any = {
-      language: mappedLanguage,
       status: searchStatus ? (searchStatus as any) : undefined,
       OR: searchConditions,
       ...teamFilter,
@@ -151,8 +152,11 @@ export async function POST(req: NextRequest) {
       };
     });
 
+    // Filter out articles with only the base score (0.1 = no meaningful text match)
+    const filteredResults = results.filter(r => r.match_score > 0.1);
+
     // Sort results by score desc
-    results.sort((a, b) => b.match_score - a.match_score);
+    filteredResults.sort((a, b) => b.match_score - a.match_score);
 
     // Log the search query in database
     await db.searchQuery.create({
@@ -162,14 +166,14 @@ export async function POST(req: NextRequest) {
         language: mappedLanguage,
         channel: mappedChannel,
         user_id: session?.user?.id || null,
-        results_count: results.length,
-        top_match_score: results.length > 0 ? results[0].match_score : 0.0,
+        results_count: filteredResults.length,
+        top_match_score: filteredResults.length > 0 ? filteredResults[0].match_score : 0.0,
       },
     });
 
-    if (results.length > 0) {
+    if (filteredResults.length > 0) {
       return NextResponse.json({
-        results,
+        results: filteredResults,
         gap_logged: false,
       });
     } else {

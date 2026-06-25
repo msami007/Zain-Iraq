@@ -388,17 +388,12 @@ export default function CustomerSearchWorkspace({
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
               {results.map((art) => {
                 const isPinned = pinnedArticleIds.includes(art.article_id);
-                const score = Math.round(art.match_score * 100);
-                const scoreColor = score >= 70 ? "bg-green-100 text-green-700" : score >= 40 ? "bg-amber-100 text-amber-700" : "bg-zinc-100 text-zinc-500";
                 return (
                   <div key={art.article_id} className="group flex flex-col rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all">
-                    <Link href={`/articles/${art.article_id}`} className="flex-1 p-4 space-y-2.5 block">
+                    <Link href={`/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}`} className="flex-1 p-4 space-y-2.5 block">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="rounded-md bg-zinc-50 border border-zinc-200 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-zinc-500">
                           {art.category}
-                        </span>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold ${scoreColor}`}>
-                          {score}% match
                         </span>
                       </div>
                       <h4 className="text-sm font-bold text-zinc-900 group-hover:text-zinc-600 leading-snug transition-colors line-clamp-2">
@@ -616,7 +611,7 @@ export default function CustomerSearchWorkspace({
               return (
                 <div key={art.article_id} className="group rounded-xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:border-zinc-350 hover:-translate-y-0.5 flex flex-col">
                   <Link
-                    href={`/articles/${art.article_id}`}
+                    href={`/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
                     className="block p-6 flex-1 text-left space-y-4"
                   >
                     <div className="flex items-center gap-2">
@@ -633,7 +628,7 @@ export default function CustomerSearchWorkspace({
                   </Link>
 
                   <div className="flex items-center justify-between px-6 py-3 border-t border-zinc-100 text-[10px] text-zinc-400 font-semibold font-mono">
-                    <span>Score: <strong className="text-zinc-800">{(art.match_score * 100).toFixed(0)}%</strong></span>
+                    <span>{art.language?.toUpperCase() || "EN"}</span>
                     {onTogglePin ? (
                       <button
                         type="button"

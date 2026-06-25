@@ -15,12 +15,13 @@ type PageProps = {
     token?: string;
     channel?: string;
     view?: string;
+    q?: string;
   }>;
 };
 
 export default async function ArticleDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { token, channel, view } = await searchParams;
+  const { token, channel, view, q } = await searchParams;
 
   const session = await auth();
   const user = session?.user;
@@ -101,28 +102,31 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     );
   }
 
-  // Record view in audit log for analytics — runs server-side on every request (page is dynamic via auth())
-  try {
-    const db = getTenantDb(article.tenant_id);
-    // For guests the audit log still needs an actor — use the tenant's first user as a system stand-in
-    const actorId = user?.id ?? (await db.user.findFirst({
-      orderBy: { created_at: "asc" },
-      select: { id: true },
-    }))?.id ?? null;
-    if (actorId) {
-      await db.auditLog.create({
-        data: {
-          tenant_id: article.tenant_id,
-          actor_id: actorId,
-          action: "View Article",
-          target_type: "Article",
-          target_id: article.id,
-          target_label: article.title,
-        },
-      });
+  // Record view in audit log for analytics — skip for Admin/SuperAdmin to prevent inflating metrics
+  const isAdminViewer = user?.role === "Admin" || user?.role === "SuperAdmin";
+  if (!isAdminViewer) {
+    try {
+      const db = getTenantDb(article.tenant_id);
+      // For guests the audit log still needs an actor — use the tenant's first user as a system stand-in
+      const actorId = user?.id ?? (await db.user.findFirst({
+        orderBy: { created_at: "asc" },
+        select: { id: true },
+      }))?.id ?? null;
+      if (actorId) {
+        await db.auditLog.create({
+          data: {
+            tenant_id: article.tenant_id,
+            actor_id: actorId,
+            action: "View Article",
+            target_type: "Article",
+            target_id: article.id,
+            target_label: article.title,
+          },
+        });
+      }
+    } catch {
+      // Non-fatal — analytics failure must never break article rendering
     }
-  } catch {
-    // Non-fatal — analytics failure must never break article rendering
   }
 
   // Guest link access: token-based OR explicit ?view=guest — forces customer-only view regardless of login state
@@ -144,14 +148,19 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   const shortAnswer = displayVariant?.short_answer || "";
   const macroText = displayVariant?.copy_ready_macro || "";
 
-  // Role-scoped back navigation — agents go to /agent, admins to /admin, guests to /
-  const backHref = !user || isGuestLinkAccess
+  // Role-scoped back navigation — preserve search context when q param is present
+  const baseHref = !user || isGuestLinkAccess
     ? "/"
     : user.role === "SuperAdmin" || user.role === "Admin"
     ? "/admin"
     : "/agent";
+  const backHref = q && !isGuestLinkAccess && user?.role === "Agent"
+    ? `/agent?q=${encodeURIComponent(q)}`
+    : baseHref;
   const backLabel = !user || isGuestLinkAccess
     ? "Back to Home"
+    : q && user.role === "Agent"
+    ? "Back to results"
     : user.role === "SuperAdmin" || user.role === "Admin"
     ? "Admin Desk"
     : "Agent Desk";

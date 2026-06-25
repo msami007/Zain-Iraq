@@ -706,7 +706,7 @@ export default function SuperAdminClient({
                       <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.totalGaps.toLocaleString()}</div>
                       {analyticsData.gapsThisWeek != null && (
                         <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-red-500">
-                          <span>▼</span>{analyticsData.gapsThisWeek} new this week
+                          <span>▲</span>{analyticsData.gapsThisWeek} new this week
                         </div>
                       )}
                     </div>
@@ -735,7 +735,7 @@ export default function SuperAdminClient({
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                       </div>
                       <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.avgConfidence}%</div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">Match quality</div>
+                      <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400" title="Average search match quality across all queries. Scores below 50% suggest the KB is missing content for common searches. 70%+ is healthy.">Match quality · hover for info</div>
                     </div>
                     {/* Total Articles */}
                     <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">

@@ -221,6 +221,7 @@ export default function AdminDeskWorkspace({
 
   // Form Fields
   const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState(false);
   const [slug, setSlug] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id || "");
   const [language, setLanguage] = useState("en");
@@ -461,7 +462,8 @@ export default function AdminDeskWorkspace({
       const status = art.status;
       if (selectedStatusFilter === "Published" && status !== "Published") return false;
       if (selectedStatusFilter === "Drafts" && status !== "Draft") return false;
-      if (selectedStatusFilter === "Pending" && status !== "InReview" && status !== "Approved") return false;
+      if (selectedStatusFilter === "In Review" && status !== "InReview") return false;
+      if (selectedStatusFilter === "Approved" && status !== "Approved") return false;
       if (selectedStatusFilter === "Archived" && status !== "Archived") return false;
       if (selectedStatusFilter === "Rejected" && status !== "Rejected") return false;
     }
@@ -721,6 +723,7 @@ export default function AdminDeskWorkspace({
   // Helper to pre-populate slug from title
   const handleTitleChange = (val: string) => {
     setTitle(val);
+    if (val.trim()) setTitleError(false);
     if (!editingArticle) {
       setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"));
     }
@@ -799,6 +802,7 @@ export default function AdminDeskWorkspace({
     setIsCreating(false);
     setFormError("");
     setFormSuccess("");
+    setTitleError(false);
 
     setTitle(article.title);
     setSlug(article.slug);
@@ -869,6 +873,7 @@ export default function AdminDeskWorkspace({
     setIsCreating(true);
     setFormError("");
     setFormSuccess("");
+    setTitleError(false);
     setTransitionStatus("");
     setTransitionComment("");
 
@@ -907,6 +912,9 @@ export default function AdminDeskWorkspace({
     setTransitionComment("");
     setSelectedWorkflowRouteId("");
     setIsTeamsDropdownOpen(false);
+    setFormError("");
+    setFormSuccess("");
+    setTitleError(false);
   };
 
   const handleCreateCategory = async () => {
@@ -1000,8 +1008,13 @@ export default function AdminDeskWorkspace({
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     const defaultDetailedTextClean = vDefaultDetailed.replace(/<[^>]*>/g, "").trim();
-    if (!title || !slug || !categoryId || !defaultDetailedTextClean) {
-      setFormError("Title, Slug, Category, and Default Detailed Steps are required.");
+    if (!title.trim()) {
+      setTitleError(true);
+      setFormError("Title is required.");
+      return;
+    }
+    if (!slug || !categoryId || !defaultDetailedTextClean) {
+      setFormError("Slug, Category, and Default Detailed Steps are required.");
       return;
     }
 
@@ -1575,7 +1588,7 @@ export default function AdminDeskWorkspace({
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200">
                     {/* Tabs */}
                     <div className="flex bg-zinc-200/60 p-1 rounded-lg gap-1 border border-zinc-200 overflow-x-auto no-scrollbar max-w-full">
-                      {["All", "Published", "Drafts", "Pending", "Rejected", "Archived"].map((tab) => (
+                      {["All", "Published", "Drafts", "In Review", "Approved", "Rejected", "Archived"].map((tab) => (
                         <button
                           key={tab}
                           type="button"
@@ -1670,10 +1683,14 @@ export default function AdminDeskWorkspace({
                                               ? "bg-zinc-200 text-zinc-600 border-zinc-300"
                                               : art.status === "Rejected"
                                                 ? "bg-red-50 text-red-700 border-red-200"
-                                                : "bg-amber-50 text-amber-700 border-amber-200" // Pending
+                                                : art.status === "InReview"
+                                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                                  : art.status === "Approved"
+                                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                    : "bg-zinc-100 text-zinc-650 border-zinc-200"
                                         }`}
                                     >
-                                      {art.status === "InReview" || art.status === "Approved" ? "PENDING" : art.status.toUpperCase()}
+                                      {art.status === "InReview" ? "IN REVIEW" : art.status === "Approved" ? "APPROVED" : art.status.toUpperCase()}
                                     </span>
                                   </td>
                                   <td className="p-4 font-mono font-bold text-zinc-600">{simulatedViews.toLocaleString()}</td>
@@ -1698,14 +1715,22 @@ export default function AdminDeskWorkspace({
                                     )}
 
                                     {(art.status === "InReview" || art.status === "Approved") && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDirectStatusTransition(art.id, art.status === "InReview" ? "Approved" : "Published")}
-                                        disabled={art.author_id === currentUserId}
-                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-green-650 hover:bg-green-50 shadow-2xs disabled:opacity-50"
-                                      >
-                                        Approve
-                                      </button>
+                                      art.author_id === currentUserId ? (
+                                        <span
+                                          title="Separation of duties: you cannot approve your own article"
+                                          className="rounded border border-red-100 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-500 cursor-not-allowed select-none"
+                                        >
+                                          ⛔ Self-authored
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDirectStatusTransition(art.id, art.status === "InReview" ? "Approved" : "Published")}
+                                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-green-650 hover:bg-green-50 shadow-2xs"
+                                        >
+                                          Approve
+                                        </button>
+                                      )
                                     )}
 
                                     <button
@@ -1853,7 +1878,7 @@ export default function AdminDeskWorkspace({
                 </div>
               ) : (
                 /* EDITOR / CREATOR FORM VIEW */
-                <form onSubmit={handleSaveArticle} className="space-y-6">
+                <form onSubmit={handleSaveArticle} noValidate className="space-y-6">
                   <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-6">
                     <div className="flex items-center justify-between border-b border-zinc-150 pb-4">
                       <h3 className="text-sm font-extrabold text-zinc-950">
@@ -1964,13 +1989,12 @@ export default function AdminDeskWorkspace({
                     {/* Grid Inputs */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Title</label>
+                        <label className={`text-[10px] font-bold uppercase tracking-wider block ${titleError ? "text-red-600" : "text-zinc-550"}`}>Title{titleError && " — required"}</label>
                         <input
                           type="text"
-                          required
                           value={title}
                           onChange={(e) => handleTitleChange(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden ${titleError ? "border-red-400 bg-red-50 focus:border-red-500" : "border-zinc-200"}`}
                           placeholder="e.g. SIM Card Setup"
                         />
                       </div>
@@ -3738,8 +3762,8 @@ export default function AdminDeskWorkspace({
                               <tr key={log.id} className="hover:bg-zinc-50/50">
                                 <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
                                 <td className="p-4 font-bold text-zinc-900">
-                                  {log.actor?.name || "System"}{" "}
-                                  <span className="text-[10px] text-zinc-400 font-normal">({log.actor?.email})</span>
+                                  {log.actor?.name || (log.action?.toLowerCase().includes("customer") || log.target_label?.toLowerCase().includes("customer") ? "Customer / Guest" : "System")}{" "}
+                                  {log.actor?.email && <span className="text-[10px] text-zinc-400 font-normal">({log.actor.email})</span>}
                                 </td>
                                 <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
                                 <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
@@ -3970,6 +3994,7 @@ export default function AdminDeskWorkspace({
                       value: string;
                       delta: string;
                       deltaUp: boolean | null;
+                      deltaUpBad?: boolean;
                       accentFrom: string;
                       accentTo: string;
                       icon: React.ReactNode;
@@ -4023,7 +4048,8 @@ export default function AdminDeskWorkspace({
                         label: "Knowledge Gaps",
                         value: (ad?.totalGaps ?? 0).toLocaleString(),
                         delta: ad?.gapsThisWeek != null ? `${ad.gapsThisWeek} new this week` : "Live from DB",
-                        deltaUp: ad?.gapsThisWeek != null ? false : null,
+                        deltaUp: ad?.gapsThisWeek != null ? true : null,
+                        deltaUpBad: true,
                         accentFrom: "#dc2626",
                         accentTo: "#f87171",
                         icon: (
@@ -4054,11 +4080,16 @@ export default function AdminDeskWorkspace({
                             {/* Value */}
                             <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{card.value}</div>
                             {/* Delta */}
-                            <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${card.deltaUp === true ? "text-green-600" : card.deltaUp === false ? "text-red-500" : "text-zinc-400"}`}>
-                              {card.deltaUp === true && <span>▲</span>}
-                              {card.deltaUp === false && <span>▼</span>}
-                              {card.delta}
-                            </div>
+                            {(() => {
+                              const isGood = card.deltaUp === null ? null : (card.deltaUpBad ? !card.deltaUp : card.deltaUp);
+                              return (
+                                <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${isGood === true ? "text-green-600" : isGood === false ? "text-red-500" : "text-zinc-400"}`}>
+                                  {card.deltaUp === true && <span>▲</span>}
+                                  {card.deltaUp === false && <span>▼</span>}
+                                  {card.delta}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ))}
                       </div>
