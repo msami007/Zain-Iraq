@@ -327,7 +327,7 @@ export default function AdminDeskWorkspace({
       .then((data: any[]) =>
         setNotifications(data.map(a => ({ id: a.id, title: a.title, message: a.body, uiType: annTypeToUi(a.type) })))
       )
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const dismissNotification = async (id: string) => {
@@ -336,7 +336,7 @@ export default function AdminDeskWorkspace({
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   const addNotification = async () => {
@@ -411,7 +411,7 @@ export default function AdminDeskWorkspace({
 
   useEffect(() => {
     fetchWorkflowRoutes();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchAnalytics = async () => {
@@ -539,7 +539,10 @@ export default function AdminDeskWorkspace({
     }
   }, [initialWhatsappDetailed]);
 
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+
   const fetchAuditLogs = async () => {
+    setLoadingAuditLogs(true);
     try {
       // SuperAdmin omits tenant_id to receive logs from all tenants
       const url = currentUserRole === "SuperAdmin"
@@ -552,6 +555,8 @@ export default function AdminDeskWorkspace({
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoadingAuditLogs(false);
     }
   };
 
@@ -711,7 +716,7 @@ export default function AdminDeskWorkspace({
       const updated = await res.json();
       setArticles(articles.map((a) => (a.id === updated.id ? updated : a)));
       alert(`Article transitioned to ${targetStatus} successfully.`);
-      
+
       // Clear rejection modal if open
       setRejectionModalArticleId(null);
       setRejectionModalComment("");
@@ -1306,6 +1311,13 @@ export default function AdminDeskWorkspace({
 
   return (
     <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full relative"}`}>
+      <style>{`
+  @keyframes tabFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tab-fade-in { animation: tabFadeIn 0.18s ease both; }
+`}</style>
       {/* Sidebar Backdrop for Mobile */}
       {!hideSidebar && mobileSidebarOpen && (
         <div
@@ -1316,10 +1328,9 @@ export default function AdminDeskWorkspace({
 
       {/* Sidebar - only show if hideSidebar is false */}
       {!hideSidebar && (
-        <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-200 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
-          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}>
-          <div>
+        <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-300 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}>
+          <div className="overflow-y-auto flex-1 min-h-0">
             {/* Brand */}
             <div className="px-5 py-5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
@@ -1336,7 +1347,7 @@ export default function AdminDeskWorkspace({
             {/* Navigation */}
             <nav className="px-3 pt-5 space-y-5">
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Workspace</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 px-3 mb-2">Workspace</p>
                 <div className="space-y-0.5">
                   <button
                     type="button"
@@ -1345,15 +1356,16 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "dashboard" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                    }`}
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${currentTab === "dashboard" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                      }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <rect x="3" y="3" width="7" height="9" rx="1"/>
-                      <rect x="14" y="3" width="7" height="5" rx="1"/>
-                      <rect x="14" y="12" width="7" height="9" rx="1"/>
-                      <rect x="3" y="16" width="7" height="5" rx="1"/>
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${currentTab === "dashboard" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                      }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "dashboard" ? "text-amber-400/80" : ""}`}>
+                      <rect x="3" y="3" width="7" height="9" rx="1" />
+                      <rect x="14" y="3" width="7" height="5" rx="1" />
+                      <rect x="14" y="12" width="7" height="9" rx="1" />
+                      <rect x="3" y="16" width="7" height="5" rx="1" />
                     </svg>
                     Dashboard
                   </button>
@@ -1364,16 +1376,17 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "articles" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                    }`}
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${currentTab === "articles" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                      }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                      <line x1="10" y1="9" x2="8" y2="9"/>
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${currentTab === "articles" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                      }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "articles" ? "text-amber-400/80" : ""}`}>
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <line x1="10" y1="9" x2="8" y2="9" />
                     </svg>
                     Articles Manager
                   </button>
@@ -1384,13 +1397,14 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "gaps" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                    }`}
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${currentTab === "gaps" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                      }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <circle cx="11" cy="11" r="8"/>
-                      <path d="m21 21-4.35-4.35"/>
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${currentTab === "gaps" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                      }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "gaps" ? "text-amber-400/80" : ""}`}>
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.35-4.35" />
                     </svg>
                     Gaps Queue
                   </button>
@@ -1401,15 +1415,16 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "workflows" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                    }`}
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${currentTab === "workflows" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                      }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <polyline points="17 1 21 5 17 9"/>
-                      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                      <polyline points="7 23 3 19 7 15"/>
-                      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${currentTab === "workflows" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                      }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "workflows" ? "text-amber-400/80" : ""}`}>
+                      <polyline points="17 1 21 5 17 9" />
+                      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                      <polyline points="7 23 3 19 7 15" />
+                      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
                     </svg>
                     Workflows
                     {articles.filter(a => a.status === "InReview" || a.status === "Approved").length > 0 && (
@@ -1425,25 +1440,27 @@ export default function AdminDeskWorkspace({
                       closeEditor();
                       setMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "audit" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                    }`}
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${currentTab === "audit" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                      }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                      <path d="M12 6v6l4 2"/>
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${currentTab === "audit" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                      }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "audit" ? "text-amber-400/80" : ""}`}>
+                      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                      <path d="M12 6v6l4 2" />
                     </svg>
                     Audit Logs
                   </button>
                   <button
                     type="button"
                     onClick={() => { setActiveTab("glossary"); closeEditor(); setMobileSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
-                      currentTab === "glossary" ? "bg-white/[0.09] text-white" : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
-                    }`}
+                    className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${currentTab === "glossary" ? "bg-white/[0.1] text-white" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                      }`}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
+                    <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${currentTab === "glossary" ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                      }`} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${currentTab === "glossary" ? "text-amber-400/80" : ""}`}>
+                      <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" />
                     </svg>
                     Glossary
                   </button>
@@ -1453,7 +1470,7 @@ export default function AdminDeskWorkspace({
           </div>
 
           {/* User Footer */}
-          <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3">
+          <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3 flex-shrink-0">
             <div className="flex items-center gap-2.5 px-1">
               <div className="h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
                 <span className="text-[11px] font-bold text-indigo-300">{userName?.[0]?.toUpperCase() ?? "A"}</span>
@@ -1478,9 +1495,9 @@ export default function AdminDeskWorkspace({
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/[0.13] px-3 py-2 text-[11px] font-semibold text-white/40 hover:text-white/70 transition-all"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
               Sign Out
             </button>
@@ -1519,16 +1536,15 @@ export default function AdminDeskWorkspace({
         )}
 
         {/* View Contents */}
-        <div className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8"}>
+        <div key={currentTab} className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8 tab-fade-in"}>
           {/* Notifications Banner — backed by Announcements API */}
           {!hideSidebar && notifications.length > 0 && (
             <div className="mb-4 space-y-2">
               {notifications.map(n => (
-                <div key={n.id} className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-xs font-semibold ${
-                  n.uiType === "warning" ? "border-amber-200 bg-amber-50 text-amber-800" :
-                  n.uiType === "success" ? "border-green-200 bg-green-50 text-green-800" :
-                  "border-blue-200 bg-blue-50 text-blue-800"
-                }`}>
+                <div key={n.id} className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-xs font-semibold ${n.uiType === "warning" ? "border-amber-200 bg-amber-50 text-amber-800" :
+                    n.uiType === "success" ? "border-green-200 bg-green-50 text-green-800" :
+                      "border-blue-200 bg-blue-50 text-blue-800"
+                  }`}>
                   <div className="flex items-start gap-2">
                     <span>{n.uiType === "warning" ? "⚠️" : n.uiType === "success" ? "✅" : "ℹ️"}</span>
                     <div>
@@ -1594,8 +1610,8 @@ export default function AdminDeskWorkspace({
                           type="button"
                           onClick={() => setSelectedStatusFilter(tab)}
                           className={`rounded px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0 ${selectedStatusFilter === tab
-                              ? "bg-white text-zinc-950 shadow-2xs"
-                              : "text-zinc-550 hover:text-zinc-900"
+                            ? "bg-white text-zinc-950 shadow-2xs"
+                            : "text-zinc-550 hover:text-zinc-900"
                             }`}
                         >
                           {tab}
@@ -1661,33 +1677,49 @@ export default function AdminDeskWorkspace({
                               const dateObj = new Date(art.updated_at);
                               const formattedDate = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+                              const rowBorder =
+                                art.status === "Published" ? "border-l-[3px] border-l-green-400"
+                                  : art.status === "Draft" ? "border-l-[3px] border-l-zinc-300"
+                                    : art.status === "Archived" ? "border-l-[3px] border-l-zinc-300"
+                                      : art.status === "Rejected" ? "border-l-[3px] border-l-red-400"
+                                        : "border-l-[3px] border-l-amber-400"; // InReview / Approved
+
+                              const langBadge =
+                                art.language === "en" ? "bg-blue-50 text-blue-700 border-blue-100"
+                                  : art.language === "ar" ? "bg-orange-50 text-orange-700 border-orange-100"
+                                    : "bg-zinc-100 text-zinc-500 border-zinc-200";
+
                               return (
-                                <tr key={art.id} className="hover:bg-zinc-50 transition-colors">
+                                <tr key={art.id} className={`hover:bg-zinc-50 transition-colors ${rowBorder}`}>
                                   <td className="p-4 font-mono text-[10px] text-zinc-400 font-semibold">{art.id.slice(0, 8)}</td>
                                   <td className="p-4 font-extrabold text-zinc-950 text-left">
                                     {art.title}
                                   </td>
                                   <td className="p-4">
-                                    <span className="rounded-full bg-zinc-50 border border-zinc-200 px-2.5 py-0.5 text-[9px] font-bold text-zinc-500 uppercase">
+                                    <span className="rounded-md bg-violet-50 border border-violet-100 px-2.5 py-0.5 text-[9px] font-bold text-violet-600 uppercase">
                                       {art.category?.name || "General"}
                                     </span>
                                   </td>
-                                  <td className="p-4 uppercase font-bold text-zinc-500">{art.language}</td>
+                                  <td className="p-4">
+                                    <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase ${langBadge}`}>
+                                      {art.language}
+                                    </span>
+                                  </td>
                                   <td className="p-4">
                                     <span
                                       className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${art.status === "Published"
-                                          ? "bg-green-50 text-green-700 border-green-200"
-                                          : art.status === "Draft"
-                                            ? "bg-zinc-100 text-zinc-650 border-zinc-200"
-                                            : art.status === "Archived"
-                                              ? "bg-zinc-200 text-zinc-600 border-zinc-300"
-                                              : art.status === "Rejected"
-                                                ? "bg-red-50 text-red-700 border-red-200"
-                                                : art.status === "InReview"
-                                                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                                                  : art.status === "Approved"
-                                                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                                                    : "bg-zinc-100 text-zinc-650 border-zinc-200"
+                                        ? "bg-green-50 text-green-700 border-green-200"
+                                        : art.status === "Draft"
+                                          ? "bg-zinc-100 text-zinc-650 border-zinc-200"
+                                          : art.status === "Archived"
+                                            ? "bg-zinc-200 text-zinc-600 border-zinc-300"
+                                            : art.status === "Rejected"
+                                              ? "bg-red-50 text-red-700 border-red-200"
+                                              : art.status === "InReview"
+                                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                                : art.status === "Approved"
+                                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                  : "bg-zinc-100 text-zinc-650 border-zinc-200"
                                         }`}
                                     >
                                       {art.status === "InReview" ? "IN REVIEW" : art.status === "Approved" ? "APPROVED" : art.status.toUpperCase()}
@@ -1958,9 +1990,9 @@ export default function AdminDeskWorkspace({
                             <div>
                               <span className="text-[10px] text-zinc-450 block font-medium">Approved By</span>
                               <span className="font-semibold text-zinc-800">
-                                {fullArticleDetail.status_history?.find((h: any) => h.to_status === "Approved")?.actor?.name || 
-                                 (fullArticleDetail.status === "Published" ? fullArticleDetail.status_history?.find((h: any) => h.to_status === "Published")?.actor?.name : null) || 
-                                 "Pending Approval"}
+                                {fullArticleDetail.status_history?.find((h: any) => h.to_status === "Approved")?.actor?.name ||
+                                  (fullArticleDetail.status === "Published" ? fullArticleDetail.status_history?.find((h: any) => h.to_status === "Published")?.actor?.name : null) ||
+                                  "Pending Approval"}
                               </span>
                             </div>
                             <div>
@@ -2086,9 +2118,9 @@ export default function AdminDeskWorkspace({
                             {selectedTeams.length === 0
                               ? "Select Teams..."
                               : teams
-                                  .filter(t => selectedTeams.includes(t.id))
-                                  .map(t => t.name)
-                                  .join(", ")}
+                                .filter(t => selectedTeams.includes(t.id))
+                                .map(t => t.name)
+                                .join(", ")}
                           </span>
                           <svg className="h-4 w-4 text-zinc-400 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -2180,27 +2212,27 @@ export default function AdminDeskWorkspace({
                       </div>
                     </div>
 
-                  {/* Workflow Route Selector */}
-                  <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Approval Workflow Route</h4>
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Approval Workflow</label>
-                      <select
-                        value={selectedWorkflowRouteId}
-                        onChange={(e) => setSelectedWorkflowRouteId(e.target.value)}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
-                        disabled={!!(!isCreating && editingArticle && editingArticle.status !== "Draft" && editingArticle.status !== "Archived")}
-                        title={!isCreating && editingArticle && editingArticle.status !== "Draft" && editingArticle.status !== "Archived" ? "Workflow cannot be changed once review has started." : ""}
-                      >
-                        <option value="">Default Direct Workflow</option>
-                        {workflowRoutes.map((route) => (
-                          <option key={route.id} value={route.id}>
-                            {route.name} ({route.steps?.length || 0} steps)
-                          </option>
-                        ))}
-                      </select>
+                    {/* Workflow Route Selector */}
+                    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Approval Workflow Route</h4>
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Approval Workflow</label>
+                        <select
+                          value={selectedWorkflowRouteId}
+                          onChange={(e) => setSelectedWorkflowRouteId(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
+                          disabled={!!(!isCreating && editingArticle && editingArticle.status !== "Draft" && editingArticle.status !== "Archived")}
+                          title={!isCreating && editingArticle && editingArticle.status !== "Draft" && editingArticle.status !== "Archived" ? "Workflow cannot be changed once review has started." : ""}
+                        >
+                          <option value="">Default Direct Workflow</option>
+                          {workflowRoutes.map((route) => (
+                            <option key={route.id} value={route.id}>
+                              {route.name} ({route.steps?.length || 0} steps)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                  </div>
 
                     {/* Workflow status transition panel (only in edit mode) */}
                     {(isCreating || editingArticle) && (
@@ -2315,8 +2347,8 @@ export default function AdminDeskWorkspace({
                                       type="button"
                                       onClick={() => handleRevokeGuestLink(link.id, !link.revoked)}
                                       className={`rounded px-2 py-0.5 text-[9px] font-bold transition-colors ${link.revoked
-                                          ? "bg-zinc-950 text-white hover:bg-zinc-800"
-                                          : "border border-red-200 text-red-700 hover:bg-red-50"
+                                        ? "bg-zinc-950 text-white hover:bg-zinc-800"
+                                        : "border border-red-200 text-red-700 hover:bg-red-50"
                                         }`}
                                     >
                                       {link.revoked ? "Restore" : "Revoke"}
@@ -2348,8 +2380,8 @@ export default function AdminDeskWorkspace({
                               type="button"
                               onClick={() => setVariantTab(tab.id as any)}
                               className={`rounded-lg py-2 px-4 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${isActive
-                                  ? "text-white shadow-xs"
-                                  : "text-zinc-500 bg-white border-zinc-200 hover:text-zinc-950 hover:bg-zinc-50"
+                                ? "text-white shadow-xs"
+                                : "text-zinc-500 bg-white border-zinc-200 hover:text-zinc-950 hover:bg-zinc-50"
                                 }`}
                               style={isActive ? { backgroundColor: brandingColor, borderColor: brandingColor } : {}}
                             >
@@ -2918,11 +2950,10 @@ export default function AdminDeskWorkspace({
                   <button
                     type="button"
                     onClick={() => setWorkflowSubTab("queue")}
-                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all shrink-0 ${
-                      workflowSubTab === "queue"
+                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all shrink-0 ${workflowSubTab === "queue"
                         ? "border-zinc-900 text-zinc-900"
                         : "border-transparent text-zinc-450 hover:text-zinc-700"
-                    }`}
+                      }`}
                   >
                     Review Queue
                   </button>
@@ -2932,11 +2963,10 @@ export default function AdminDeskWorkspace({
                       setWorkflowSubTab("builder");
                       setEditingWorkflow(null);
                     }}
-                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all shrink-0 ${
-                      workflowSubTab === "builder"
+                    className={`px-5 py-2.5 text-xs font-bold border-b-2 transition-all shrink-0 ${workflowSubTab === "builder"
                         ? "border-zinc-900 text-zinc-900"
                         : "border-transparent text-zinc-450 hover:text-zinc-700"
-                    }`}
+                      }`}
                   >
                     Custom Workflows Builder
                   </button>
@@ -2953,11 +2983,11 @@ export default function AdminDeskWorkspace({
                       </div>
                       <div className="flex gap-2">
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
-                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                           IN REVIEW: {articles.filter(a => a.status === "InReview").length}
                         </span>
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                           APPROVED: {articles.filter(a => a.status === "Approved").length}
                         </span>
                       </div>
@@ -3005,12 +3035,12 @@ export default function AdminDeskWorkspace({
                                     <td className="px-5 py-4">
                                       {art.status === "InReview" ? (
                                         <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
-                                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500"/>
+                                          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                                           In Review
                                         </span>
                                       ) : (
                                         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
-                                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500"/>
+                                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                                           Approved
                                         </span>
                                       )}
@@ -3070,9 +3100,8 @@ export default function AdminDeskWorkspace({
                         { label: "Archived", color: "bg-red-100 text-red-600", active: false },
                       ].map((stage, i, arr) => (
                         <div key={stage.label} className="flex items-center shrink-0">
-                          <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border shrink-0 ${
-                            stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
-                          } ${stage.color}`}>
+                          <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border shrink-0 ${stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
+                            } ${stage.color}`}>
                             {stage.active && <span className="mr-1">👁</span>}{stage.label}
                           </div>
                           {i < arr.length - 1 && (
@@ -3234,22 +3263,22 @@ export default function AdminDeskWorkspace({
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                       {idx > 0 && (
-                                        <button type="button" title="Move up" onClick={() => { const u = [...newWorkflowSteps]; [u[idx-1],u[idx]]=[u[idx],u[idx-1]]; setNewWorkflowSteps(u); }} className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs">↑</button>
+                                        <button type="button" title="Move up" onClick={() => { const u = [...newWorkflowSteps];[u[idx - 1], u[idx]] = [u[idx], u[idx - 1]]; setNewWorkflowSteps(u); }} className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs">↑</button>
                                       )}
                                       {idx < newWorkflowSteps.length - 1 && (
-                                        <button type="button" title="Move down" onClick={() => { const u = [...newWorkflowSteps]; [u[idx],u[idx+1]]=[u[idx+1],u[idx]]; setNewWorkflowSteps(u); }} className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs">↓</button>
+                                        <button type="button" title="Move down" onClick={() => { const u = [...newWorkflowSteps];[u[idx], u[idx + 1]] = [u[idx + 1], u[idx]]; setNewWorkflowSteps(u); }} className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 shadow-2xs">↓</button>
                                       )}
-                                      <button type="button" onClick={() => setNewWorkflowSteps(newWorkflowSteps.filter((_,i)=>i!==idx))} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 shadow-2xs">✕ Remove</button>
+                                      <button type="button" onClick={() => setNewWorkflowSteps(newWorkflowSteps.filter((_, i) => i !== idx))} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 shadow-2xs">✕ Remove</button>
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                                     <div className="lg:col-span-2">
                                       <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Step Name *</label>
-                                      <input type="text" value={step.name} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],name:e.target.value}; setNewWorkflowSteps(u); }} placeholder="e.g. Technical Review" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition" />
+                                      <input type="text" value={step.name} onChange={e => { const u = [...newWorkflowSteps]; u[idx] = { ...u[idx], name: e.target.value }; setNewWorkflowSteps(u); }} placeholder="e.g. Technical Review" className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition" />
                                     </div>
                                     <div>
                                       <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Role Required</label>
-                                      <select value={step.role_restriction} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],role_restriction:e.target.value}; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
+                                      <select value={step.role_restriction} onChange={e => { const u = [...newWorkflowSteps]; u[idx] = { ...u[idx], role_restriction: e.target.value }; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
                                         <option value="Admin">Admin</option>
                                         <option value="SuperAdmin">Super Admin</option>
                                         <option value="Any">Any Role</option>
@@ -3257,14 +3286,14 @@ export default function AdminDeskWorkspace({
                                     </div>
                                     <div>
                                       <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Restrict to Team</label>
-                                      <select value={step.team_id} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],team_id:e.target.value}; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
+                                      <select value={step.team_id} onChange={e => { const u = [...newWorkflowSteps]; u[idx] = { ...u[idx], team_id: e.target.value }; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
                                         <option value="">Any Team</option>
                                         {teams.map((t: any) => (<option key={t.id} value={t.id}>{t.name}</option>))}
                                       </select>
                                     </div>
                                     <div className="lg:col-span-2">
                                       <label className="block text-[9px] font-bold uppercase tracking-wider text-zinc-400 mb-1">Restrict to Specific User</label>
-                                      <select value={step.user_id} onChange={e => { const u=[...newWorkflowSteps]; u[idx]={...u[idx],user_id:e.target.value}; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
+                                      <select value={step.user_id} onChange={e => { const u = [...newWorkflowSteps]; u[idx] = { ...u[idx], user_id: e.target.value }; setNewWorkflowSteps(u); }} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-500 transition">
                                         <option value="">Any User (matching role/team)</option>
                                         {users.map((u: User) => (<option key={u.id} value={u.id}>{u.name} · {u.email}</option>))}
                                       </select>
@@ -3334,8 +3363,8 @@ export default function AdminDeskWorkspace({
                       key={st}
                       onClick={() => setGapStatusFilter(st)}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all shadow-2xs whitespace-nowrap shrink-0 ${gapStatusFilter === st
-                          ? "bg-zinc-950 text-white border-zinc-950"
-                          : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+                        ? "bg-zinc-950 text-white border-zinc-950"
+                        : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
                         }`}
                     >
                       {st}
@@ -3351,7 +3380,7 @@ export default function AdminDeskWorkspace({
                       className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all ${gapSortOrder === "newest" ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
                     >
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M11 12h4"/><path d="M11 16h7"/><path d="M11 20h10"/>
+                        <path d="m3 8 4-4 4 4" /><path d="M7 4v16" /><path d="M11 12h4" /><path d="M11 16h7" /><path d="M11 20h10" />
                       </svg>
                       Newest
                     </button>
@@ -3361,7 +3390,7 @@ export default function AdminDeskWorkspace({
                       className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-all ${gapSortOrder === "oldest" ? "bg-zinc-950 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
                     >
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/>
+                        <path d="m3 16 4 4 4-4" /><path d="M7 20V4" /><path d="M11 4h10" /><path d="M11 8h7" /><path d="M11 12h4" />
                       </svg>
                       Oldest
                     </button>
@@ -3428,119 +3457,119 @@ export default function AdminDeskWorkspace({
                             return gapSortOrder === "newest" ? tb - ta : ta - tb;
                           })
                           .map((g) => (
-                          <tr key={g.id} className="hover:bg-zinc-50 transition-colors align-top">
-                            <td className="p-4 max-w-xs">
-                              <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>
-                              {g.flagged_article && (
-                                <p className="text-[10px] text-red-600 font-semibold mt-0.5">
-                                  📄 Flagged: {g.flagged_article.title}
-                                </p>
-                              )}
-                            </td>
+                            <tr key={g.id} className="hover:bg-zinc-50 transition-colors align-top">
+                              <td className="p-4 max-w-xs">
+                                <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>
+                                {g.flagged_article && (
+                                  <p className="text-[10px] text-red-600 font-semibold mt-0.5">
+                                    📄 Flagged: {g.flagged_article.title}
+                                  </p>
+                                )}
+                              </td>
 
-                            <td className="p-4">
-                              {g.source === "search" ? (
-                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200">Search Query</span>
-                              ) : g.source === "article_flag" ? (
-                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200">Article Flag</span>
-                              ) : g.source === "customer" ? (
-                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200">Customer</span>
-                              ) : (
-                                <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200">Knowledge Gap</span>
-                              )}
-                            </td>
+                              <td className="p-4">
+                                {g.source === "search" ? (
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200">Search Query</span>
+                                ) : g.source === "article_flag" ? (
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200">Article Flag</span>
+                                ) : g.source === "customer" ? (
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200">Customer</span>
+                                ) : (
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200">Knowledge Gap</span>
+                                )}
+                              </td>
 
-                            <td className="p-4 max-w-xs">
-                              {g.comment ? (
-                                <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-3">"{g.comment}"</p>
-                              ) : (
-                                <span className="text-[10px] text-zinc-300">—</span>
-                              )}
-                            </td>
-                            <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
-                            <td className="p-4">
-                              <span
-                                className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
+                              <td className="p-4 max-w-xs">
+                                {g.comment ? (
+                                  <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-3">"{g.comment}"</p>
+                                ) : (
+                                  <span className="text-[10px] text-zinc-300">—</span>
+                                )}
+                              </td>
+                              <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
+                              <td className="p-4">
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
                                     ? "bg-green-50 text-green-700 border-green-200"
                                     : g.status === "NEW"
                                       ? "bg-red-50 text-red-700 border-red-200"
                                       : "bg-amber-50 text-amber-700 border-amber-200"
-                                  }`}
-                              >
-                                {g.status}
-                              </span>
-                            </td>
-                            <td className="p-4 text-zinc-500 font-medium">
-                              <p>{g.reporter?.name || "Customer / Guest"}</p>
-                              {g.reporter?.email && <p className="text-[9px] text-zinc-400">{g.reporter.email}</p>}
-                            </td>
-                            <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
-                            <td className="p-4 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
-                              {new Date(g.created_at).toLocaleString()}
-                            </td>
-                            <td className="p-4 text-right">
-                              <div className="flex flex-wrap gap-2 justify-end items-center">
-                                {g.status === "NEW" && (
-                                  <>
-                                    <button
-                                      onClick={() => handleClaimGap(g.id)}
-                                      className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs whitespace-nowrap"
-                                    >
-                                      Claim Gap
-                                    </button>
-                                    <button
-                                      onClick={() => handleCreateArticleFromGap(g)}
-                                      className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
-                                    >
-                                      Create Article
-                                    </button>
-                                  </>
-                                )}
-                                {g.status === "IN_PROGRESS" && (
-                                  <>
-                                    <button
-                                      onClick={() => setResolvingGap(g)}
-                                      className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
-                                    >
-                                      Resolve Gap
-                                    </button>
-                                    <button
-                                      onClick={() => handleCreateArticleFromGap(g)}
-                                      className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
-                                    >
-                                      Create Article
-                                    </button>
-                                  </>
-                                )}
-                                {g.status === "RESOLVED" && (
-                                  <div className="flex items-center justify-end gap-2 text-xs">
-                                    {g.resolving_article_id ? (
-                                      <Link
-                                        href={`/articles/${g.resolving_article_id}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 hover:text-green-900 hover:underline truncate max-w-40 transition-colors"
+                                    }`}
+                                >
+                                  {g.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-zinc-500 font-medium">
+                                <p>{g.reporter?.name || "Customer / Guest"}</p>
+                                {g.reporter?.email && <p className="text-[9px] text-zinc-400">{g.reporter.email}</p>}
+                              </td>
+                              <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
+                              <td className="p-4 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
+                                {new Date(g.created_at).toLocaleString()}
+                              </td>
+                              <td className="p-4 text-right">
+                                <div className="flex flex-wrap gap-2 justify-end items-center">
+                                  {g.status === "NEW" && (
+                                    <>
+                                      <button
+                                        onClick={() => handleClaimGap(g.id)}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs whitespace-nowrap"
                                       >
-                                        {g.resolving_article?.title || "View Article"}
-                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                                        </svg>
-                                      </Link>
-                                    ) : (
-                                      <span className="text-[10px] text-zinc-400 font-medium">No article linked</span>
-                                    )}
-                                    <button
-                                      onClick={() => handleUnresolveGap(g.id)}
-                                      className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
-                                    >
-                                      Rollback
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                                        Claim Gap
+                                      </button>
+                                      <button
+                                        onClick={() => handleCreateArticleFromGap(g)}
+                                        className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
+                                      >
+                                        Create Article
+                                      </button>
+                                    </>
+                                  )}
+                                  {g.status === "IN_PROGRESS" && (
+                                    <>
+                                      <button
+                                        onClick={() => setResolvingGap(g)}
+                                        className="rounded bg-zinc-950 hover:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
+                                      >
+                                        Resolve Gap
+                                      </button>
+                                      <button
+                                        onClick={() => handleCreateArticleFromGap(g)}
+                                        className="rounded bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-[10px] font-bold text-white shadow-xs whitespace-nowrap"
+                                      >
+                                        Create Article
+                                      </button>
+                                    </>
+                                  )}
+                                  {g.status === "RESOLVED" && (
+                                    <div className="flex items-center justify-end gap-2 text-xs">
+                                      {g.resolving_article_id ? (
+                                        <Link
+                                          href={`/articles/${g.resolving_article_id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 hover:text-green-900 hover:underline truncate max-w-40 transition-colors"
+                                        >
+                                          {g.resolving_article?.title || "View Article"}
+                                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                                          </svg>
+                                        </Link>
+                                      ) : (
+                                        <span className="text-[10px] text-zinc-400 font-medium">No article linked</span>
+                                      )}
+                                      <button
+                                        onClick={() => handleUnresolveGap(g.id)}
+                                        className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
+                                      >
+                                        Rollback
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
                       )}
                     </tbody>
                   </table>
@@ -3613,16 +3642,20 @@ export default function AdminDeskWorkspace({
                         className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
                         Export CSV
                       </button>
                       <button
                         type="button"
                         onClick={fetchAuditLogs}
-                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650"
+                        disabled={loadingAuditLogs}
+                        className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-60 disabled:cursor-not-allowed px-2.5 py-1 text-[10px] font-bold text-zinc-650 transition-colors"
                       >
-                        Refresh
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAuditLogs ? "animate-spin" : ""}>
+                          <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        {loadingAuditLogs ? "Refreshing…" : "Refresh"}
                       </button>
                     </div>
                   </div>
@@ -3655,7 +3688,7 @@ export default function AdminDeskWorkspace({
                         <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Actor</label>
                         <div className="relative">
                           <svg className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-350 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                           </svg>
                           <input
                             type="text"
@@ -3699,7 +3732,7 @@ export default function AdminDeskWorkspace({
                         <label className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Target Label</label>
                         <div className="relative">
                           <svg className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-350 pointer-events-none" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                           </svg>
                           <input
                             type="text"
@@ -3727,7 +3760,7 @@ export default function AdminDeskWorkspace({
                           className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors"
                         >
                           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                           </svg>
                           Clear all filters
                         </button>
@@ -3739,7 +3772,7 @@ export default function AdminDeskWorkspace({
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                       <thead>
-                        <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
+                        <tr className="bg-zinc-50 border-b border-zinc-100 text-zinc-500 uppercase text-[10px] font-bold">
                           <th className="p-4">Timestamp</th>
                           <th className="p-4">Actor</th>
                           <th className="p-4">Action</th>
@@ -3748,7 +3781,7 @@ export default function AdminDeskWorkspace({
                           <th className="p-4">Rollback</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-150">
+                      <tbody className="divide-y divide-zinc-100">
                         {filteredLogs.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="p-8 text-center text-zinc-400 font-semibold">
@@ -3758,6 +3791,29 @@ export default function AdminDeskWorkspace({
                         ) : (
                           filteredLogs.map((log) => {
                             const canRollback = log.target_type === "Article" && log.before && Object.keys(log.before).length > 0;
+                            const a = log.action?.toUpperCase() || "";
+                            const actionBadge =
+                              a.includes("CREATE") || a.includes("PUBLISH") || a.includes("APPROVE")
+                                ? "bg-green-50 text-green-700 border-green-100"
+                                : a.includes("DELETE") || a.includes("ARCHIVE")
+                                  ? "bg-red-50 text-red-600 border-red-100"
+                                  : a.includes("UPDATE") || a.includes("EDIT")
+                                    ? "bg-blue-50 text-blue-700 border-blue-100"
+                                    : a.includes("GAP") || a.includes("FLAG")
+                                      ? "bg-amber-50 text-amber-700 border-amber-100"
+                                      : a.includes("ROLLBACK") || a.includes("RESTORE")
+                                        ? "bg-orange-50 text-orange-700 border-orange-100"
+                                        : a.includes("VIEW") || a.includes("SEARCH")
+                                          ? "bg-zinc-100 text-zinc-500 border-zinc-200"
+                                          : "bg-zinc-100 text-zinc-600 border-zinc-200";
+                            const typeBadge =
+                              log.target_type === "Article"
+                                ? "bg-blue-50 text-blue-700 border-blue-100"
+                                : log.target_type === "KnowledgeGap"
+                                  ? "bg-amber-50 text-amber-700 border-amber-100"
+                                  : log.target_type === "User"
+                                    ? "bg-violet-50 text-violet-700 border-violet-100"
+                                    : "bg-zinc-100 text-zinc-500 border-zinc-200";
                             return (
                               <tr key={log.id} className="hover:bg-zinc-50/50">
                                 <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
@@ -3765,9 +3821,17 @@ export default function AdminDeskWorkspace({
                                   {log.actor?.name || (log.action?.toLowerCase().includes("customer") || log.target_label?.toLowerCase().includes("customer") ? "Customer / Guest" : "System")}{" "}
                                   {log.actor?.email && <span className="text-[10px] text-zinc-400 font-normal">({log.actor.email})</span>}
                                 </td>
-                                <td className="p-4 font-bold text-zinc-800 uppercase tracking-wider text-[10px]">{log.action}</td>
-                                <td className="p-4 text-zinc-500 font-medium">{log.target_type}</td>
-                                <td className="p-4 text-zinc-955 font-semibold max-w-xs truncate">{log.target_label}</td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${actionBadge}`}>
+                                    {log.action}
+                                  </span>
+                                </td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold ${typeBadge}`}>
+                                    {log.target_type}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-zinc-700 font-medium text-[11px] max-w-xs truncate">{log.target_label}</td>
                                 <td className="p-4">
                                   {canRollback ? (
                                     <button
@@ -3898,7 +3962,7 @@ export default function AdminDeskWorkspace({
                     </span>
                   </div>
                   <div className="relative">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                     <input type="text" placeholder="Search terms or definitions…" value={glossarySearch} onChange={e => setGlossarySearch(e.target.value)}
                       className="w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-10 py-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none transition-colors" />
                     {glossarySearch && (
@@ -3930,7 +3994,7 @@ export default function AdminDeskWorkspace({
                 {/* Section tables */}
                 {filteredSections.length === 0 ? (
                   <div className="rounded-xl border border-zinc-100 bg-white py-14 text-center">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-zinc-300"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3 text-zinc-300"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                     <p className="text-sm font-semibold text-zinc-500">No terms match your search.</p>
                     <p className="text-xs text-zinc-400 mt-1">Try a different keyword or clear the filters.</p>
                   </div>
@@ -3971,7 +4035,7 @@ export default function AdminDeskWorkspace({
                   className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
-                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                   </svg>
                   {loadingAnalytics ? "Refreshing…" : "Refresh"}
                 </button>
@@ -4009,7 +4073,7 @@ export default function AdminDeskWorkspace({
                         accentTo: "#a78bfa",
                         icon: (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                           </svg>
                         ),
                       },
@@ -4024,7 +4088,7 @@ export default function AdminDeskWorkspace({
                         accentTo: "#34d399",
                         icon: (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                           </svg>
                         ),
                       },
@@ -4039,8 +4103,8 @@ export default function AdminDeskWorkspace({
                         accentTo: "#22d3ee",
                         icon: (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
-                            <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" />
+                            <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
                           </svg>
                         ),
                       },
@@ -4054,8 +4118,8 @@ export default function AdminDeskWorkspace({
                         accentTo: "#f87171",
                         icon: (
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 9v4"/><path d="M12 17h.01"/>
-                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <path d="M12 9v4" /><path d="M12 17h.01" />
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                           </svg>
                         ),
                       },
@@ -4339,7 +4403,7 @@ export default function AdminDeskWorkspace({
                       className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs"
                     >
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
                       Export CSV
                     </button>
@@ -4350,7 +4414,7 @@ export default function AdminDeskWorkspace({
                       className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs disabled:opacity-50"
                     >
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
-                        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                       </svg>
                       {loadingAnalytics ? "Refreshing…" : "Refresh"}
                     </button>
@@ -4418,13 +4482,13 @@ export default function AdminDeskWorkspace({
                               return i >= analyticsData.dailyTrend.length - days;
                             })
                             .map((t: any) => (
-                            <tr key={t.date} className="hover:bg-zinc-50/50">
-                              <td className="p-4 font-mono font-bold text-zinc-650">{t.date}</td>
-                              <td className="p-4 font-semibold text-zinc-800">{t.views} views</td>
-                              <td className="p-4 font-semibold text-zinc-800">{t.clicks} clicks</td>
-                              <td className="p-4 font-bold text-zinc-950">{t.views + t.clicks} interactions</td>
-                            </tr>
-                          ))}
+                              <tr key={t.date} className="hover:bg-zinc-50/50">
+                                <td className="p-4 font-mono font-bold text-zinc-650">{t.date}</td>
+                                <td className="p-4 font-semibold text-zinc-800">{t.views} views</td>
+                                <td className="p-4 font-semibold text-zinc-800">{t.clicks} clicks</td>
+                                <td className="p-4 font-bold text-zinc-950">{t.views + t.clicks} interactions</td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>

@@ -835,6 +835,13 @@ export default function AgentDeskWorkspace({
 
   return (
     <div className="min-h-screen flex bg-zinc-50 w-full text-left relative">
+      <style>{`
+  @keyframes tabFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tab-fade-in { animation: tabFadeIn 0.18s ease both; }
+`}</style>
 
       {/* Sidebar Backdrop for Mobile */}
       {mobileSidebarOpen && (
@@ -845,10 +852,10 @@ export default function AgentDeskWorkspace({
       )}
 
       {/* ── Sidebar ── */}
-      <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-200 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
+      <aside className={`w-56 flex-shrink-0 bg-[#0c0c14] border-r border-white/[0.06] flex flex-col justify-between fixed inset-y-0 left-0 z-50 transform md:sticky md:translate-x-0 transition-transform duration-300 ease-in-out h-screen shadow-[4px_0_24px_rgba(0,0,0,0.35)] ${
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       }`}>
-        <div>
+        <div className="overflow-y-auto flex-1 min-h-0">
           {/* Brand */}
           <div className="px-5 py-5 border-b border-white/[0.06]">
             <div className="flex items-center gap-3">
@@ -867,7 +874,7 @@ export default function AgentDeskWorkspace({
 
           {/* Navigation */}
           <nav className="px-3 pt-5 space-y-0.5">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 px-3 mb-2">Workspace</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 px-3 mb-2">Workspace</p>
             {NAV_ITEMS.map((item) => (
               <button
                 key={item.key}
@@ -877,13 +884,18 @@ export default function AgentDeskWorkspace({
                   if (item.key === "gaps") { loadMyGaps(); loadMyArticles(); }
                   setMobileSidebarOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-colors text-left ${
+                className={`relative group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
                   agentActiveTab === item.key
-                    ? "bg-white/[0.09] text-white"
-                    : "text-white/40 hover:text-white/75 hover:bg-white/[0.04]"
+                    ? "bg-white/[0.1] text-white"
+                    : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
                 }`}
               >
-                {item.icon}
+                <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
+                  agentActiveTab === item.key ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
+                }`} />
+                <span className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${agentActiveTab === item.key ? "text-amber-400/80" : ""}`}>
+                  {item.icon}
+                </span>
                 {item.label}
                 {item.key === "gaps" && rejectedCount > 0 && (
                   <span className="ml-auto inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-extrabold bg-red-500/20 text-red-300 border border-red-500/20">
@@ -896,7 +908,7 @@ export default function AgentDeskWorkspace({
         </div>
 
         {/* User Footer */}
-        <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3">
+        <div className="px-3 pt-4 pb-4 border-t border-white/[0.06] space-y-3 flex-shrink-0">
           <div className="flex items-center gap-2.5 px-1">
             <div className="h-7 w-7 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
               <span className="text-[11px] font-bold text-indigo-300">{userName?.[0]?.toUpperCase() ?? "A"}</span>
@@ -961,7 +973,7 @@ export default function AgentDeskWorkspace({
         </header>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        <div key={agentActiveTab} className="flex-1 overflow-y-auto p-8 space-y-6 tab-fade-in">
 
       {agentActiveTab === "dashboard" && (
         <>
