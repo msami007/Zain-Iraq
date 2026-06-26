@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         OR: [
           { visibility: Visibility.PUBLIC },
           {
-            visibility: { in: [Visibility.AGENTS, Visibility.PRIVATE] },
+            visibility: Visibility.PRIVATE,
             OR: [
               { article_teams: { none: {} } },
               { article_teams: { some: { team_id: { in: teamIds } } } },
@@ -64,13 +64,6 @@ export async function POST(req: NextRequest) {
       teamFilter = {
         OR: [
           { visibility: Visibility.PUBLIC },
-          {
-            visibility: { in: [Visibility.AGENTS, Visibility.ADMINS] },
-            OR: [
-              { article_teams: { none: {} } },
-              { article_teams: { some: { team_id: { in: teamIds } } } },
-            ],
-          },
           {
             visibility: Visibility.PRIVATE,
             article_teams: { some: { team_id: { in: teamIds } } },

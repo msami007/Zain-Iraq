@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 type Tenant = {
@@ -83,8 +83,20 @@ export default function CustomerSearchWorkspace({
   const activeCategories = initialCategories.filter((c) => c.tenant_id === selectedTenant?.id);
   const brandingColor = selectedTenant?.branding?.primaryColor || "#09090B";
 
-  // Reset search state on tenant switch
+  // Auto-run search on mount when returning from an article/category with a query
+  const didAutoSearch = useRef(false);
   useEffect(() => {
+    if (!didAutoSearch.current && initialQuery.trim()) {
+      didAutoSearch.current = true;
+      triggerSearch(initialQuery);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reset search state on tenant switch (skip on first render to preserve initialQuery results)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
     setQuery("");
     setResults([]);
     setSearched(false);
