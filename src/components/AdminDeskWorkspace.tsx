@@ -512,7 +512,7 @@ export default function AdminDeskWorkspace({
     }
 
     if (selectedHelpfulFilter !== "All") {
-      const rate = art.helpfulRate;
+      const rate = art.helpfulRate ?? null;
       if (selectedHelpfulFilter === "no-ratings" && rate !== null) return false;
       if (selectedHelpfulFilter === "high" && (rate === null || rate < 80)) return false;
       if (selectedHelpfulFilter === "medium" && (rate === null || rate < 60 || rate >= 80)) return false;
