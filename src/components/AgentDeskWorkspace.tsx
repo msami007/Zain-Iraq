@@ -1373,7 +1373,7 @@ export default function AgentDeskWorkspace({
                 label: "Queries Handled",
                 value: s.todaySearches,
                 sub: "Today",
-                delta: `+${s.weeklySearches} this week`,
+                delta: `+${s.weeklySearches} KB searches this week`,
                 deltaUp: true as boolean | null,
                 accentFrom: "#2563eb",
                 accentTo: "#60a5fa",
@@ -1387,7 +1387,7 @@ export default function AgentDeskWorkspace({
                 label: "Cases Resolved",
                 value: s.resolvedCases,
                 sub: "All time",
-                delta: `+${s.weeklyResolvedCases} this week`,
+                delta: `+${s.weeklyResolvedCases} cases closed this week`,
                 deltaUp: true as boolean | null,
                 accentFrom: "#059669",
                 accentTo: "#34d399",
@@ -1401,7 +1401,7 @@ export default function AgentDeskWorkspace({
                 label: "Articles Opened",
                 value: s.articlesViewed,
                 sub: "All time",
-                delta: `+${s.weeklyArticlesViewed} this week`,
+                delta: `+${s.weeklyArticlesViewed} articles read this week`,
                 deltaUp: true as boolean | null,
                 accentFrom: "#4f46e5",
                 accentTo: "#818cf8",
@@ -1446,7 +1446,7 @@ export default function AgentDeskWorkspace({
                   <div key={card.label} className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
                     <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${card.accentFrom}, ${card.accentTo})` }} />
                     <div className="flex items-start justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{card.label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">{card.label}</span>
                       <span style={{ color: card.accentFrom }}>{card.icon}</span>
                     </div>
                     <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{card.value}</div>
@@ -1466,7 +1466,7 @@ export default function AgentDeskWorkspace({
                 {/* Knowledge Gaps */}
                 <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Knowledge Gaps</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Knowledge Gaps</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
                       <path d="M12 9v4"/><path d="M12 17h.01"/>
                       <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -1494,7 +1494,8 @@ export default function AgentDeskWorkspace({
 
                 {/* Gap Impact */}
                 <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-4">Gap Report Impact</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 block mb-1">Gap Report Impact</span>
+                  <p className="text-[10px] text-zinc-400 mb-3">Resolved = admin published new content addressing the gap</p>
                   <div className="space-y-3">
                     {[
                       { label: "Submitted", val: s.gapsSubmitted, dot: "bg-zinc-300", cls: "text-zinc-950" },
@@ -1515,14 +1516,14 @@ export default function AgentDeskWorkspace({
                       <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
                         <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}%` }} />
                       </div>
-                      <p className="mt-1.5 text-[10px] text-zinc-400">{Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}% resolution rate</p>
+                      <p className="mt-1.5 text-[10px] text-zinc-400">{Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}% resolved</p>
                     </div>
                   )}
                 </div>
 
                 {/* This Week */}
                 <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block mb-4">This Week Summary</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 block mb-4">This Week Summary</span>
                   <div className="space-y-3">
                     {[
                       { label: "Search queries", value: s.weeklySearches },
@@ -2703,6 +2704,25 @@ export default function AgentDeskWorkspace({
                               <p className="mt-0.5 italic">"{r.comment}"</p>
                             </div>
                           ))}
+                        </div>
+                      )}
+                      {art.status === "Draft" && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const res = await fetch(`/api/v1/articles/${art.id}`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ status: "InReview" }),
+                              });
+                              if (res.ok) { toast("Article submitted for review.", "success"); loadMyArticles(); }
+                              else { const e = await res.json(); toast(e.error || "Failed to submit article.", "error"); }
+                            }}
+                            className="rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1 text-[10px] font-bold text-blue-700 transition-all"
+                          >
+                            Submit for Review
+                          </button>
                         </div>
                       )}
                       {isRejected && (

@@ -83,19 +83,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Team access filter: PRIVATE visibility
-    if (article.visibility === Visibility.PRIVATE) {
-      if (!session || !session.user) {
-        return NextResponse.json({ error: "Unauthorized: Private article" }, { status: 401 });
+    // Visibility access control
+    const viewer = session?.user;
+    if (article.visibility === Visibility.ADMINS) {
+      if (!viewer || (viewer.role !== "Admin" && viewer.role !== "SuperAdmin")) {
+        return NextResponse.json({ error: "Forbidden: Admin-only article" }, { status: 403 });
       }
-      if (session.user.role !== "SuperAdmin") {
-        const userTeams = await prisma.userTeam.findMany({
-          where: { user_id: session.user.id }
-        });
+    } else if (article.visibility === Visibility.AGENTS || article.visibility === Visibility.PRIVATE) {
+      if (!viewer) {
+        return NextResponse.json({ error: "Unauthorized: Agent-only article" }, { status: 401 });
+      }
+      // For PRIVATE, also enforce team membership
+      if (article.visibility === Visibility.PRIVATE && viewer.role !== "SuperAdmin") {
+        const userTeams = await prisma.userTeam.findMany({ where: { user_id: viewer.id } });
         const userTeamIds = userTeams.map(ut => ut.team_id);
         const articleTeamIds = article.article_teams.map(at => at.team.id);
-        const hasAccess = articleTeamIds.some(tid => userTeamIds.includes(tid));
-        if (!hasAccess) {
+        if (!articleTeamIds.some(tid => userTeamIds.includes(tid))) {
           return NextResponse.json({ error: "Forbidden: You do not belong to the teams assigned to this article" }, { status: 403 });
         }
       }
@@ -134,8 +137,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     const { role, tenant_id: tenantId, id: userId } = session.user;
 
-    // Enforce permission matrix: only Admin and SuperAdmin can modify content
-    if (role !== "Admin" && role !== "SuperAdmin") {
+    // Agents may only submit their own Draft articles for review — nothing else
+    const isAgentStatusOnly = role === "Agent";
+    if (role !== "Admin" && role !== "SuperAdmin" && !isAgentStatusOnly) {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
@@ -157,6 +161,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       slug,
       category_id,
       language,
+      visibility: visibilityInput,
       owner_id,
       review_due,
       status: targetStatus, // New workflow status
@@ -166,6 +171,16 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       workflow_route_id,
       tags,
     } = body;
+
+    // Agents: only allow Draft → InReview on their own articles
+    if (isAgentStatusOnly) {
+      if (currentArticle.author_id !== userId) {
+        return NextResponse.json({ error: "Forbidden: Agents can only submit their own articles." }, { status: 403 });
+      }
+      if (targetStatus !== "InReview" || currentArticle.status !== "Draft") {
+        return NextResponse.json({ error: "Forbidden: Agents may only submit a Draft article for review." }, { status: 403 });
+      }
+    }
 
     // Enforce mandatory team assignment for all roles if team_ids is updated
     if (team_ids !== undefined) {
@@ -381,6 +396,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           slug: formattedSlug || undefined,
           category_id: category_id || undefined,
           language: language || undefined,
+          visibility: visibilityInput ? (visibilityInput as Visibility) : undefined,
           owner_id: owner_id || undefined,
           review_due: review_due ? new Date(review_due) : undefined,
           status: finalStatus,

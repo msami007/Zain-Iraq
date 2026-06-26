@@ -61,19 +61,21 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
 
   // - Rule C: If the user is logged in (Agent/Admin/SuperAdmin)
   if (!hasAccess && user) {
-    if (article.visibility === "PRIVATE") {
+    if (article.visibility === "ADMINS") {
+      hasAccess = user.role === "Admin" || user.role === "SuperAdmin";
+    } else if (article.visibility === "AGENTS") {
+      hasAccess = true; // Any logged-in user qualifies
+    } else if (article.visibility === "PRIVATE") {
       if (user.role === "SuperAdmin") {
         hasAccess = true;
       } else {
-        const userTeams = await prisma.userTeam.findMany({
-          where: { user_id: user.id }
-        });
+        const userTeams = await prisma.userTeam.findMany({ where: { user_id: user.id } });
         const userTeamIds = userTeams.map(ut => ut.team_id);
         const articleTeamIds = article.article_teams.map(at => at.team_id);
         hasAccess = articleTeamIds.some(tid => userTeamIds.includes(tid));
       }
     } else {
-      // Logged in staff can view any PUBLIC article status (Draft, InReview, Approved, etc.)
+      // PUBLIC — logged-in staff can view any status (Draft, InReview, Approved, etc.)
       hasAccess = true;
     }
   }

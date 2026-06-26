@@ -2107,6 +2107,19 @@ export default function AdminDeskWorkspace({
                         </select>
                       </div>
 
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Visibility</label>
+                        <select
+                          value={visibility}
+                          onChange={(e) => setVisibility(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden cursor-pointer"
+                        >
+                          <option value="PUBLIC">Public — visible to customers</option>
+                          <option value="AGENTS">Agents only</option>
+                          <option value="ADMINS">Admins only</option>
+                        </select>
+                      </div>
+
                       <div className="space-y-2 relative">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Assign to Teams</label>
                         <button
@@ -4111,9 +4124,8 @@ export default function AdminDeskWorkspace({
                       {
                         label: "Knowledge Gaps",
                         value: (ad?.totalGaps ?? 0).toLocaleString(),
-                        delta: ad?.gapsThisWeek != null ? `${ad.gapsThisWeek} new this week` : "Live from DB",
+                        delta: ad?.gapsThisWeek != null ? `+${ad.gapsThisWeek} reported this week` : "Live from DB",
                         deltaUp: ad?.gapsThisWeek != null ? true : null,
-                        deltaUpBad: true,
                         accentFrom: "#dc2626",
                         accentTo: "#f87171",
                         icon: (
@@ -4138,8 +4150,8 @@ export default function AdminDeskWorkspace({
                             />
                             {/* Icon + label */}
                             <div className="flex items-start justify-between">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{card.label}</span>
-                              <span className="text-zinc-300" style={{ color: card.accentFrom }}>{card.icon}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">{card.label}</span>
+                              <span style={{ color: card.accentFrom }}>{card.icon}</span>
                             </div>
                             {/* Value */}
                             <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{card.value}</div>
@@ -4161,9 +4173,9 @@ export default function AdminDeskWorkspace({
                   })()}
 
                   {/* Section Heading */}
-                  <div className="text-left pt-4">
-                    <h3 className="text-sm font-extrabold text-zinc-955 uppercase tracking-wide">Article Performance</h3>
-                    <p className="text-[11px] text-zinc-550 font-semibold mt-0.5">Content utilization and feedback metrics</p>
+                  <div className="text-left">
+                    <h3 className="text-sm font-extrabold text-zinc-900 uppercase tracking-wide">Article Performance</h3>
+                    <p className="text-[11px] text-zinc-500 font-semibold mt-0.5">Content utilization and feedback metrics</p>
                   </div>
 
                   {/* Highlights Row */}

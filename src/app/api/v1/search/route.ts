@@ -39,29 +39,46 @@ export async function POST(req: NextRequest) {
     // Authenticated users (Agent/Admin/SuperAdmin) can search all statuses, guests see Published only
     const searchStatus = session?.user?.role ? undefined : "Published";
 
-    // Team access filter
+    // Team access filter — enforces visibility tier + optional team restriction
     let teamFilter: any = {};
     if (!session || !session.user) {
       teamFilter = { visibility: Visibility.PUBLIC };
-    } else if (session.user.role !== "SuperAdmin") {
-      const userTeams = await prisma.userTeam.findMany({
-        where: { user_id: session.user.id }
-      });
+    } else if (session.user.role === "Agent") {
+      const userTeams = await prisma.userTeam.findMany({ where: { user_id: session.user.id } });
       const teamIds = userTeams.map(ut => ut.team_id);
       teamFilter = {
         OR: [
           { visibility: Visibility.PUBLIC },
           {
+            visibility: { in: [Visibility.AGENTS, Visibility.PRIVATE] },
+            OR: [
+              { article_teams: { none: {} } },
+              { article_teams: { some: { team_id: { in: teamIds } } } },
+            ],
+          },
+        ],
+      };
+    } else if (session.user.role === "Admin") {
+      const userTeams = await prisma.userTeam.findMany({ where: { user_id: session.user.id } });
+      const teamIds = userTeams.map(ut => ut.team_id);
+      teamFilter = {
+        OR: [
+          { visibility: Visibility.PUBLIC },
+          {
+            visibility: { in: [Visibility.AGENTS, Visibility.ADMINS] },
+            OR: [
+              { article_teams: { none: {} } },
+              { article_teams: { some: { team_id: { in: teamIds } } } },
+            ],
+          },
+          {
             visibility: Visibility.PRIVATE,
-            article_teams: {
-              some: {
-                team_id: { in: teamIds }
-              }
-            }
-          }
-        ]
+            article_teams: { some: { team_id: { in: teamIds } } },
+          },
+        ],
       };
     }
+    // SuperAdmin: teamFilter stays {} (sees everything)
 
     const cleanQuery = query.trim();
     const words = cleanQuery.split(/\s+/).filter((w) => w.length > 1);

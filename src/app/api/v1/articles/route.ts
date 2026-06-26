@@ -45,29 +45,47 @@ export async function GET(req: NextRequest) {
       statusClause = statusFilter;
     }
 
-    // Team access filter
+    // Team access filter — enforces visibility tier + optional team restriction
     let teamFilter: any = {};
     if (!session || !userRole) {
+      // Customers: PUBLIC only
       teamFilter = { visibility: Visibility.PUBLIC };
-    } else if (userRole !== "SuperAdmin") {
-      const userTeams = await prisma.userTeam.findMany({
-        where: { user_id: session.user.id }
-      });
+    } else if (userRole === "Agent") {
+      const userTeams = await prisma.userTeam.findMany({ where: { user_id: session.user.id } });
       const teamIds = userTeams.map(ut => ut.team_id);
       teamFilter = {
         OR: [
           { visibility: Visibility.PUBLIC },
           {
+            visibility: { in: [Visibility.AGENTS, Visibility.PRIVATE] },
+            OR: [
+              { article_teams: { none: {} } },
+              { article_teams: { some: { team_id: { in: teamIds } } } },
+            ],
+          },
+        ],
+      };
+    } else if (userRole === "Admin") {
+      const userTeams = await prisma.userTeam.findMany({ where: { user_id: session.user.id } });
+      const teamIds = userTeams.map(ut => ut.team_id);
+      teamFilter = {
+        OR: [
+          { visibility: Visibility.PUBLIC },
+          {
+            visibility: { in: [Visibility.AGENTS, Visibility.ADMINS] },
+            OR: [
+              { article_teams: { none: {} } },
+              { article_teams: { some: { team_id: { in: teamIds } } } },
+            ],
+          },
+          {
             visibility: Visibility.PRIVATE,
-            article_teams: {
-              some: {
-                team_id: { in: teamIds }
-              }
-            }
-          }
-        ]
+            article_teams: { some: { team_id: { in: teamIds } } },
+          },
+        ],
       };
     }
+    // SuperAdmin: teamFilter stays {} (sees everything)
 
     const articles = await db.article.findMany({
       where: {
@@ -150,6 +168,7 @@ export async function POST(req: NextRequest) {
       slug,
       category_id,
       language,
+      visibility: visibilityInput,
       bodyText,
       owner_id,
       review_due,
@@ -228,7 +247,7 @@ export async function POST(req: NextRequest) {
           category_id,
           language: language || Language.en,
           status: ArticleStatus.Draft,
-          visibility: Visibility.PUBLIC, // Default to PUBLIC as Visibility selection is removed from UI
+          visibility: (visibilityInput as Visibility) || Visibility.PUBLIC,
           author_id: userId,
           owner_id: owner_id || userId,
           review_due: review_due ? new Date(review_due) : null,
