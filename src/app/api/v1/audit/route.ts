@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     const queryClient = isSuperAdminAllTenants ? prisma : getTenantDb(targetTenantId!);
 
     // Filter audit logs for regular Admins to only show actions by members of their teams
+    // Also always include null-actor entries (customer/guest-triggered events).
     let actorFilter: any = undefined;
     if (role === "Admin" && userId) {
       const tenantDb = getTenantDb(userTenantId!);
@@ -45,7 +46,10 @@ export async function GET(req: NextRequest) {
       const memberIds = Array.from(new Set([...teamMembers.map((ut: any) => ut.user_id), userId]));
 
       actorFilter = {
-        actor_id: { in: memberIds }
+        OR: [
+          { actor_id: null },                    // customer / guest actions
+          { actor_id: { in: memberIds } },       // team member actions
+        ]
       };
     }
 

@@ -3960,8 +3960,10 @@ export default function AdminDeskWorkspace({
                               <tr key={log.id} className="hover:bg-zinc-50/50">
                                 <td className="p-4 text-zinc-500 font-mono whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</td>
                                 <td className="p-4 font-bold text-zinc-900">
-                                  {log.actor?.name || (log.action?.toLowerCase().includes("customer") || log.target_label?.toLowerCase().includes("customer") ? "Customer / Guest" : "System")}{" "}
-                                  {log.actor?.email && <span className="text-[10px] text-zinc-400 font-normal">({log.actor.email})</span>}
+                                  {log.actor
+                                    ? <>{log.actor.name} <span className="text-[10px] text-zinc-400 font-normal">({log.actor.email})</span></>
+                                    : <span className="text-zinc-500 font-semibold">Customer / Guest</span>
+                                  }
                                 </td>
                                 <td className="p-4">
                                   <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${actionBadge}`}>
