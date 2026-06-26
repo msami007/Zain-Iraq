@@ -22,16 +22,21 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   // Role-scoped back navigation
   const isAgent = user?.role === "Agent";
+  const qEnc = backQuery ? encodeURIComponent(backQuery) : null;
   const backHref = !user
-    ? "/"
-    : user.role === "SuperAdmin" || user.role === "Admin"
+    ? (qEnc ? `/?q=${qEnc}` : "/")
+    : user.role === "SuperAdmin"
+    ? "/superadmin"
+    : user.role === "Admin"
     ? "/admin"
-    : backQuery
-    ? `/agent?q=${encodeURIComponent(backQuery)}&tab=search`
+    : qEnc
+    ? `/agent?q=${qEnc}&tab=search`
     : "/agent?tab=search";
   const backLabel = !user
-    ? "Back to Home"
-    : user.role === "SuperAdmin" || user.role === "Admin"
+    ? (backQuery ? "Back to results" : "Back to Home")
+    : user.role === "SuperAdmin"
+    ? "Super Admin"
+    : user.role === "Admin"
     ? "Admin Desk"
     : backQuery
     ? "Back to results"
@@ -125,12 +130,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {articles.map((article) => {
-              const agentArticleParams = new URLSearchParams();
-              agentArticleParams.set("categoryId", id);
-              if (backQuery) agentArticleParams.set("q", backQuery);
+              const ctxParams = new URLSearchParams();
+              ctxParams.set("categoryId", id);
+              if (backQuery) ctxParams.set("q", backQuery);
               const articleHref = isAgent
-                ? `/agent/articles/${article.id}?${agentArticleParams.toString()}`
-                : `/articles/${article.id}`;
+                ? `/agent/articles/${article.id}?${ctxParams.toString()}`
+                : `/articles/${article.id}?${ctxParams.toString()}`;
               return (
                 <Link
                   key={article.id}

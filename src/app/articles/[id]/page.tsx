@@ -16,12 +16,13 @@ type PageProps = {
     channel?: string;
     view?: string;
     q?: string;
+    categoryId?: string;
   }>;
 };
 
 export default async function ArticleDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { token, channel, view, q } = await searchParams;
+  const { token, channel, view, q, categoryId } = await searchParams;
 
   const session = await auth();
   const user = session?.user;
@@ -143,22 +144,57 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   const shortAnswer = displayVariant?.short_answer || "";
   const macroText = displayVariant?.copy_ready_macro || "";
 
-  // Role-scoped back navigation — preserve search context when q param is present
-  const baseHref = !user || isGuestLinkAccess
-    ? "/"
-    : user.role === "SuperAdmin" || user.role === "Admin"
-    ? "/admin"
-    : "/agent";
-  const backHref = q && !isGuestLinkAccess && user?.role === "Agent"
-    ? `/agent?q=${encodeURIComponent(q)}`
-    : baseHref;
-  const backLabel = !user || isGuestLinkAccess
-    ? "Back to Home"
-    : q && user.role === "Agent"
-    ? "Back to results"
-    : user.role === "SuperAdmin" || user.role === "Admin"
-    ? "Admin Desk"
-    : "Agent Desk";
+  // Role-scoped back navigation — preserves category and search context
+  const catName = article.category?.name;
+  const qEnc = q ? encodeURIComponent(q) : null;
+  const catHref = categoryId
+    ? `/categories/${categoryId}${qEnc ? `?q=${qEnc}` : ""}`
+    : null;
+
+  let backHref: string;
+  let backLabel: string;
+
+  if (!user || isGuestLinkAccess) {
+    // Guest / customer / guest-link access
+    if (catHref) {
+      backHref = catHref;
+      backLabel = catName || "Category";
+    } else if (qEnc) {
+      backHref = `/?q=${qEnc}`;
+      backLabel = "Back to results";
+    } else {
+      backHref = "/";
+      backLabel = "Back to Home";
+    }
+  } else if (user.role === "Agent") {
+    if (catHref) {
+      backHref = catHref;
+      backLabel = catName || "Category";
+    } else if (qEnc) {
+      backHref = `/agent?q=${qEnc}&tab=search`;
+      backLabel = "Back to results";
+    } else {
+      backHref = "/agent";
+      backLabel = "Agent Desk";
+    }
+  } else if (user.role === "Admin") {
+    if (catHref) {
+      backHref = catHref;
+      backLabel = catName || "Category";
+    } else {
+      backHref = "/admin";
+      backLabel = "Admin Desk";
+    }
+  } else {
+    // SuperAdmin
+    if (catHref) {
+      backHref = catHref;
+      backLabel = catName || "Category";
+    } else {
+      backHref = "/superadmin";
+      backLabel = "Super Admin";
+    }
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50/50 text-zinc-900 font-sans">

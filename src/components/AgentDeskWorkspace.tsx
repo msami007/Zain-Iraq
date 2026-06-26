@@ -838,7 +838,7 @@ export default function AgentDeskWorkspace({
   const rejectedCount = myArticles.filter((a: any) => a.status === "Rejected").length;
 
   return (
-    <div className="min-h-screen flex bg-zinc-50 w-full text-left relative">
+    <div className="min-h-screen flex bg-zinc-50 w-full text-left relative overflow-x-hidden">
       <style>{`
   @keyframes tabFadeIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -957,18 +957,18 @@ export default function AgentDeskWorkspace({
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-green-50 border border-green-200 px-2.5 py-1 text-[10px] font-bold text-green-700 uppercase tracking-wider">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-green-50 border border-green-200 px-2.5 py-1 text-[10px] font-bold text-green-700 uppercase tracking-wider">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               Shift Active
             </span>
-            <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
+            <span className="hidden sm:inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
               {todaySearches} searches today
             </span>
           </div>
         </header>
 
         {/* Scrollable Content */}
-        <div key={agentActiveTab} className="flex-1 overflow-y-auto p-8 space-y-6 tab-fade-in">
+        <div key={agentActiveTab} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 tab-fade-in">
 
       {agentActiveTab === "dashboard" && (
         <>
@@ -1572,15 +1572,17 @@ export default function AgentDeskWorkspace({
                   <tbody className="divide-y divide-zinc-100">
                     {filteredCases.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-5 py-12 text-center">
-                            <div className="flex flex-col items-center gap-2">
-                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300">
+                        <td colSpan={5} className="px-5 py-16 text-center">
+                          <div className="flex flex-col items-center">
+                            <div className="h-12 w-12 rounded-2xl bg-zinc-100 flex items-center justify-center mb-3">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
                                 <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
                               </svg>
-                              <p className="text-xs font-bold text-zinc-500">No cases in this queue</p>
-                              <p className="text-[11px] text-zinc-400">New inbound cases will appear here automatically.</p>
                             </div>
-                          </td>
+                            <p className="text-sm font-bold text-zinc-500">No cases in this queue</p>
+                            <p className="text-xs text-zinc-400 font-medium mt-1">New inbound cases will appear here automatically.</p>
+                          </div>
+                        </td>
                       </tr>
                     ) : (
                       filteredCases.map((c) => {
@@ -1654,7 +1656,15 @@ export default function AgentDeskWorkspace({
               <div className="rounded-xl border border-zinc-200 bg-white p-5">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-900 mb-4">Pinned Resources</h4>
                 {pinnedArticleIds.length === 0 ? (
-                  <p className="text-xs text-zinc-400 font-medium leading-relaxed">No pinned articles yet. Pin articles from the Knowledge Base tab for quick access.</p>
+                  <div className="flex flex-col items-center py-4 text-center">
+                    <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center mb-2.5">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                        <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
+                      </svg>
+                    </div>
+                    <p className="text-sm font-bold text-zinc-500">Nothing pinned yet</p>
+                    <p className="text-xs text-zinc-400 font-medium mt-1">Pin articles from the Knowledge Base for quick access.</p>
+                  </div>
                 ) : (
                   <div className="divide-y divide-zinc-100">
                     {pinnedArticleIds.map((id) => {
@@ -2369,7 +2379,7 @@ export default function AgentDeskWorkspace({
                 </div>
 
                 {/* Language + Channel + Occurrences in a row */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-zinc-700">Language</label>
                     <select
@@ -2922,14 +2932,14 @@ export default function AgentDeskWorkspace({
             </div>
 
             {pinnedArticleIds.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-6 text-center space-y-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 border border-zinc-200">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+              <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-zinc-100 flex items-center justify-center mb-3">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
                     <line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
                   </svg>
                 </div>
-                <p className="text-sm font-bold text-zinc-500">No pinned articles</p>
-                <p className="text-xs text-zinc-400 font-medium max-w-xs">
+                <p className="text-sm font-bold text-zinc-500">Nothing pinned yet</p>
+                <p className="text-xs text-zinc-400 font-medium mt-1 max-w-xs">
                   Search the Knowledge Base and pin frequently used articles for quick access during support calls.
                 </p>
               </div>

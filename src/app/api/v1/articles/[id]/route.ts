@@ -135,12 +135,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { role, tenant_id: tenantId, id: userId } = session.user;
+    const { role, tenant_id: sessionTenantId, id: userId } = session.user;
 
     // Agents may only submit their own Draft articles for review — nothing else
     const isAgentStatusOnly = role === "Agent";
     if (role !== "Admin" && role !== "SuperAdmin" && !isAgentStatusOnly) {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    // SuperAdmin may act on articles belonging to any tenant.
+    // Resolve the article's actual tenant_id before scoping the DB client.
+    let tenantId = sessionTenantId;
+    if (role === "SuperAdmin") {
+      const raw = await prisma.article.findFirst({ where: { id }, select: { tenant_id: true } });
+      if (!raw) {
+        return NextResponse.json({ error: "Article not found" }, { status: 404 });
+      }
+      tenantId = raw.tenant_id;
     }
 
     const db = getTenantDb(tenantId);
@@ -598,11 +609,21 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { role, tenant_id: tenantId, id: userId } = session.user;
+    const { role, tenant_id: sessionTenantId, id: userId } = session.user;
 
     // Enforce permission matrix: only Admin and SuperAdmin can delete
     if (role !== "Admin" && role !== "SuperAdmin") {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
+    // SuperAdmin may delete articles from any tenant — resolve the article's actual tenant first.
+    let tenantId = sessionTenantId;
+    if (role === "SuperAdmin") {
+      const raw = await prisma.article.findFirst({ where: { id }, select: { tenant_id: true } });
+      if (!raw) {
+        return NextResponse.json({ error: "Article not found" }, { status: 404 });
+      }
+      tenantId = raw.tenant_id;
     }
 
     const db = getTenantDb(tenantId);

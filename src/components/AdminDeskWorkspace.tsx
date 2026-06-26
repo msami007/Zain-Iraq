@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import TroubleshootingPlayer from "@/components/TroubleshootingPlayer";
+import { useToast } from "@/components/ToastProvider";
 
 type AdminArticle = {
   id: string;
@@ -226,8 +227,7 @@ export default function AdminDeskWorkspace({
   const [editingArticle, setEditingArticle] = useState<AdminArticle | null>(null);
   const [fullArticleDetail, setFullArticleDetail] = useState<any | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [formSuccess, setFormSuccess] = useState("");
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
 
   // Per-field validation error states
@@ -295,6 +295,11 @@ export default function AdminDeskWorkspace({
   // Guest Links State
   const [guestLinks, setGuestLinks] = useState<any[]>([]);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [transitioningArticleId, setTransitioningArticleId] = useState<string | null>(null);
+  const [deletingArticle, setDeletingArticle] = useState(false);
+  const [claimingGapId, setClaimingGapId] = useState<string | null>(null);
+  const [unresolvingGapId, setUnresolvingGapId] = useState<string | null>(null);
+  const [submittingRejection, setSubmittingRejection] = useState(false);
 
   // Teams state and fetch
   const [teams, setTeams] = useState<any[]>([]);
@@ -662,13 +667,12 @@ export default function AdminDeskWorkspace({
       if (res.ok) {
         const newLink = await res.json();
         setGuestLinks([newLink, ...guestLinks]);
-        alert("New guest link generated successfully!");
+        toast("Guest link generated.", "success");
       } else {
         throw new Error("Failed to generate link");
       }
     } catch (e) {
-      console.error(e);
-      alert("Failed to generate guest link");
+      toast("Failed to generate guest link.", "error");
     } finally {
       setGeneratingLink(false);
     }
@@ -685,13 +689,12 @@ export default function AdminDeskWorkspace({
       if (res.ok) {
         const updated = await res.json();
         setGuestLinks(guestLinks.map((l) => (l.id === linkId ? updated : l)));
-        alert(revokedStatus ? "Guest link revoked." : "Guest link restored.");
+        toast(revokedStatus ? "Guest link revoked." : "Guest link restored.", "success");
       } else {
         throw new Error("Failed to update link");
       }
     } catch (e) {
-      console.error(e);
-      alert("Failed to update guest link status");
+      toast("Failed to update guest link.", "error");
     }
   };
 
@@ -779,7 +782,7 @@ export default function AdminDeskWorkspace({
 
       // Separation of duties check
       if ((targetStatus === "Approved" || targetStatus === "Published") && art.author_id === currentUserId) {
-        alert("Separation of duties restriction: You are the author of this article and cannot approve or publish it.");
+        toast("Separation of duties: you authored this article and cannot approve or publish it.", "error");
         return;
       }
 
@@ -788,6 +791,9 @@ export default function AdminDeskWorkspace({
         setRejectionModalComment("");
         return;
       }
+
+      setTransitioningArticleId(articleId);
+      if (customComment) setSubmittingRejection(true);
 
       const res = await fetch(`/api/v1/articles/${articleId}`, {
         method: "PUT",
@@ -805,20 +811,23 @@ export default function AdminDeskWorkspace({
 
       const updated = await res.json();
       setArticles(articles.map((a) => (a.id === updated.id ? updated : a)));
-      alert(`Article transitioned to ${targetStatus} successfully.`);
+      toast(`Article moved to ${targetStatus}.`, "success");
 
       // Clear rejection modal if open
       setRejectionModalArticleId(null);
       setRejectionModalComment("");
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message || "Failed to update article status.", "error");
+    } finally {
+      setTransitioningArticleId(null);
+      setSubmittingRejection(false);
     }
   };
 
   // Helper to pre-populate slug from title
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (val.trim()) { setTitleError(false); setFormError(""); }
+    if (val.trim()) { setTitleError(false); }
     if (!editingArticle) {
       const autoSlug = val.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
       setSlug(autoSlug);
@@ -885,9 +894,9 @@ export default function AdminDeskWorkspace({
         else if (variantTab === "whatsapp") setVWhatsappDetailed(newHTML);
       }
 
-      alert("Image uploaded successfully and link inserted!");
+      toast("Image uploaded and link inserted.", "success");
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message || "Image upload failed.", "error");
     } finally {
       setUploadingImage(false);
     }
@@ -897,8 +906,6 @@ export default function AdminDeskWorkspace({
     setEditingArticle(article);
     setFullArticleDetail(null);
     setIsCreating(false);
-    setFormError("");
-    setFormSuccess("");
     setTitleError(false);
     setSlugError(false);
     setContentError(false);
@@ -972,8 +979,6 @@ export default function AdminDeskWorkspace({
   const openCreator = () => {
     setEditingArticle(null);
     setIsCreating(true);
-    setFormError("");
-    setFormSuccess("");
     setTitleError(false);
     setSlugError(false);
     setContentError(false);
@@ -1017,8 +1022,6 @@ export default function AdminDeskWorkspace({
     setTransitionComment("");
     setSelectedWorkflowRouteId("");
     setIsTeamsDropdownOpen(false);
-    setFormError("");
-    setFormSuccess("");
     setTitleError(false);
   };
 
@@ -1092,9 +1095,12 @@ export default function AdminDeskWorkspace({
       if (res.ok) {
         await fetchWorkflowRoutes();
         setEditingWorkflow(null);
+        toast("Workflow saved.", "success");
+      } else {
+        toast("Failed to save workflow.", "error");
       }
     } catch (err) {
-      console.error("Failed to save workflow", err);
+      toast("Failed to save workflow.", "error");
     }
   };
 
@@ -1104,9 +1110,12 @@ export default function AdminDeskWorkspace({
       const res = await fetch(`/api/v1/workflows/${id}`, { method: "DELETE" });
       if (res.ok) {
         setWorkflowRoutes(prev => prev.filter(r => r.id !== id));
+        toast("Workflow deleted.", "info");
+      } else {
+        toast("Failed to delete workflow.", "error");
       }
     } catch (err) {
-      console.error("Failed to delete workflow", err);
+      toast("Failed to delete workflow.", "error");
     }
   };
 
@@ -1121,11 +1130,12 @@ export default function AdminDeskWorkspace({
     if (!defaultDetailedTextClean) { setContentError(true); hasErrors = true; }
     if (selectedTeams.length === 0) { setTeamsError(true); hasErrors = true; }
     if (!reviewDue) { setReviewDueError(true); hasErrors = true; }
-    if (hasErrors) return;
+    if (hasErrors) {
+      toast("Please fill in all required fields before saving.", "warning");
+      return;
+    }
 
     setSaving(true);
-    setFormError("");
-    setFormSuccess("");
     setTitleError(false);
     setSlugError(false);
     setContentError(false);
@@ -1193,7 +1203,7 @@ export default function AdminDeskWorkspace({
 
         const finalArticle = await putRes.json();
         setArticles([finalArticle, ...articles]);
-        setFormSuccess("Article created successfully!");
+        toast("Article created successfully!", "success");
 
         if (originGapId) {
           try {
@@ -1254,11 +1264,11 @@ export default function AdminDeskWorkspace({
 
         const updated = await res.json();
         setArticles(articles.map((a) => (a.id === updated.id ? updated : a)));
-        setFormSuccess("Article updated successfully!");
+        toast("Article updated successfully!", "success");
         setTimeout(() => closeEditor(), 1000);
       }
     } catch (err: any) {
-      setFormError(err.message || "Failed to save article");
+      toast(err.message || "Failed to save article", "error");
     } finally {
       setSaving(false);
     }
@@ -1267,6 +1277,7 @@ export default function AdminDeskWorkspace({
   const handleDeleteArticle = async (articleId: string) => {
     if (!confirm("Are you sure you want to permanently delete this article?")) return;
 
+    setDeletingArticle(true);
     try {
       const res = await fetch(`/api/v1/articles/${articleId}`, {
         method: "DELETE",
@@ -1279,14 +1290,17 @@ export default function AdminDeskWorkspace({
 
       setArticles(articles.filter((a) => a.id !== articleId));
       closeEditor();
-      alert("Article deleted successfully.");
+      toast("Article deleted.", "info");
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message || "Failed to delete article.", "error");
+    } finally {
+      setDeletingArticle(false);
     }
   };
 
   // Gap Claim/Resolution Actions
   const handleClaimGap = async (gapId: string) => {
+    setClaimingGapId(gapId);
     try {
       const res = await fetch("/api/v1/gaps", {
         method: "PUT",
@@ -1299,8 +1313,11 @@ export default function AdminDeskWorkspace({
       if (onUpdateGaps) {
         onUpdateGaps(updated);
       }
+      toast("Gap claimed — it's now assigned to you.", "success");
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message || "Failed to claim gap.", "error");
+    } finally {
+      setClaimingGapId(null);
     }
   };
 
@@ -1331,13 +1348,14 @@ export default function AdminDeskWorkspace({
       }
       setResolvingGap(null);
       setSelectedResolvingArticleId("");
-      alert("Gap resolved successfully!");
+      toast("Gap resolved and linked to article.", "success");
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message || "Failed to resolve gap.", "error");
     }
   };
 
   const handleUnresolveGap = async (gapId: string) => {
+    setUnresolvingGapId(gapId);
     try {
       const res = await fetch("/api/v1/gaps", {
         method: "PUT",
@@ -1353,9 +1371,11 @@ export default function AdminDeskWorkspace({
       if (onUpdateGaps) {
         onUpdateGaps(updated);
       }
-      alert("Gap unresolved/rolled back successfully!");
+      toast("Gap rolled back to In Progress.", "info");
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message || "Failed to unresolve gap.", "error");
+    } finally {
+      setUnresolvingGapId(null);
     }
   };
 
@@ -1410,7 +1430,7 @@ export default function AdminDeskWorkspace({
 
 
   return (
-    <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full relative"}`}>
+    <div className={`text-left ${hideSidebar ? "w-full" : "min-h-screen flex bg-zinc-50 w-full relative overflow-x-hidden"}`}>
       <style>{`
   @keyframes tabFadeIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -1622,7 +1642,7 @@ export default function AdminDeskWorkspace({
               </h2>
             </div>
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
+              <span className="hidden sm:inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
                 Tenant Key: <code className="ml-1.5 font-mono text-[9px] text-zinc-800">{tenantId}</code>
               </span>
             </div>
@@ -1630,7 +1650,7 @@ export default function AdminDeskWorkspace({
         )}
 
         {/* View Contents */}
-        <div key={currentTab} className={hideSidebar ? "" : "flex-1 overflow-y-auto p-8 tab-fade-in"}>
+        <div key={currentTab} className={hideSidebar ? "" : "flex-1 overflow-y-auto p-4 md:p-8 tab-fade-in"}>
           {/* Notifications Banner — backed by Announcements API */}
           {!hideSidebar && notifications.length > 0 && (
             <div className="mb-4 space-y-2">
@@ -1920,9 +1940,10 @@ export default function AdminDeskWorkspace({
                                         <button
                                           type="button"
                                           onClick={() => handleDirectStatusTransition(art.id, art.status === "InReview" ? "Approved" : "Published")}
-                                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-green-650 hover:bg-green-50 shadow-2xs"
+                                          disabled={transitioningArticleId === art.id}
+                                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-green-650 hover:bg-green-50 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                          Approve
+                                          {transitioningArticleId === art.id ? "…" : "Approve"}
                                         </button>
                                       )
                                     )}
@@ -1939,17 +1960,19 @@ export default function AdminDeskWorkspace({
                                       <button
                                         type="button"
                                         onClick={() => handleDirectStatusTransition(art.id, "Draft", "Restored from Archived to Draft")}
-                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-blue-600 hover:bg-blue-50 shadow-2xs"
+                                        disabled={transitioningArticleId === art.id}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-blue-600 hover:bg-blue-50 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        Restore
+                                        {transitioningArticleId === art.id ? "…" : "Restore"}
                                       </button>
                                     ) : (
                                       <button
                                         type="button"
                                         onClick={() => handleDirectStatusTransition(art.id, "Archived")}
-                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-red-650 hover:bg-red-50 shadow-2xs"
+                                        disabled={transitioningArticleId === art.id}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-1 text-[10px] font-bold text-red-650 hover:bg-red-50 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        Archive
+                                        {transitioningArticleId === art.id ? "…" : "Archive"}
                                       </button>
                                     )}
                                   </td>
@@ -1985,9 +2008,12 @@ export default function AdminDeskWorkspace({
                                 if (res.ok) {
                                   const newLink = await res.json();
                                   setGuestLinks([newLink, ...guestLinks]);
+                                  toast("Guest link generated.", "success");
+                                } else {
+                                  toast("Failed to generate guest link.", "error");
                                 }
                               } catch (e) {
-                                console.error(e);
+                                toast("Failed to generate guest link.", "error");
                               } finally {
                                 setGeneratingLink(false);
                               }
@@ -2018,7 +2044,7 @@ export default function AdminDeskWorkspace({
                                         type="button"
                                         onClick={() => {
                                           navigator.clipboard.writeText(guestUrl);
-                                          alert("Link copied!");
+                                          toast("Guest link copied to clipboard.", "success");
                                         }}
                                         className="rounded border border-zinc-200 bg-white px-2 py-0.5 text-[9px] font-bold text-zinc-650"
                                       >
@@ -2037,9 +2063,12 @@ export default function AdminDeskWorkspace({
                                           if (res.ok) {
                                             const updated = await res.json();
                                             setGuestLinks(guestLinks.map((l) => (l.id === link.id ? updated : l)));
+                                            toast(link.revoked ? "Guest link restored." : "Guest link revoked.", "success");
+                                          } else {
+                                            toast("Failed to update guest link.", "error");
                                           }
                                         } catch (e) {
-                                          console.error(e);
+                                          toast("Failed to update guest link.", "error");
                                         }
                                       }}
                                       className={`rounded px-2 py-0.5 text-[9px] font-bold ${link.revoked ? "bg-zinc-950 text-white" : "border border-red-200 text-red-700"
@@ -2097,20 +2126,14 @@ export default function AdminDeskWorkspace({
                           <button
                             type="button"
                             onClick={() => handleDeleteArticle(editingArticle.id)}
-                            className="rounded bg-red-650 hover:bg-red-750 px-3.5 py-2 text-xs font-bold text-white shadow-xs"
+                            disabled={deletingArticle}
+                            className="rounded bg-red-600 hover:bg-red-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Delete
+                            {deletingArticle ? "Deleting…" : "Delete"}
                           </button>
                         )}
                       </div>
                     </div>
-
-                    {formError && (
-                      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 flex items-start justify-between gap-3">
-                        <span>{formError}</span>
-                        <button type="button" onClick={() => setFormError("")} className="shrink-0 text-red-400 hover:text-red-700 transition-colors leading-none">✕</button>
-                      </div>
-                    )}
 
                     {(titleError || slugError || contentError || teamsError || reviewDueError) && (
                       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3">
@@ -2125,12 +2148,6 @@ export default function AdminDeskWorkspace({
                             {reviewDueError && <li className="text-[11px] font-semibold text-red-700 flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-red-400 shrink-0" />Review Due Date</li>}
                           </ul>
                         </div>
-                      </div>
-                    )}
-
-                    {formSuccess && (
-                      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-xs font-semibold text-green-800">
-                        {formSuccess}
                       </div>
                     )}
 
@@ -2532,7 +2549,7 @@ export default function AdminDeskWorkspace({
                                         type="button"
                                         onClick={() => {
                                           navigator.clipboard.writeText(guestUrl);
-                                          alert("Guest link copied to clipboard!");
+                                          toast("Guest link copied to clipboard.", "success");
                                         }}
                                         className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-0.5 text-[9px] font-bold text-zinc-650"
                                       >
@@ -3198,11 +3215,13 @@ export default function AdminDeskWorkspace({
 
                     {articles.filter(a => a.status === "InReview" || a.status === "Approved").length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="h-14 w-14 rounded-2xl bg-zinc-100 flex items-center justify-center mb-4">
-                          <span className="text-2xl">✅</span>
+                        <div className="h-12 w-12 rounded-2xl bg-zinc-100 flex items-center justify-center mb-3">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                          </svg>
                         </div>
-                        <p className="text-sm font-bold text-zinc-400">All clear!</p>
-                        <p className="text-xs text-zinc-350 font-medium mt-1">No articles are waiting for review or approval.</p>
+                        <p className="text-sm font-bold text-zinc-500">All clear!</p>
+                        <p className="text-xs text-zinc-400 font-medium mt-1">No articles are waiting for review or approval.</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
@@ -3269,9 +3288,10 @@ export default function AdminDeskWorkspace({
                                         <button
                                           type="button"
                                           onClick={() => handleDirectStatusTransition(art.id, nextStatus)}
-                                          className="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 text-[10px] font-bold text-green-700 shadow-2xs transition-colors"
+                                          disabled={transitioningArticleId === art.id}
+                                          className="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 hover:bg-green-100 px-2.5 py-1.5 text-[10px] font-bold text-green-700 shadow-2xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                          ✓ {nextLabel}
+                                          {transitioningArticleId === art.id ? "Processing…" : `✓ ${nextLabel}`}
                                         </button>
                                       )}
                                       <button
@@ -3716,9 +3736,10 @@ export default function AdminDeskWorkspace({
                                     <>
                                       <button
                                         onClick={() => handleClaimGap(g.id)}
-                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs whitespace-nowrap"
+                                        disabled={claimingGapId === g.id}
+                                        className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-650 shadow-2xs whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        Claim Gap
+                                        {claimingGapId === g.id ? "Claiming…" : "Claim Gap"}
                                       </button>
                                       <button
                                         onClick={() => handleCreateArticleFromGap(g)}
@@ -3763,9 +3784,10 @@ export default function AdminDeskWorkspace({
                                       )}
                                       <button
                                         onClick={() => handleUnresolveGap(g.id)}
-                                        className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors"
+                                        disabled={unresolvingGapId === g.id}
+                                        className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        Rollback
+                                        {unresolvingGapId === g.id ? "Rolling back…" : "Rollback"}
                                       </button>
                                     </div>
                                   )}
@@ -4049,11 +4071,11 @@ export default function AdminDeskWorkspace({
                                           body: JSON.stringify({ ...log.before, _rollback_from_audit: log.id }),
                                         });
                                         if (res.ok) {
-                                          alert("Article restored. Refreshing...");
+                                          toast("Article restored. Reloading page…", "success");
                                           window.location.reload();
                                         } else {
                                           const err = await res.json().catch(() => ({}));
-                                          alert(`Rollback failed: ${err.error || res.status}`);
+                                          toast(`Rollback failed: ${err.error || res.status}`, "error");
                                         }
                                       }}
                                       className="rounded border border-amber-200 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 shadow-2xs transition-colors whitespace-nowrap"
@@ -5091,16 +5113,17 @@ export default function AdminDeskWorkspace({
                   </button>
                   <button
                     type="button"
+                    disabled={submittingRejection}
                     onClick={() => {
                       if (!rejectionModalComment.trim()) {
-                        alert("Please enter a rejection comment.");
+                        toast("Please enter a rejection reason before submitting.", "warning");
                         return;
                       }
                       handleDirectStatusTransition(rejectionModalArticleId, "Rejected", rejectionModalComment);
                     }}
-                    className="rounded bg-red-650 hover:bg-red-750 px-4 py-1.5 text-xs font-bold text-white shadow-xs"
+                    className="rounded bg-red-600 hover:bg-red-700 px-4 py-1.5 text-xs font-bold text-white shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Submit Rejection
+                    {submittingRejection ? "Submitting…" : "Submit Rejection"}
                   </button>
                 </div>
               </div>

@@ -3,7 +3,12 @@ import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import CustomerSearchWorkspace from "@/components/CustomerSearchWorkspace";
 
-export default async function Home() {
+type PageProps = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+export default async function Home({ searchParams }: PageProps) {
+  const { q: initialQuery } = await searchParams;
   const session = await auth();
   const isLoggedIn = !!session?.user;
 
@@ -103,6 +108,7 @@ export default async function Home() {
             isLoggedIn={isLoggedIn}
             userRole={session?.user?.role}
             userName={session?.user?.name || undefined}
+            initialQuery={initialQuery || ""}
           />
         </div>
       </main>

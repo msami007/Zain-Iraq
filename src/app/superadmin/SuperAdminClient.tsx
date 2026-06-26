@@ -404,7 +404,7 @@ export default function SuperAdminClient({
   };
 
   return (
-    <div className="min-h-screen flex bg-zinc-50 w-full text-left relative">
+    <div className="min-h-screen flex bg-zinc-50 w-full text-left relative overflow-x-hidden">
       {/* Sidebar Backdrop for Mobile */}
       {mobileSidebarOpen && (
         <div
@@ -569,12 +569,12 @@ export default function SuperAdminClient({
               </h2>
           </div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
+            <span className="hidden sm:inline-flex items-center rounded-lg bg-zinc-50 border border-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-650">
               Scope: Platform Super Admin
             </span>
             {activeTab === "dashboard" && (
               <>
-                <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg">
+                <div className="hidden sm:flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg">
                   {(["all", "customer", "agent"] as const).map((ch) => (
                     <button
                       key={ch}
@@ -602,7 +602,7 @@ export default function SuperAdminClient({
           </div>
         </header>
 
-        <div key={activeTab} className="flex-1 overflow-y-auto p-8 tab-fade-in">
+        <div key={activeTab} className="flex-1 overflow-y-auto p-4 md:p-8 tab-fade-in">
           {activeTab === "dashboard" && (
             <div className="space-y-6">
 
