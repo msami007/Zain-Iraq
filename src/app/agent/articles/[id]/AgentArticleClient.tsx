@@ -9,6 +9,7 @@ type ArticleProps = {
   status: string;
   language: string;
   category: string;
+  categoryId?: string;
   shortAnswer: string;
   copyMacro: string;
   numberedSteps: string[];
@@ -53,7 +54,15 @@ const STATUS_PILL: Record<string, string> = {
   Archived:  "bg-red-50 text-red-600 border-red-200 ring-red-100",
 };
 
-export default function AgentArticleClient({ article }: { article: ArticleProps }) {
+export default function AgentArticleClient({
+  article,
+  backQuery,
+  backCategoryId,
+}: {
+  article: ArticleProps;
+  backQuery?: string;
+  backCategoryId?: string;
+}) {
   const [copied, setCopied]         = useState(false);
   const [feedback, setFeedback]     = useState<"helpful" | "missing" | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -118,6 +127,23 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
   const pillClass = STATUS_PILL[article.status] ?? STATUS_PILL.Draft;
   const hasContent = article.copyMacro || article.numberedSteps.length > 0 || article.internalNote;
 
+  // Breadcrumb back navigation
+  const backHref = backCategoryId
+    ? `/categories/${backCategoryId}${backQuery ? `?q=${encodeURIComponent(backQuery)}` : ""}`
+    : backQuery
+    ? `/agent?q=${encodeURIComponent(backQuery)}&tab=search`
+    : "/agent";
+  const backLabel = backCategoryId
+    ? article.category
+    : backQuery
+    ? "Back to results"
+    : "Dashboard";
+  const sidebarBackLabel = backCategoryId
+    ? `Back to ${article.category}`
+    : backQuery
+    ? "Back to results"
+    : "Back to workspace";
+
   return (
     <div className="min-h-screen bg-[#f8f8f9] font-sans">
 
@@ -126,13 +152,13 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
         <div className="mx-auto max-w-screen-xl px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link
-              href="/agent"
+              href={backHref}
               className="flex items-center gap-1.5 shrink-0 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-all"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 19l-7-7 7-7"/>
               </svg>
-              Dashboard
+              {backLabel}
             </Link>
             <span className="text-zinc-300 select-none">/</span>
             <span className="text-xs font-semibold text-zinc-500 truncate max-w-[280px]">{article.title}</span>
@@ -383,10 +409,10 @@ export default function AgentArticleClient({ article }: { article: ArticleProps 
 
             {/* Actions */}
             <Link
-              href="/agent"
+              href={backHref}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 px-4 py-3 text-xs font-bold text-white shadow-sm transition-all"
             >
-              Back to workspace
+              {sidebarBackLabel}
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
               </svg>

@@ -5,6 +5,7 @@ import AgentArticleClient from "./AgentArticleClient";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ q?: string; categoryId?: string }>;
 };
 
 /** Strip HTML tags and all markdown syntax, returning clean plain text. */
@@ -33,8 +34,9 @@ function isLinkDump(line: string): boolean {
   return linkCount > 1;
 }
 
-export default async function AgentArticlePage({ params }: PageProps) {
+export default async function AgentArticlePage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { q: backQuery, categoryId } = await searchParams;
 
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -111,6 +113,7 @@ export default async function AgentArticlePage({ params }: PageProps) {
         status: article.status,
         language: article.language,
         category: article.category?.name ?? "General",
+        categoryId: article.category_id ?? undefined,
         shortAnswer,
         copyMacro,
         numberedSteps,
@@ -119,6 +122,8 @@ export default async function AgentArticlePage({ params }: PageProps) {
         helpfulPct,
         totalFeedback,
       }}
+      backQuery={backQuery}
+      backCategoryId={categoryId}
     />
   );
 }

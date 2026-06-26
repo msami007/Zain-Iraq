@@ -3,7 +3,11 @@ import { prisma, getTenantDb } from "@/lib/db";
 import { redirect } from "next/navigation";
 import AgentDeskWorkspace from "@/components/AgentDeskWorkspace";
 
-export default async function AgentPage() {
+export default async function AgentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; tab?: string }>;
+}) {
   const session = await auth();
   if (!session || !session.user) {
     redirect("/login");
@@ -239,6 +243,7 @@ export default async function AgentPage() {
   ] : serializedCases;
 
   const brandingColor = (tenant.branding as any)?.primaryColor || "#09090B";
+  const { q: initialQuery, tab: initialTab } = await searchParams;
 
   return (
     <div className="text-zinc-900 font-sans">
@@ -256,6 +261,8 @@ export default async function AgentPage() {
         userEmail={email || undefined}
         tenantName={tenant.name}
         brandingColor={brandingColor}
+        initialQuery={initialQuery}
+        initialTab={initialTab === "search" ? "search" : undefined}
       />
     </div>
   );

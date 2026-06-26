@@ -41,6 +41,7 @@ type SearchWorkspaceProps = {
   feedbackTitle?: string;
   feedbackSubtitle?: string;
   agentMode?: boolean;
+  initialQuery?: string;
 };
 
 export default function CustomerSearchWorkspace({
@@ -58,9 +59,10 @@ export default function CustomerSearchWorkspace({
   feedbackTitle = "Help us improve",
   feedbackSubtitle = "Tell us what you were looking for — our content team will create a guide to help you.",
   agentMode = false,
+  initialQuery = "",
 }: SearchWorkspaceProps) {
   const [selectedTenant, setSelectedTenant] = useState<Tenant>(tenants[0] || null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -285,7 +287,7 @@ export default function CustomerSearchWorkspace({
               {activeCategories.map((c) => (
                 <Link
                   key={c.id}
-                  href={`/categories/${c.id}`}
+                  href={`/categories/${c.id}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
                   className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-all"
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
@@ -390,7 +392,7 @@ export default function CustomerSearchWorkspace({
                 const isPinned = pinnedArticleIds.includes(art.article_id);
                 return (
                   <div key={art.article_id} className="group flex flex-col rounded-xl border border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-all">
-                    <Link href={`/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}`} className="flex-1 p-4 space-y-2.5 block">
+                    <Link href={agentMode ? `/agent/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}` : `/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}`} className="flex-1 p-4 space-y-2.5 block">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="rounded-md bg-zinc-50 border border-zinc-200 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-zinc-500">
                           {art.category}
@@ -491,7 +493,7 @@ export default function CustomerSearchWorkspace({
           {activeCategories.map((c) => (
             <Link
               key={c.id}
-              href={`/categories/${c.id}`}
+              href={`/categories/${c.id}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
               className="rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-650 hover:text-zinc-950 transition-colors shadow-2xs"
             >
               {c.name}
@@ -578,7 +580,7 @@ export default function CustomerSearchWorkspace({
                   {suggestedCategories.map((c) => (
                     <Link
                       key={c.id}
-                      href={`/categories/${c.id}`}
+                      href={`/categories/${c.id}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
                       className="rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-zinc-950 transition-colors shadow-2xs"
                     >
                       {c.name}
@@ -611,7 +613,7 @@ export default function CustomerSearchWorkspace({
               return (
                 <div key={art.article_id} className="group rounded-xl border border-zinc-200 bg-white shadow-sm transition-all duration-200 hover:border-zinc-350 hover:-translate-y-0.5 flex flex-col">
                   <Link
-                    href={`/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
+                    href={agentMode ? `/agent/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}` : `/articles/${art.article_id}${query ? `?q=${encodeURIComponent(query)}` : ""}`}
                     className="block p-6 flex-1 text-left space-y-4"
                   >
                     <div className="flex items-center gap-2">

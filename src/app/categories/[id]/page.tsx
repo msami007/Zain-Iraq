@@ -6,10 +6,12 @@ import { ArticleStatus, Visibility } from "@prisma/client";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ q?: string }>;
 };
 
-export default async function CategoryPage({ params }: PageProps) {
+export default async function CategoryPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { q: backQuery } = await searchParams;
   const session = await auth();
   const user = session?.user;
 
@@ -19,16 +21,21 @@ export default async function CategoryPage({ params }: PageProps) {
   const tenant = await prisma.tenant.findUnique({ where: { id: category.tenant_id } });
 
   // Role-scoped back navigation
+  const isAgent = user?.role === "Agent";
   const backHref = !user
     ? "/"
     : user.role === "SuperAdmin" || user.role === "Admin"
     ? "/admin"
-    : "/agent";
+    : backQuery
+    ? `/agent?q=${encodeURIComponent(backQuery)}&tab=search`
+    : "/agent?tab=search";
   const backLabel = !user
     ? "Back to Home"
     : user.role === "SuperAdmin" || user.role === "Admin"
     ? "Admin Desk"
-    : "Agent Desk";
+    : backQuery
+    ? "Back to results"
+    : "Knowledge Base";
 
   // Visibility and status rules mirror the articles list API
   const statusClause = user ? undefined : ArticleStatus.Published;
@@ -118,7 +125,12 @@ export default async function CategoryPage({ params }: PageProps) {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {articles.map((article) => {
-              const articleHref = user?.role === "Agent" ? `/agent/articles/${article.id}` : `/articles/${article.id}`;
+              const agentArticleParams = new URLSearchParams();
+              agentArticleParams.set("categoryId", id);
+              if (backQuery) agentArticleParams.set("q", backQuery);
+              const articleHref = isAgent
+                ? `/agent/articles/${article.id}?${agentArticleParams.toString()}`
+                : `/articles/${article.id}`;
               return (
                 <Link
                   key={article.id}

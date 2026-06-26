@@ -63,6 +63,8 @@ type AgentWorkspaceProps = {
   userEmail?: string;
   tenantName?: string;
   brandingColor?: string;
+  initialQuery?: string;
+  initialTab?: "dashboard" | "chat" | "search" | "gaps" | "glossary";
 };
 
 export default function AgentDeskWorkspace({
@@ -79,13 +81,15 @@ export default function AgentDeskWorkspace({
   userEmail,
   tenantName,
   brandingColor = "#09090B",
+  initialQuery,
+  initialTab,
 }: AgentWorkspaceProps) {
   const toast = useToast();
   const [cases, setCases] = useState<AgentCase[]>(initialCases);
   const [activeTab, setActiveTab] = useState<"waiting" | "active" | "resolved">("waiting");
   const [selectedCase, setSelectedCase] = useState<AgentCase | null>(null);
 
-  const [agentActiveTab, setAgentActiveTab] = useState<"dashboard" | "chat" | "search" | "gaps" | "glossary">("dashboard");
+  const [agentActiveTab, setAgentActiveTab] = useState<"dashboard" | "chat" | "search" | "gaps" | "glossary">(initialTab ?? "dashboard");
   const [glossarySearch, setGlossarySearch] = useState("");
   const [glossaryCategory, setGlossaryCategory] = useState("All");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -2319,6 +2323,7 @@ export default function AgentDeskWorkspace({
             feedbackTitle="Report Knowledge Gap"
             feedbackSubtitle="Describe the missing information so the admin team can create a resolving article."
             agentMode={true}
+            initialQuery={initialQuery}
           />
         </div>
       )}

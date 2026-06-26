@@ -103,12 +103,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Search across both languages so Arabic queries can find Arabic articles
-    // and English queries can find all content
+    // Combine search conditions AND access filter using AND so neither overwrites the other.
+    // Spreading teamFilter directly would clobber the search OR when teamFilter also has an OR key.
     const whereClause: any = {
       status: searchStatus ? (searchStatus as any) : undefined,
-      OR: searchConditions,
-      ...teamFilter,
+      AND: [
+        { OR: searchConditions },
+        ...(Object.keys(teamFilter).length > 0 ? [teamFilter] : []),
+      ],
     };
 
     // Apply search filters

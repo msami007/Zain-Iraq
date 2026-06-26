@@ -219,6 +219,12 @@ export default function AdminDeskWorkspace({
   const [formSuccess, setFormSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Per-field validation error states
+  const [slugError, setSlugError] = useState(false);
+  const [contentError, setContentError] = useState(false);
+  const [teamsError, setTeamsError] = useState(false);
+  const [reviewDueError, setReviewDueError] = useState(false);
+
   // Variant Editor Sub-tab
   const [variantTab, setVariantTab] = useState<"default" | "agent" | "chatbot" | "whatsapp">("default");
 
@@ -783,7 +789,9 @@ export default function AdminDeskWorkspace({
     setTitle(val);
     if (val.trim()) { setTitleError(false); setFormError(""); }
     if (!editingArticle) {
-      setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"));
+      const autoSlug = val.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
+      setSlug(autoSlug);
+      if (autoSlug) setSlugError(false);
     }
   };
 
@@ -861,6 +869,10 @@ export default function AdminDeskWorkspace({
     setFormError("");
     setFormSuccess("");
     setTitleError(false);
+    setSlugError(false);
+    setContentError(false);
+    setTeamsError(false);
+    setReviewDueError(false);
 
     setTitle(article.title);
     setSlug(article.slug);
@@ -932,6 +944,10 @@ export default function AdminDeskWorkspace({
     setFormError("");
     setFormSuccess("");
     setTitleError(false);
+    setSlugError(false);
+    setContentError(false);
+    setTeamsError(false);
+    setReviewDueError(false);
     setTransitionStatus("");
     setTransitionComment("");
 
@@ -1066,24 +1082,24 @@ export default function AdminDeskWorkspace({
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     const defaultDetailedTextClean = vDefaultDetailed.replace(/<[^>]*>/g, "").trim();
-    if (!title.trim()) {
-      setTitleError(true);
-      setFormError("Title is required.");
-      return;
-    }
-    if (!slug || !categoryId || !defaultDetailedTextClean) {
-      setFormError("Slug, Category, and Default Detailed Steps are required.");
-      return;
-    }
 
-    if (selectedTeams.length === 0) {
-      setFormError("At least one team must be assigned to the article.");
-      return;
-    }
+    // Validate all fields at once so every error shows simultaneously
+    let hasErrors = false;
+    if (!title.trim()) { setTitleError(true); hasErrors = true; }
+    if (!slug.trim()) { setSlugError(true); hasErrors = true; }
+    if (!defaultDetailedTextClean) { setContentError(true); hasErrors = true; }
+    if (selectedTeams.length === 0) { setTeamsError(true); hasErrors = true; }
+    if (!reviewDue) { setReviewDueError(true); hasErrors = true; }
+    if (hasErrors) return;
 
     setSaving(true);
     setFormError("");
     setFormSuccess("");
+    setTitleError(false);
+    setSlugError(false);
+    setContentError(false);
+    setTeamsError(false);
+    setReviewDueError(false);
 
     // Prepare variants payload
     const variantsPayload = [
@@ -2035,6 +2051,22 @@ export default function AdminDeskWorkspace({
                       </div>
                     )}
 
+                    {(titleError || slugError || contentError || teamsError || reviewDueError) && (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <div>
+                          <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1.5">Missing required fields</p>
+                          <ul className="space-y-0.5">
+                            {titleError && <li className="text-[11px] font-semibold text-red-700 flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-red-400 shrink-0" />Title</li>}
+                            {slugError && <li className="text-[11px] font-semibold text-red-700 flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-red-400 shrink-0" />Slug</li>}
+                            {contentError && <li className="text-[11px] font-semibold text-red-700 flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-red-400 shrink-0" />Default content (Customer View tab)</li>}
+                            {teamsError && <li className="text-[11px] font-semibold text-red-700 flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-red-400 shrink-0" />Assign to Teams</li>}
+                            {reviewDueError && <li className="text-[11px] font-semibold text-red-700 flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-red-400 shrink-0" />Review Due Date</li>}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
                     {formSuccess && (
                       <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-xs font-semibold text-green-800">
                         {formSuccess}
@@ -2107,7 +2139,7 @@ export default function AdminDeskWorkspace({
                     {/* Grid Inputs */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className={`text-[10px] font-bold uppercase tracking-wider block ${titleError ? "text-red-600" : "text-zinc-550"}`}>Title{titleError && " — required"}</label>
+                        <label className={`text-[10px] font-bold uppercase tracking-wider block ${titleError ? "text-red-600" : "text-zinc-550"}`}>Title <span className="text-red-500">*</span></label>
                         <input
                           type="text"
                           value={title}
@@ -2115,18 +2147,19 @@ export default function AdminDeskWorkspace({
                           className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden ${titleError ? "border-red-400 bg-red-50 focus:border-red-500" : "border-zinc-200"}`}
                           placeholder="e.g. SIM Card Setup"
                         />
+                        {titleError && <p className="text-[10px] font-semibold text-red-600">Title is required</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Slug</label>
+                        <label className={`text-[10px] font-bold uppercase tracking-wider block ${slugError ? "text-red-600" : "text-zinc-550"}`}>Slug <span className="text-red-500">*</span></label>
                         <input
                           type="text"
-                          required
                           value={slug}
-                          onChange={(e) => setSlug(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          onChange={(e) => { setSlug(e.target.value); if (e.target.value.trim()) setSlugError(false); }}
+                          className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden ${slugError ? "border-red-400 bg-red-50 focus:border-red-500" : "border-zinc-200"}`}
                           placeholder="sim-card-setup"
                         />
+                        {slugError && <p className="text-[10px] font-semibold text-red-600">Slug is required</p>}
                       </div>
 
                       <div className="space-y-2">
@@ -2207,11 +2240,11 @@ export default function AdminDeskWorkspace({
                       </div>
 
                       <div className="space-y-2 relative">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Assign to Teams</label>
+                        <label className={`text-[10px] font-bold uppercase tracking-wider block ${teamsError ? "text-red-600" : "text-zinc-550"}`}>Assign to Teams <span className="text-red-500">*</span></label>
                         <button
                           type="button"
                           onClick={() => setIsTeamsDropdownOpen(!isTeamsDropdownOpen)}
-                          className="flex items-center justify-between w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-850 hover:bg-zinc-50 transition-colors text-left"
+                          className={`flex items-center justify-between w-full rounded-lg border bg-white px-3 py-2 text-xs text-zinc-850 hover:bg-zinc-50 transition-colors text-left ${teamsError ? "border-red-400 bg-red-50" : "border-zinc-200"}`}
                         >
                           <span className="truncate">
                             {selectedTeams.length === 0
@@ -2244,6 +2277,7 @@ export default function AdminDeskWorkspace({
                                       onChange={(e) => {
                                         if (e.target.checked) {
                                           setSelectedTeams([...selectedTeams, team.id]);
+                                          setTeamsError(false);
                                         } else {
                                           setSelectedTeams(selectedTeams.filter(id => id !== team.id));
                                         }
@@ -2256,16 +2290,18 @@ export default function AdminDeskWorkspace({
                             </div>
                           </>
                         )}
+                        {teamsError && <p className="text-[10px] font-semibold text-red-600">At least one team must be assigned</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-550 block">Review Due Date</label>
+                        <label className={`text-[10px] font-bold uppercase tracking-wider block ${reviewDueError ? "text-red-600" : "text-zinc-550"}`}>Review Due Date <span className="text-red-500">*</span></label>
                         <input
                           type="date"
                           value={reviewDue}
-                          onChange={(e) => setReviewDue(e.target.value)}
-                          className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden"
+                          onChange={(e) => { setReviewDue(e.target.value); if (e.target.value) setReviewDueError(false); }}
+                          className={`w-full rounded-lg border bg-white px-3 py-2 text-xs text-zinc-800 focus:outline-hidden ${reviewDueError ? "border-red-400 bg-red-50 focus:border-red-500" : "border-zinc-200"}`}
                         />
+                        {reviewDueError && <p className="text-[10px] font-semibold text-red-600">Review due date is required</p>}
                       </div>
 
                       <div className="space-y-2">
@@ -2923,7 +2959,7 @@ export default function AdminDeskWorkspace({
                             <div
                               ref={editorRefDefault}
                               contentEditable={true}
-                              onInput={(e) => setVDefaultDetailed(e.currentTarget.innerHTML)}
+                              onInput={(e) => { setVDefaultDetailed(e.currentTarget.innerHTML); if (e.currentTarget.innerText.trim()) setContentError(false); }}
                               className={`wysiwyg-editor bg-white ${variantTab === "default" ? "block" : "hidden"}`}
                               data-placeholder="Start writing..."
                               suppressContentEditableWarning={true}
@@ -2958,6 +2994,13 @@ export default function AdminDeskWorkspace({
                               data-placeholder="Start writing..."
                               suppressContentEditableWarning={true}
                             />
+
+                            {/* Content error — only relevant on the Default tab */}
+                            {contentError && variantTab === "default" && (
+                              <div className="absolute bottom-12 left-4 right-4 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                                Default content is required
+                              </div>
+                            )}
 
                             {/* Word Counter */}
                             <div className="absolute bottom-3 right-4 px-2 py-0.5 rounded bg-zinc-100 text-[10px] font-bold text-zinc-450 shadow-3xs select-none">
