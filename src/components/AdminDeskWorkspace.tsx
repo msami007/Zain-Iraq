@@ -1336,13 +1336,7 @@ export default function AdminDeskWorkspace({
             {/* Brand */}
             <div className="px-5 py-5 border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${brandingColor}18`, borderColor: `${brandingColor}30`, borderStyle: 'solid', borderWidth: '1px' }}>
-                  <span className="h-2.5 w-2.5 rounded-full border border-white/10 shadow-xs" style={{ backgroundColor: brandingColor }} />
-                </div>
-                <div>
-                  <div className="text-[11px] font-extrabold text-white uppercase tracking-widest leading-none truncate max-w-[120px]" title={tenantName}>{tenantName}</div>
-                  <div className="text-[9px] font-semibold text-white/25 uppercase tracking-widest mt-1">Admin Workspace</div>
-                </div>
+                <img src="/images/zain-logo.png" alt="Zain Iraq" className="h-8 w-auto object-contain flex-shrink-0 brightness-0 invert" />
               </div>
             </div>
 

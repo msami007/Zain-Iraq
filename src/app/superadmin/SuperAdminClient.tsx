@@ -424,15 +424,7 @@ export default function SuperAdminClient({
           {/* Brand */}
           <div className="px-5 py-5 border-b border-white/[0.06]">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-amber-400/[0.12] border border-amber-400/[0.22] flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(251 191 36 / 0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-              </div>
-              <div>
-                <div className="text-[11px] font-extrabold text-white uppercase tracking-widest leading-none">Zain & Oodi</div>
-                <div className="text-[9px] font-semibold text-white/30 uppercase tracking-widest mt-1">Super Admin</div>
-              </div>
+              <img src="/images/zain-logo.png" alt="Zain Iraq" className="h-8 w-auto object-contain flex-shrink-0 brightness-0 invert" />
             </div>
           </div>
 
