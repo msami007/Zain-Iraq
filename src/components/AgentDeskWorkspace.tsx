@@ -1452,8 +1452,8 @@ export default function AgentDeskWorkspace({
                 ))}
               </div>
 
-              {/* Second row: quality + gaps + weekly */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Second row: gaps + weekly */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Knowledge Gaps */}
                 <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
                   <div className="flex items-center justify-between mb-4">
@@ -1465,51 +1465,26 @@ export default function AgentDeskWorkspace({
                   </div>
                   <div className="space-y-3">
                     {[
-                      { label: "All time", val: s.gapsSubmitted, cls: "text-zinc-950" },
-                      { label: "This week", val: s.gapsThisWeek, cls: "text-amber-700" },
-                      { label: "Today", val: s.todayGaps, cls: "text-red-600" },
+                      { label: "This week", val: s.gapsThisWeek, dot: "bg-amber-400", cls: "text-amber-700" },
+                      { label: "Today", val: s.todayGaps, dot: "bg-red-400", cls: "text-red-600" },
+                      { label: "Resolved", val: s.gapsResolved, dot: "bg-green-400", cls: "text-green-700" },
+                      { label: "Pending", val: s.gapsSubmitted - s.gapsResolved, dot: "bg-zinc-300", cls: "text-zinc-700" },
                     ].map((row) => (
                       <div key={row.label} className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-zinc-500">{row.label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`h-2 w-2 rounded-full shrink-0 ${row.dot}`} />
+                          <span className="text-xs font-semibold text-zinc-500">{row.label}</span>
+                        </div>
                         <span className={`text-sm font-extrabold tabular-nums ${row.cls}`}>{row.val}</span>
                       </div>
                     ))}
                   </div>
                   <div className="mt-4 pt-3 border-t border-zinc-100">
                     <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
-                      <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: s.gapsSubmitted > 0 ? `${Math.min(100, (s.gapsResolved / s.gapsSubmitted) * 100)}%` : "0%" }} />
+                      <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: s.gapsSubmitted > 0 ? `${Math.min(100, Math.round((s.gapsResolved / s.gapsSubmitted) * 100))}%` : "0%" }} />
                     </div>
-                    <p className="mt-1.5 text-[10px] text-zinc-400">{s.gapsResolved} of {s.gapsSubmitted} resolved</p>
+                    <p className="mt-1.5 text-[10px] text-zinc-400">{s.gapsResolved} of {s.gapsSubmitted} resolved ({s.gapsSubmitted > 0 ? Math.round((s.gapsResolved / s.gapsSubmitted) * 100) : 0}%)</p>
                   </div>
-                </div>
-
-                {/* Gap Impact */}
-                <div className="rounded-xl border border-zinc-200 bg-white p-5 text-left">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 block mb-1">Gap Report Impact</span>
-                  <p className="text-[10px] text-zinc-400 mb-3">Resolved = admin published new content addressing the gap</p>
-                  <div className="space-y-3">
-                    {[
-                      { label: "Submitted", val: s.gapsSubmitted, dot: "bg-zinc-300", cls: "text-zinc-950" },
-                      { label: "Resolved", val: s.gapsResolved, dot: "bg-green-400", cls: "text-green-700" },
-                      { label: "Pending", val: s.gapsSubmitted - s.gapsResolved, dot: "bg-amber-400", cls: "text-amber-700" },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`h-2 w-2 rounded-full ${row.dot}`} />
-                          <span className="text-xs font-semibold text-zinc-600">{row.label}</span>
-                        </div>
-                        <span className={`text-sm font-extrabold tabular-nums ${row.cls}`}>{row.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {s.gapsSubmitted > 0 && (
-                    <div className="mt-4 pt-3 border-t border-zinc-100">
-                      <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
-                        <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}%` }} />
-                      </div>
-                      <p className="mt-1.5 text-[10px] text-zinc-400">{Math.round((s.gapsResolved / s.gapsSubmitted) * 100)}% resolved</p>
-                    </div>
-                  )}
                 </div>
 
                 {/* This Week */}

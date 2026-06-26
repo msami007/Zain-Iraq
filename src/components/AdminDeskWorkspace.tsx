@@ -199,6 +199,9 @@ export default function AdminDeskWorkspace({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All Categories");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [articleSort, setArticleSort] = useState<"updated_at" | "created_at" | "title" | "views" | "status" | "category">("updated_at");
+  const [articleSortDir, setArticleSortDir] = useState<"desc" | "asc">("desc");
+  const [articleViewCounts, setArticleViewCounts] = useState<Record<string, number>>({});
 
   // Guest Link Modal Manager overlay
   const [activeLinkManagerArticle, setActiveLinkManagerArticle] = useState<AdminArticle | null>(null);
@@ -425,6 +428,7 @@ export default function AdminDeskWorkspace({
       if (res.ok) {
         const data = await res.json();
         setAnalyticsData(data);
+        if (data.articleViewCounts) setArticleViewCounts(data.articleViewCounts);
       }
     } catch (e) {
       console.error("Failed to fetch analytics:", e);
@@ -432,6 +436,14 @@ export default function AdminDeskWorkspace({
       setLoadingAnalytics(false);
     }
   };
+
+  // Fetch view counts when articles tab opens (if not already loaded)
+  useEffect(() => {
+    if (currentTab === "articles" && Object.keys(articleViewCounts).length === 0) {
+      fetchAnalytics();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTab]);
 
   const fetchFilteredGaps = async () => {
     try {
@@ -484,6 +496,45 @@ export default function AdminDeskWorkspace({
 
     return true;
   });
+
+  // Sort filtered articles
+  const sortedFilteredArticles = [...filteredArticles].sort((a, b) => {
+    let cmp = 0;
+    switch (articleSort) {
+      case "title":
+        cmp = a.title.localeCompare(b.title);
+        break;
+      case "category":
+        cmp = (a.category?.name || "").localeCompare(b.category?.name || "");
+        break;
+      case "status":
+        cmp = a.status.localeCompare(b.status);
+        break;
+      case "views":
+        cmp = (articleViewCounts[a.id] || 0) - (articleViewCounts[b.id] || 0);
+        break;
+      case "created_at": {
+        const aDate = a.published_at || a.created_at || a.updated_at;
+        const bDate = b.published_at || b.created_at || b.updated_at;
+        cmp = new Date(aDate).getTime() - new Date(bDate).getTime();
+        break;
+      }
+      case "updated_at":
+      default:
+        cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        break;
+    }
+    return articleSortDir === "asc" ? cmp : -cmp;
+  });
+
+  const toggleSort = (field: typeof articleSort) => {
+    if (articleSort === field) {
+      setArticleSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setArticleSort(field);
+      setArticleSortDir(field === "title" || field === "category" ? "asc" : "desc");
+    }
+  };
 
   // Fetch guest links on editing article change
   useEffect(() => {
@@ -1584,7 +1635,7 @@ export default function AdminDeskWorkspace({
                     <div className="text-left">
                       <h2 className="text-xl font-extrabold text-zinc-950">All Articles</h2>
                       <p className="text-xs text-zinc-500 font-medium mt-1">
-                        {filteredArticles.length} articles · {categories.length} categories · 2 languages
+                        {sortedFilteredArticles.length} articles · {categories.length} categories · 2 languages
                       </p>
                     </div>
                     <button
@@ -1630,6 +1681,28 @@ export default function AdminDeskWorkspace({
                         ))}
                       </select>
 
+                      {/* Sort Dropdown */}
+                      <select
+                        value={`${articleSort}:${articleSortDir}`}
+                        onChange={(e) => {
+                          const [field, dir] = e.target.value.split(":") as [typeof articleSort, typeof articleSortDir];
+                          setArticleSort(field);
+                          setArticleSortDir(dir);
+                        }}
+                        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="updated_at:desc">Last Updated ↓</option>
+                        <option value="updated_at:asc">Last Updated ↑</option>
+                        <option value="created_at:desc">Publish Date (Newest)</option>
+                        <option value="created_at:asc">Publish Date (Oldest)</option>
+                        <option value="views:desc">Most Views</option>
+                        <option value="views:asc">Fewest Views</option>
+                        <option value="title:asc">Title A → Z</option>
+                        <option value="title:desc">Title Z → A</option>
+                        <option value="category:asc">Category A → Z</option>
+                        <option value="status:asc">Status A → Z</option>
+                      </select>
+
                       {/* Search Bar Input */}
                       <input
                         type="text"
@@ -1646,28 +1719,42 @@ export default function AdminDeskWorkspace({
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                         <thead>
-                          <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
-                            <th className="p-4">ID</th>
-                            <th className="p-4">Title</th>
-                            <th className="p-4">Category</th>
-                            <th className="p-4">Lang</th>
-                            <th className="p-4">Status</th>
-                            <th className="p-4">Views</th>
-                            <th className="p-4">Updated</th>
-                            <th className="p-4 text-right">Actions</th>
-                          </tr>
+                          {(() => {
+                            const SortTh = ({ field, label, className }: { field: typeof articleSort; label: string; className?: string }) => (
+                              <th
+                                className={`p-4 cursor-pointer select-none hover:text-zinc-700 transition-colors ${articleSort === field ? "text-zinc-900" : ""} ${className || ""}`}
+                                onClick={() => toggleSort(field)}
+                              >
+                                <span className="inline-flex items-center gap-1">
+                                  {label}
+                                  {articleSort === field ? (articleSortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+                                </span>
+                              </th>
+                            );
+                            return (
+                              <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
+                                <th className="p-4">ID</th>
+                                <SortTh field="title" label="Title" />
+                                <SortTh field="category" label="Category" />
+                                <th className="p-4">Lang</th>
+                                <SortTh field="status" label="Status" />
+                                <SortTh field="views" label="Views" />
+                                <SortTh field="updated_at" label="Updated" />
+                                <th className="p-4 text-right">Actions</th>
+                              </tr>
+                            );
+                          })()}
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
-                          {filteredArticles.length === 0 ? (
+                          {sortedFilteredArticles.length === 0 ? (
                             <tr>
                               <td colSpan={8} className="p-8 text-center text-zinc-450 font-semibold">
                                 No articles found matching filters.
                               </td>
                             </tr>
                           ) : (
-                            filteredArticles.map((art) => {
-                              // Simulated realistic views count based on ID characters
-                              const simulatedViews = Math.abs((art.id.charCodeAt(0) * 12 + art.id.charCodeAt(1)) % 1300);
+                            sortedFilteredArticles.map((art) => {
+                              const realViews = articleViewCounts[art.id] ?? null;
 
                               // Format date nicely: Jun 23
                               const dateObj = new Date(art.updated_at);
@@ -1721,7 +1808,9 @@ export default function AdminDeskWorkspace({
                                       {art.status === "InReview" ? "IN REVIEW" : art.status === "Approved" ? "APPROVED" : art.status.toUpperCase()}
                                     </span>
                                   </td>
-                                  <td className="p-4 font-mono font-bold text-zinc-600">{simulatedViews.toLocaleString()}</td>
+                                  <td className="p-4 font-mono font-bold text-zinc-600">
+                                    {realViews !== null ? realViews.toLocaleString() : <span className="text-zinc-300">—</span>}
+                                  </td>
                                   <td className="p-4 text-zinc-500 font-medium">{formattedDate}</td>
                                   <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
                                     <Link
@@ -3438,18 +3527,18 @@ export default function AdminDeskWorkspace({
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                  <table className="min-w-[1050px] w-full text-xs text-zinc-800 text-left border-collapse">
                     <thead>
                       <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
-                        <th className="p-4">Search Query / Flag</th>
-                        <th className="p-4">Type</th>
-                        <th className="p-4">Feedback / Comment</th>
-                        <th className="p-4">Hits</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Reported By</th>
-                        <th className="p-4">Claimed By</th>
-                        <th className="p-4">Date/Time</th>
-                        <th className="p-4 text-right">Actions</th>
+                        <th className="p-4 w-52">Search Query / Flag</th>
+                        <th className="p-4 w-28">Type</th>
+                        <th className="p-4 w-44">Feedback / Comment</th>
+                        <th className="p-4 w-12">Hits</th>
+                        <th className="p-4 w-24">Status</th>
+                        <th className="p-4 w-36">Reported By</th>
+                        <th className="p-4 w-32">Claimed By</th>
+                        <th className="p-4 w-36 whitespace-nowrap">Date/Time</th>
+                        <th className="p-4 text-right w-44 whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-50">
@@ -3468,35 +3557,35 @@ export default function AdminDeskWorkspace({
                           })
                           .map((g) => (
                             <tr key={g.id} className="hover:bg-zinc-50 transition-colors align-top">
-                              <td className="p-4 max-w-xs">
-                                <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>
+                              <td className="p-4 w-52">
+                                <p className="font-bold text-zinc-955 italic truncate max-w-[180px]" title={g.query_text}>"{g.query_text}"</p>
                                 {g.flagged_article && (
-                                  <p className="text-[10px] text-red-600 font-semibold mt-0.5">
+                                  <p className="text-[10px] text-red-600 font-semibold mt-0.5 truncate max-w-[180px]" title={g.flagged_article.title}>
                                     📄 Flagged: {g.flagged_article.title}
                                   </p>
                                 )}
                               </td>
 
-                              <td className="p-4">
+                              <td className="p-4 w-28">
                                 {g.source === "search" ? (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200">Search Query</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">Search Query</span>
                                 ) : g.source === "article_flag" ? (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200">Article Flag</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200 whitespace-nowrap">Article Flag</span>
                                 ) : g.source === "customer" ? (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200">Customer</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200 whitespace-nowrap">Customer</span>
                                 ) : (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200">Knowledge Gap</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">Knowledge Gap</span>
                                 )}
                               </td>
 
-                              <td className="p-4 max-w-xs">
+                              <td className="p-4 w-44">
                                 {g.comment ? (
-                                  <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-3">"{g.comment}"</p>
+                                  <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-2 max-w-[160px]">"{g.comment}"</p>
                                 ) : (
                                   <span className="text-[10px] text-zinc-300">—</span>
                                 )}
                               </td>
-                              <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
+                              <td className="p-4 w-12 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
                               <td className="p-4">
                                 <span
                                   className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
@@ -3509,16 +3598,16 @@ export default function AdminDeskWorkspace({
                                   {g.status}
                                 </span>
                               </td>
-                              <td className="p-4 text-zinc-500 font-medium">
-                                <p>{g.reporter?.name || "Customer / Guest"}</p>
-                                {g.reporter?.email && <p className="text-[9px] text-zinc-400">{g.reporter.email}</p>}
+                              <td className="p-4 w-36 text-zinc-500 font-medium">
+                                <p className="truncate max-w-[120px]" title={g.reporter?.name || "Customer / Guest"}>{g.reporter?.name || "Customer / Guest"}</p>
+                                {g.reporter?.email && <p className="text-[9px] text-zinc-400 truncate max-w-[120px]">{g.reporter.email}</p>}
                               </td>
-                              <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
-                              <td className="p-4 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
+                              <td className="p-4 w-32 text-zinc-500 font-medium truncate max-w-[110px]">{g.claimer?.name || "Unassigned"}</td>
+                              <td className="p-4 w-36 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
                                 {new Date(g.created_at).toLocaleString()}
                               </td>
-                              <td className="p-4 text-right">
-                                <div className="flex flex-wrap gap-2 justify-end items-center">
+                              <td className="p-4 w-44 text-right">
+                                <div className="flex flex-nowrap gap-2 justify-end items-center">
                                   {g.status === "NEW" && (
                                     <>
                                       <button
