@@ -545,11 +545,11 @@ export default function AdminDeskWorkspace({
         break;
       }
       case "helpfulRate":
-        // null (no ratings) sorts to the bottom regardless of direction
-        if (a.helpfulRate === null && b.helpfulRate === null) { cmp = 0; break; }
-        if (a.helpfulRate === null) { return 1; }
-        if (b.helpfulRate === null) { return -1; }
-        cmp = a.helpfulRate - b.helpfulRate;
+        // null/undefined (no ratings) sorts to the bottom regardless of direction
+        if ((a.helpfulRate ?? null) === null && (b.helpfulRate ?? null) === null) { cmp = 0; break; }
+        if ((a.helpfulRate ?? null) === null) { return 1; }
+        if ((b.helpfulRate ?? null) === null) { return -1; }
+        cmp = (a.helpfulRate as number) - (b.helpfulRate as number);
         break;
       case "updated_at":
       default:
