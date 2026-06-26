@@ -1848,7 +1848,8 @@ export default function AdminDeskWorkspace({
                                   : art.status === "Draft" ? "border-l-[3px] border-l-zinc-300"
                                     : art.status === "Archived" ? "border-l-[3px] border-l-zinc-300"
                                       : art.status === "Rejected" ? "border-l-[3px] border-l-red-400"
-                                        : "border-l-[3px] border-l-amber-400"; // InReview / Approved
+                                        : art.status === "InReview" ? "border-l-[3px] border-l-blue-400"
+                                          : "border-l-[3px] border-l-amber-400"; // Approved
 
                               const langBadge =
                                 art.language === "en" ? "bg-blue-50 text-blue-700 border-blue-100"
@@ -3320,7 +3321,7 @@ export default function AdminDeskWorkspace({
                         { label: "In Review", color: "bg-blue-100 text-blue-700", active: true },
                         { label: "Approved", color: "bg-amber-100 text-amber-700", active: true },
                         { label: "Published", color: "bg-green-100 text-green-700", active: false },
-                        { label: "Archived", color: "bg-red-100 text-red-600", active: false },
+                        { label: "Archived", color: "bg-zinc-200 text-zinc-500", active: false },
                       ].map((stage, i, arr) => (
                         <div key={stage.label} className="flex items-center shrink-0">
                           <div className={`rounded-full px-3 py-1.5 text-[10px] font-bold border shrink-0 ${stage.active ? "border-current ring-2 ring-offset-1 ring-current/20" : "border-transparent"
@@ -4431,12 +4432,6 @@ export default function AdminDeskWorkspace({
                       </div>
                     );
                   })()}
-
-                  {/* Section Heading */}
-                  <div className="text-left">
-                    <h3 className="text-sm font-extrabold text-zinc-900 uppercase tracking-wide">Article Performance</h3>
-                    <p className="text-[11px] text-zinc-500 font-semibold mt-0.5">Content utilization and feedback metrics</p>
-                  </div>
 
                   {/* Highlights Row */}
                   {(() => {

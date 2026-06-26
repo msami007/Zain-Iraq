@@ -232,8 +232,15 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             )}
             <div className="flex items-center gap-2">
               {article.status !== ArticleStatus.Published && (
-                <span className="rounded bg-yellow-50 px-2 py-0.5 text-[10px] font-bold text-yellow-750 border border-yellow-200 uppercase">
-                  {article.status}
+                <span className={`rounded px-2 py-0.5 text-[10px] font-bold border uppercase ${
+                  article.status === "Draft" ? "bg-zinc-100 text-zinc-600 border-zinc-200"
+                  : article.status === "InReview" ? "bg-blue-50 text-blue-700 border-blue-200"
+                  : article.status === "Approved" ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : article.status === "Rejected" ? "bg-red-50 text-red-700 border-red-200"
+                  : article.status === "Archived" ? "bg-zinc-200 text-zinc-600 border-zinc-300"
+                  : "bg-zinc-100 text-zinc-600 border-zinc-200"
+                }`}>
+                  {article.status === "InReview" ? "In Review" : article.status}
                 </span>
               )}
               <span className="text-xs text-zinc-400 font-medium">

@@ -448,16 +448,16 @@ export default function SuperAdminClient({
                     key={tab}
                     type="button"
                     onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }}
-                    className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                    className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 text-left ${
                       activeTab === tab
                         ? "bg-white/[0.1] text-white"
-                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                        : "text-white/65 hover:text-white hover:bg-white/[0.06]"
                     }`}
                   >
                     <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
                       activeTab === tab ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                     }`} />
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${activeTab === tab ? "text-amber-400/80" : ""}`}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${activeTab === tab ? "text-amber-400/80" : ""}`}>
                       {icon}
                     </svg>
                     {label}
@@ -480,16 +480,16 @@ export default function SuperAdminClient({
                     key={tab}
                     type="button"
                     onClick={() => { setActiveTab(tab); setMobileSidebarOpen(false); }}
-                    className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all duration-200 text-left ${
+                    className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 text-left ${
                       activeTab === tab
                         ? "bg-white/[0.1] text-white"
-                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                        : "text-white/65 hover:text-white hover:bg-white/[0.06]"
                     }`}
                   >
                     <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-amber-400/70 transition-all duration-200 origin-center ${
                       activeTab === tab ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                     }`} />
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${activeTab === tab ? "text-amber-400/80" : ""}`}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={`flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${activeTab === tab ? "text-amber-400/80" : ""}`}>
                       {icon}
                     </svg>
                     {label}
