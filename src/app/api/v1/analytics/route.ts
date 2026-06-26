@@ -419,6 +419,7 @@ export async function GET(req: NextRequest) {
       topHelpful,
       mostViewed,
       needsAttention,
+      articleViewCounts: viewsMap,
     });
   } catch (error: any) {
     console.error("GET Analytics Aggregates Error:", error);

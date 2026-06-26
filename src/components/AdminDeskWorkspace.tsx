@@ -199,6 +199,9 @@ export default function AdminDeskWorkspace({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All Categories");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [articleSort, setArticleSort] = useState<"updated_at" | "created_at" | "title" | "views" | "status" | "category">("updated_at");
+  const [articleSortDir, setArticleSortDir] = useState<"desc" | "asc">("desc");
+  const [articleViewCounts, setArticleViewCounts] = useState<Record<string, number>>({});
 
   // Guest Link Modal Manager overlay
   const [activeLinkManagerArticle, setActiveLinkManagerArticle] = useState<AdminArticle | null>(null);
@@ -425,6 +428,7 @@ export default function AdminDeskWorkspace({
       if (res.ok) {
         const data = await res.json();
         setAnalyticsData(data);
+        if (data.articleViewCounts) setArticleViewCounts(data.articleViewCounts);
       }
     } catch (e) {
       console.error("Failed to fetch analytics:", e);
@@ -432,6 +436,14 @@ export default function AdminDeskWorkspace({
       setLoadingAnalytics(false);
     }
   };
+
+  // Fetch view counts when articles tab opens (if not already loaded)
+  useEffect(() => {
+    if (currentTab === "articles" && Object.keys(articleViewCounts).length === 0) {
+      fetchAnalytics();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTab]);
 
   const fetchFilteredGaps = async () => {
     try {
@@ -484,6 +496,45 @@ export default function AdminDeskWorkspace({
 
     return true;
   });
+
+  // Sort filtered articles
+  const sortedFilteredArticles = [...filteredArticles].sort((a, b) => {
+    let cmp = 0;
+    switch (articleSort) {
+      case "title":
+        cmp = a.title.localeCompare(b.title);
+        break;
+      case "category":
+        cmp = (a.category?.name || "").localeCompare(b.category?.name || "");
+        break;
+      case "status":
+        cmp = a.status.localeCompare(b.status);
+        break;
+      case "views":
+        cmp = (articleViewCounts[a.id] || 0) - (articleViewCounts[b.id] || 0);
+        break;
+      case "created_at": {
+        const aDate = a.published_at || a.created_at || a.updated_at;
+        const bDate = b.published_at || b.created_at || b.updated_at;
+        cmp = new Date(aDate).getTime() - new Date(bDate).getTime();
+        break;
+      }
+      case "updated_at":
+      default:
+        cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        break;
+    }
+    return articleSortDir === "asc" ? cmp : -cmp;
+  });
+
+  const toggleSort = (field: typeof articleSort) => {
+    if (articleSort === field) {
+      setArticleSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setArticleSort(field);
+      setArticleSortDir(field === "title" || field === "category" ? "asc" : "desc");
+    }
+  };
 
   // Fetch guest links on editing article change
   useEffect(() => {
@@ -1590,7 +1641,7 @@ export default function AdminDeskWorkspace({
                     <div className="text-left">
                       <h2 className="text-xl font-extrabold text-zinc-950">All Articles</h2>
                       <p className="text-xs text-zinc-500 font-medium mt-1">
-                        {filteredArticles.length} articles · {categories.length} categories · 2 languages
+                        {sortedFilteredArticles.length} articles · {categories.length} categories · 2 languages
                       </p>
                     </div>
                     <button
@@ -1636,6 +1687,28 @@ export default function AdminDeskWorkspace({
                         ))}
                       </select>
 
+                      {/* Sort Dropdown */}
+                      <select
+                        value={`${articleSort}:${articleSortDir}`}
+                        onChange={(e) => {
+                          const [field, dir] = e.target.value.split(":") as [typeof articleSort, typeof articleSortDir];
+                          setArticleSort(field);
+                          setArticleSortDir(dir);
+                        }}
+                        className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="updated_at:desc">Last Updated ↓</option>
+                        <option value="updated_at:asc">Last Updated ↑</option>
+                        <option value="created_at:desc">Publish Date (Newest)</option>
+                        <option value="created_at:asc">Publish Date (Oldest)</option>
+                        <option value="views:desc">Most Views</option>
+                        <option value="views:asc">Fewest Views</option>
+                        <option value="title:asc">Title A → Z</option>
+                        <option value="title:desc">Title Z → A</option>
+                        <option value="category:asc">Category A → Z</option>
+                        <option value="status:asc">Status A → Z</option>
+                      </select>
+
                       {/* Search Bar Input */}
                       <input
                         type="text"
@@ -1652,28 +1725,43 @@ export default function AdminDeskWorkspace({
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                         <thead>
-                          <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
-                            <th className="p-4">ID</th>
-                            <th className="p-4">Title</th>
-                            <th className="p-4">Category</th>
-                            <th className="p-4">Lang</th>
-                            <th className="p-4">Status</th>
-                            <th className="p-4">Views</th>
-                            <th className="p-4">Updated</th>
-                            <th className="p-4 text-right">Actions</th>
-                          </tr>
+                          {(() => {
+                            const SortTh = ({ field, label, className }: { field: typeof articleSort; label: string; className?: string }) => (
+                              <th
+                                className={`p-4 cursor-pointer select-none hover:text-zinc-700 transition-colors ${articleSort === field ? "text-zinc-900" : ""} ${className || ""}`}
+                                onClick={() => toggleSort(field)}
+                              >
+                                <span className="inline-flex items-center gap-1">
+                                  {label}
+                                  {articleSort === field ? (articleSortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+                                </span>
+                              </th>
+                            );
+                            return (
+                              <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
+                                <th className="p-4">ID</th>
+                                <SortTh field="title" label="Title" />
+                                <SortTh field="category" label="Category" />
+                                <th className="p-4">Lang</th>
+                                <SortTh field="status" label="Status" />
+                                <SortTh field="views" label="Views" />
+                                <SortTh field="updated_at" label="Updated" />
+                                <th className="p-4 text-right">Actions</th>
+                              </tr>
+                            );
+                          })()}
+                        </thead>
                         </thead>
                         <tbody className="divide-y divide-zinc-50">
-                          {filteredArticles.length === 0 ? (
+                          {sortedFilteredArticles.length === 0 ? (
                             <tr>
                               <td colSpan={8} className="p-8 text-center text-zinc-450 font-semibold">
                                 No articles found matching filters.
                               </td>
                             </tr>
                           ) : (
-                            filteredArticles.map((art) => {
-                              // Simulated realistic views count based on ID characters
-                              const simulatedViews = Math.abs((art.id.charCodeAt(0) * 12 + art.id.charCodeAt(1)) % 1300);
+                            sortedFilteredArticles.map((art) => {
+                              const realViews = articleViewCounts[art.id] ?? null;
 
                               // Format date nicely: Jun 23
                               const dateObj = new Date(art.updated_at);
@@ -1727,7 +1815,9 @@ export default function AdminDeskWorkspace({
                                       {art.status === "InReview" ? "IN REVIEW" : art.status === "Approved" ? "APPROVED" : art.status.toUpperCase()}
                                     </span>
                                   </td>
-                                  <td className="p-4 font-mono font-bold text-zinc-600">{simulatedViews.toLocaleString()}</td>
+                                  <td className="p-4 font-mono font-bold text-zinc-600">
+                                    {realViews !== null ? realViews.toLocaleString() : <span className="text-zinc-300">—</span>}
+                                  </td>
                                   <td className="p-4 text-zinc-500 font-medium">{formattedDate}</td>
                                   <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
                                     <Link
