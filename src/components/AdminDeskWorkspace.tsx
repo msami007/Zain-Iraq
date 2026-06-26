@@ -27,6 +27,8 @@ type AdminArticle = {
   created_at?: string;
   published_at?: string | null;
   workflow_route_id?: string | null;
+  totalFeedback?: number;
+  helpfulRate?: number | null;
 };
 
 type Category = {
@@ -87,6 +89,10 @@ type WorkspaceProps = {
   hideSidebar?: boolean;
   overrideActiveTab?: "articles" | "gaps" | "audit" | "workflows";
   signOutAction?: () => Promise<void>;
+  initialStatusFilter?: string;
+  initialHelpfulFilter?: string;
+  initialArticleSort?: "updated_at" | "created_at" | "title" | "views" | "status" | "category" | "helpfulRate";
+  initialArticleSortDir?: "asc" | "desc";
   onUpdateGaps?: (updatedGap: Gap) => void;
   onUpdateGapsState?: (updatedGaps: Gap[]) => void;
   onUpdateArticles?: (updatedArticles: AdminArticle[]) => void;
@@ -167,6 +173,10 @@ export default function AdminDeskWorkspace({
   onUpdateArticles,
   seededGap,
   onRedirectToTab,
+  initialStatusFilter,
+  initialHelpfulFilter,
+  initialArticleSort,
+  initialArticleSortDir,
 }: WorkspaceProps) {
   const [articles, setArticles] = useState<AdminArticle[]>(initialArticles);
   const [gaps, setGaps] = useState<Gap[]>(initialGaps);
@@ -196,11 +206,12 @@ export default function AdminDeskWorkspace({
   }, [gaps, onUpdateGapsState]);
 
   // Articles Filter states
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState(initialStatusFilter ?? "All");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All Categories");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [articleSort, setArticleSort] = useState<"updated_at" | "created_at" | "title" | "views" | "status" | "category">("updated_at");
-  const [articleSortDir, setArticleSortDir] = useState<"desc" | "asc">("desc");
+  const [articleSort, setArticleSort] = useState<"updated_at" | "created_at" | "title" | "views" | "status" | "category" | "helpfulRate">(initialArticleSort ?? "updated_at");
+  const [articleSortDir, setArticleSortDir] = useState<"desc" | "asc">(initialArticleSortDir ?? "desc");
+  const [selectedHelpfulFilter, setSelectedHelpfulFilter] = useState(initialHelpfulFilter ?? "All");
   const [articleViewCounts, setArticleViewCounts] = useState<Record<string, number>>({});
 
   // Guest Link Modal Manager overlay
@@ -500,6 +511,14 @@ export default function AdminDeskWorkspace({
       if (!titleMatch && !idMatch && !bodyMatch) return false;
     }
 
+    if (selectedHelpfulFilter !== "All") {
+      const rate = art.helpfulRate;
+      if (selectedHelpfulFilter === "no-ratings" && rate !== null) return false;
+      if (selectedHelpfulFilter === "high" && (rate === null || rate < 80)) return false;
+      if (selectedHelpfulFilter === "medium" && (rate === null || rate < 60 || rate >= 80)) return false;
+      if (selectedHelpfulFilter === "low" && (rate === null || rate >= 60)) return false;
+    }
+
     return true;
   });
 
@@ -525,6 +544,13 @@ export default function AdminDeskWorkspace({
         cmp = new Date(aDate).getTime() - new Date(bDate).getTime();
         break;
       }
+      case "helpfulRate":
+        // null (no ratings) sorts to the bottom regardless of direction
+        if (a.helpfulRate === null && b.helpfulRate === null) { cmp = 0; break; }
+        if (a.helpfulRate === null) { return 1; }
+        if (b.helpfulRate === null) { return -1; }
+        cmp = a.helpfulRate - b.helpfulRate;
+        break;
       case "updated_at":
       default:
         cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
@@ -1717,6 +1743,21 @@ export default function AdminDeskWorkspace({
                         <option value="title:desc">Title Z → A</option>
                         <option value="category:asc">Category A → Z</option>
                         <option value="status:asc">Status A → Z</option>
+                        <option value="helpfulRate:asc">Helpful Rate ↑ (worst first)</option>
+                        <option value="helpfulRate:desc">Helpful Rate ↓ (best first)</option>
+                      </select>
+
+                      {/* Helpful Rate Filter */}
+                      <select
+                        value={selectedHelpfulFilter}
+                        onChange={(e) => setSelectedHelpfulFilter(e.target.value)}
+                        className={`rounded-lg border bg-white px-3 py-1.5 text-xs font-bold focus:outline-hidden cursor-pointer ${selectedHelpfulFilter !== "All" ? "border-cyan-400 text-cyan-700" : "border-zinc-200 text-zinc-700"}`}
+                      >
+                        <option value="All">All Ratings</option>
+                        <option value="high">≥ 80% Helpful</option>
+                        <option value="medium">60–79% Helpful</option>
+                        <option value="low">&lt; 60% Helpful</option>
+                        <option value="no-ratings">No Ratings Yet</option>
                       </select>
 
                       {/* Search Bar Input */}
@@ -1755,6 +1796,7 @@ export default function AdminDeskWorkspace({
                                 <th className="p-4">Lang</th>
                                 <SortTh field="status" label="Status" />
                                 <SortTh field="views" label="Views" />
+                                <SortTh field="helpfulRate" label="Helpful %" />
                                 <SortTh field="updated_at" label="Updated" />
                                 <th className="p-4 text-right">Actions</th>
                               </tr>
@@ -1826,6 +1868,20 @@ export default function AdminDeskWorkspace({
                                   </td>
                                   <td className="p-4 font-mono font-bold text-zinc-600">
                                     {realViews !== null ? realViews.toLocaleString() : <span className="text-zinc-300">—</span>}
+                                  </td>
+                                  <td className="p-4">
+                                    {art.helpfulRate !== null && art.helpfulRate !== undefined ? (
+                                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                                        art.helpfulRate >= 80 ? "bg-green-50 text-green-700 border-green-200"
+                                        : art.helpfulRate >= 60 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-red-50 text-red-600 border-red-200"
+                                      }`}>
+                                        {art.helpfulRate}%
+                                        <span className="text-[9px] font-medium opacity-70">({art.totalFeedback})</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-zinc-300 font-mono text-[11px]">—</span>
+                                    )}
                                   </td>
                                   <td className="p-4 text-zinc-500 font-medium">{formattedDate}</td>
                                   <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
@@ -4279,6 +4335,10 @@ export default function AdminDeskWorkspace({
                         actionLabel: "Fix Unhelpful Articles",
                         onAction: () => {
                           setActiveTab("articles");
+                          setSelectedStatusFilter("Published");
+                          setSelectedHelpfulFilter("All");
+                          setArticleSort("helpfulRate");
+                          setArticleSortDir("asc");
                           closeEditor();
                         },
                       },

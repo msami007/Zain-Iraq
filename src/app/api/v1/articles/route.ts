@@ -136,12 +136,25 @@ export async function GET(req: NextRequest) {
           include: {
             actor: { select: { id: true, name: true } }
           }
-        }
+        },
+        feedback: {
+          select: { helpful: true }
+        },
       },
       orderBy: { updated_at: "desc" },
     });
 
-    return NextResponse.json(articles);
+    const articlesWithStats = articles.map((article) => {
+      const total = article.feedback.length;
+      const helpful = article.feedback.filter((f) => f.helpful).length;
+      return {
+        ...article,
+        totalFeedback: total,
+        helpfulRate: total > 0 ? Math.round((helpful / total) * 100) : null,
+      };
+    });
+
+    return NextResponse.json(articlesWithStats);
   } catch (error: any) {
     console.error("GET Articles Error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });

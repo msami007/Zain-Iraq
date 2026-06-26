@@ -46,6 +46,7 @@ export default async function AdminPage() {
             tag: true,
           },
         },
+        feedback: { select: { helpful: true } },
       },
     }),
     db.category.findMany({
@@ -99,6 +100,10 @@ export default async function AdminPage() {
         name: at.tag.name,
       },
     })),
+    totalFeedback: a.feedback.length,
+    helpfulRate: a.feedback.length > 0
+      ? Math.round((a.feedback.filter((f) => f.helpful).length / a.feedback.length) * 100)
+      : null,
   }));
 
   const serializedCategories = categories.map((c) => ({

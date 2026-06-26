@@ -1,5 +1,5 @@
 import { auth, signOut } from "@/lib/auth";
-import { prisma, getTenantDb } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import SuperAdminClient from "./SuperAdminClient";
 
@@ -19,8 +19,6 @@ export default async function SuperAdminPage() {
   }
 
   // Load all tenants and users (platform level)
-  const db = getTenantDb(tenantId);
-
   const [tenants, users, articles, categories, activeUsers, gaps] = await Promise.all([
     prisma.tenant.findMany({
       orderBy: { created_at: "desc" },
@@ -43,19 +41,20 @@ export default async function SuperAdminPage() {
         }
       },
     }),
-    db.article.findMany({
+    prisma.article.findMany({
       orderBy: { updated_at: "desc" },
       include: {
         category: { select: { id: true, name: true } },
         author: { select: { id: true, name: true, email: true } },
         owner: { select: { id: true, name: true, email: true } },
         variants: true,
+        feedback: { select: { helpful: true } },
       },
     }),
-    db.category.findMany({
+    prisma.category.findMany({
       orderBy: { name: "asc" },
     }),
-    db.user.findMany({
+    prisma.user.findMany({
       where: { status: "Active" },
       orderBy: { name: "asc" },
     }),
@@ -119,6 +118,10 @@ export default async function SuperAdminPage() {
       video_link: v.video_link,
       troubleshooting_flow: v.troubleshooting_flow || null,
     })),
+    totalFeedback: a.feedback.length,
+    helpfulRate: a.feedback.length > 0
+      ? Math.round((a.feedback.filter((f) => f.helpful).length / a.feedback.length) * 100)
+      : null,
   }));
 
   const serializedCategories = categories.map((c) => ({

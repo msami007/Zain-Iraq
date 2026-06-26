@@ -102,6 +102,11 @@ export default function SuperAdminClient({
   const [articles, setArticles] = useState<any[]>(initialArticles);
   const [gaps, setGaps] = useState<any[]>(initialGaps);
   const [seededGapForRedirect, setSeededGapForRedirect] = useState<{ id: string; query_text: string } | null>(null);
+  const [articleFiltersPreset, setArticleFiltersPreset] = useState<{
+    status: string; helpful: string;
+    sort: "updated_at" | "created_at" | "title" | "views" | "status" | "category" | "helpfulRate";
+    sortDir: "asc" | "desc";
+  } | null>(null);
 
   const handleUpdateGapsState = (updatedGaps: any[]) => {
     setGaps(updatedGaps);
@@ -620,7 +625,21 @@ export default function SuperAdminClient({
                       <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">All time</div>
                     </div>
                     {/* Helpful Rate */}
-                    <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">
+                    <div
+                      className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] hover:border-zinc-300 transition-all text-left overflow-hidden flex flex-col justify-between h-[120px] cursor-pointer"
+                      onClick={() => {
+                        setArticleFiltersPreset({ status: "Published", helpful: "All", sort: "helpfulRate", sortDir: "asc" });
+                        setActiveTab("articles");
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          setArticleFiltersPreset({ status: "Published", helpful: "All", sort: "helpfulRate", sortDir: "asc" });
+                          setActiveTab("articles");
+                        }
+                      }}
+                    >
                       <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#0891b2,#22d3ee)" }} />
                       <div className="flex items-start justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Helpful Rate</span>
@@ -633,7 +652,7 @@ export default function SuperAdminClient({
                           {analyticsData.helpfulRateDelta > 0 ? "+" : ""}{analyticsData.helpfulRateDelta}pp this month
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">Based on feedback</div>
+                        <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400">Fix Unhelpful Articles →</div>
                       )}
                     </div>
                     {/* Knowledge Gaps */}
@@ -1631,6 +1650,7 @@ export default function SuperAdminClient({
           {activeTab === "articles" && (
             <div className="space-y-6">
               <AdminDeskWorkspace
+                key={articleFiltersPreset ? `preset-${articleFiltersPreset.sort}-${articleFiltersPreset.status}` : "default"}
                 initialArticles={articles}
                 categories={categories}
                 users={activeUsers}
@@ -1644,6 +1664,10 @@ export default function SuperAdminClient({
                 onUpdateGapsState={handleUpdateGapsState}
                 seededGap={seededGapForRedirect}
                 onRedirectToTab={handleRedirectToTab}
+                initialStatusFilter={articleFiltersPreset?.status}
+                initialHelpfulFilter={articleFiltersPreset?.helpful}
+                initialArticleSort={articleFiltersPreset?.sort}
+                initialArticleSortDir={articleFiltersPreset?.sortDir}
               />
             </div>
           )}
