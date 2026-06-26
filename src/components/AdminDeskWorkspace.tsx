@@ -328,6 +328,11 @@ export default function AdminDeskWorkspace({
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "all">("7d");
   const [analyticsChannel, setAnalyticsChannel] = useState<"all" | "agent" | "customer">("all");
+  const [trendHideEmpty, setTrendHideEmpty] = useState(false);
+  const [articleSearchFilter, setArticleSearchFilter] = useState("");
+  const [articleAnalyticsSort, setArticleAnalyticsSort] = useState<"views" | "helpfulPct">("views");
+  const [agentSearchFilter, setAgentSearchFilter] = useState("");
+  const [agentAnalyticsSort, setAgentAnalyticsSort] = useState<"views" | "clicks">("views");
 
   // Notifications banner state — backed by Announcements API
   type NotifEntry = { id: string; title: string; message: string; uiType: "info" | "warning" | "success" };
@@ -4638,21 +4643,20 @@ export default function AdminDeskWorkspace({
           {currentTab === "analytics" && (
             <div className="space-y-6">
               {loadingAnalytics && !analyticsData ? (
-                <div className="text-center py-12 text-zinc-450 font-semibold animate-pulse">Loading analytics data...</div>
+                <div className="text-center py-16 text-zinc-400 font-semibold animate-pulse">Loading analytics data…</div>
               ) : !analyticsData ? (
-                <div className="text-center py-12 text-zinc-400 italic">No analytics data available.</div>
+                <div className="text-center py-16 text-zinc-400 italic">No analytics data available.</div>
               ) : (
                 <>
-                  {/* Time-window toolbar + export */}
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-lg">
-
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-lg">
                       {(["7d", "30d", "all"] as const).map(w => (
                         <button
                           key={w}
                           type="button"
                           onClick={() => setAnalyticsWindow(w)}
-                          className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${analyticsWindow === w ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-900"}`}
+                          className={`rounded-md px-3 py-1.5 text-xs font-bold transition-all ${analyticsWindow === w ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-800"}`}
                         >
                           {w === "7d" ? "Last 7 Days" : w === "30d" ? "Last 30 Days" : "All Time"}
                         </button>
@@ -4660,48 +4664,18 @@ export default function AdminDeskWorkspace({
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        const trendRows = (() => {
-                          const days = analyticsWindow === "7d" ? 7 : analyticsWindow === "30d" ? 30 : 999;
-                          return analyticsData.dailyTrend
-                            .filter((_: any, i: number) => analyticsWindow === "all" || i >= analyticsData.dailyTrend.length - days)
-                            .map((t: any) => [t.date, String(t.views), String(t.clicks), String(t.views + t.clicks)]);
-                        })();
-                        downloadCSV(
-                          `analytics-${analyticsWindow}-${new Date().toISOString().split("T")[0]}.csv`,
-                          [
-                            ...trendRows,
-                            [],
-                            ["--- Top Articles ---"],
-                            ...analyticsData.topArticles.map((a: any) => [a.label, String(a.views), String(a.clicks), String(a.views + a.clicks)]),
-                            [],
-                            ["--- Agent Usage ---"],
-                            ...analyticsData.topAgents.map((ag: any) => [ag.name, ag.email, String(ag.views), String(ag.clicks)]),
-                          ],
-                          ["Date / Title", "Views", "Clicks", "Total"]
-                        );
-                      }}
-                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                      Export CSV
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => fetchAnalytics()}
                       disabled={loadingAnalytics}
-                      className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-xs disabled:opacity-50 transition-colors"
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
                         <path d="M23 4v6h-6" /><path d="M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                       </svg>
                       {loadingAnalytics ? "Refreshing…" : "Refresh"}
                     </button>
                   </div>
 
-                  {/* Summary totals — consistent across all screens */}
+                  {/* Summary KPI cards */}
                   {(() => {
                     const filteredTrend = analyticsData.dailyTrend.filter((_: any, i: number) => {
                       if (analyticsWindow === "all") return true;
@@ -4709,127 +4683,313 @@ export default function AdminDeskWorkspace({
                       return i >= analyticsData.dailyTrend.length - days;
                     });
                     const totalViews = analyticsData.topArticles.reduce((a: number, c: any) => a + c.views, 0);
-                    const totalClicks = analyticsData.topArticles.reduce((a: number, c: any) => a + c.clicks, 0);
                     const windowViews = filteredTrend.reduce((a: any, c: any) => a + c.views, 0);
-                    const windowClicks = filteredTrend.reduce((a: any, c: any) => a + c.clicks, 0);
+                    const publishedCount = articles.filter(a => a.status === "Published").length;
+                    const kpis = [
+                      {
+                        label: "Total KB Views",
+                        sub: "All time",
+                        value: totalViews.toLocaleString(),
+                        accent: "from-blue-500 to-blue-400",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: "Views in Window",
+                        sub: analyticsWindow === "7d" ? "Last 7 days" : analyticsWindow === "30d" ? "Last 30 days" : "All time",
+                        value: windowViews.toLocaleString(),
+                        accent: "from-violet-500 to-violet-400",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: "Published Articles",
+                        sub: `of ${articles.length} total`,
+                        value: publishedCount.toLocaleString(),
+                        accent: "from-emerald-500 to-emerald-400",
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                        ),
+                      },
+                    ];
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total KB Views (All Time)</span>
-                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{totalViews.toLocaleString()}</span>
-                        </div>
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Total Macro Clicks (All Time)</span>
-                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{totalClicks.toLocaleString()}</span>
-                        </div>
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs border-l-4 border-l-blue-400">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Views in Window</span>
-                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{windowViews.toLocaleString()}</span>
-                          <span className="text-[10px] text-zinc-400 font-medium">{analyticsWindow === "7d" ? "Last 7 days" : analyticsWindow === "30d" ? "Last 30 days" : "All time"}</span>
-                        </div>
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Published Articles</span>
-                          <span className="text-3xl font-extrabold text-zinc-950 mt-1 block">{articles.filter(a => a.status === "Published").length}</span>
-                          <span className="text-[10px] text-zinc-400 font-medium">of {articles.length} total</span>
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {kpis.map(k => (
+                          <div key={k.label} className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col gap-1">
+                            <div className={`absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r ${k.accent}`} />
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">{k.label}</span>
+                              {k.icon}
+                            </div>
+                            <span className="text-3xl font-extrabold text-zinc-950 tabular-nums leading-tight">{k.value}</span>
+                            <span className="text-[11px] text-zinc-400 font-medium">{k.sub}</span>
+                          </div>
+                        ))}
                       </div>
                     );
                   })()}
 
-                  <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-                    <div className="border-b border-zinc-200 bg-zinc-50/50 p-4 flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">
-                        {analyticsWindow === "7d" ? "7-Day" : analyticsWindow === "30d" ? "30-Day" : "All-Time"} Access Trends
-                      </h3>
-                      <span className="text-[10px] text-zinc-400 font-medium">
-                        {analyticsWindow === "7d" ? "Showing last 7 days" : analyticsWindow === "30d" ? "Showing last 30 days" : "Showing all data"}
-                      </span>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                        <thead>
-                          <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
-                            <th className="p-4">Date</th>
-                            <th className="p-4">Article Views</th>
-                            <th className="p-4">Macro Clicks</th>
-                            <th className="p-4">Total Interactions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-150">
-                          {analyticsData.dailyTrend
-                            .filter((_: any, i: number) => {
-                              if (analyticsWindow === "all") return true;
-                              const days = analyticsWindow === "7d" ? 7 : 30;
-                              return i >= analyticsData.dailyTrend.length - days;
-                            })
-                            .map((t: any) => (
-                              <tr key={t.date} className="hover:bg-zinc-50/50">
-                                <td className="p-4 font-mono font-bold text-zinc-650">{t.date}</td>
-                                <td className="p-4 font-semibold text-zinc-800">{t.views} views</td>
-                                <td className="p-4 font-semibold text-zinc-800">{t.clicks} clicks</td>
-                                <td className="p-4 font-bold text-zinc-950">{t.views + t.clicks} interactions</td>
+                  {/* Daily KB Engagement table */}
+                  {(() => {
+                    const trendRows = analyticsData.dailyTrend
+                      .filter((_: any, i: number) => {
+                        if (analyticsWindow === "all") return true;
+                        const days = analyticsWindow === "7d" ? 7 : 30;
+                        return i >= analyticsData.dailyTrend.length - days;
+                      })
+                      .filter((t: any) => !trendHideEmpty || t.views > 0 || t.clicks > 0)
+                      .slice()
+                      .reverse();
+                    return (
+                      <div className="rounded-xl border border-zinc-200 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] overflow-hidden">
+                        <div className="border-b border-zinc-100 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+                          <div>
+                            <h3 className="text-sm font-bold text-zinc-950">Daily KB Engagement</h3>
+                            <p className="text-[11px] text-zinc-400 font-medium mt-0.5">
+                              Article opens and copy-macro clicks per day — latest first
+                            </p>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer select-none shrink-0">
+                            <div
+                              onClick={() => setTrendHideEmpty(v => !v)}
+                              className={`relative w-8 h-4 rounded-full transition-colors ${trendHideEmpty ? "bg-zinc-800" : "bg-zinc-200"}`}
+                            >
+                              <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${trendHideEmpty ? "translate-x-4" : ""}`} />
+                            </div>
+                            <span className="text-[11px] font-semibold text-zinc-500">Hide inactive days</span>
+                          </label>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full table-fixed text-xs text-zinc-800 text-left border-collapse">
+                            <colgroup>
+                              <col className="w-1/4" />
+                              <col className="w-1/4" />
+                              <col className="w-1/4" />
+                              <col className="w-1/4" />
+                            </colgroup>
+                            <thead>
+                              <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
+                                <th className="p-4">Date</th>
+                                <th className="p-4">Article Views</th>
+                                <th className="p-4">Macro Clicks</th>
+                                <th className="p-4">Total</th>
                               </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-50">
+                              {trendRows.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="p-8 text-center text-zinc-400 text-xs font-medium italic">No activity recorded in this window.</td>
+                                </tr>
+                              ) : trendRows.map((t: any) => {
+                                const total = t.views + t.clicks;
+                                const inactive = total === 0;
+                                return (
+                                  <tr key={t.date} className="hover:bg-zinc-50/50 transition-colors">
+                                    <td className="p-4 font-mono text-[11px] font-bold text-zinc-500">{t.date}</td>
+                                    <td className={`p-4 font-semibold ${inactive ? "text-zinc-300" : "text-zinc-800"}`}>{t.views.toLocaleString()}</td>
+                                    <td className={`p-4 font-semibold ${inactive ? "text-zinc-300" : "text-zinc-800"}`}>{t.clicks.toLocaleString()}</td>
+                                    <td className={`p-4 font-bold ${inactive ? "text-zinc-300" : "text-zinc-950"}`}>{total.toLocaleString()}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        {trendRows.length > 0 && (
+                          <div className="border-t border-zinc-100 px-5 py-2.5 flex items-center justify-end">
+                            <span className="text-[10px] text-zinc-400 font-medium">{trendRows.length} day{trendRows.length !== 1 ? "s" : ""} shown</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
+                  {/* Top articles + agent ranking */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-                      <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Performing Articles</h3>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                          <thead>
-                            <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
-                              <th className="p-4">Article Title</th>
-                              <th className="p-4">Views</th>
-                              <th className="p-4">Clicks</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-150">
-                            {analyticsData.topArticles.map((a: any) => (
-                              <tr key={a.id} className="hover:bg-zinc-50/50">
-                                <td className="p-4 font-bold text-zinc-950 truncate max-w-xs">{a.label}</td>
-                                <td className="p-4 font-semibold text-zinc-600">{a.views}</td>
-                                <td className="p-4 font-semibold text-zinc-600">{a.clicks}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    {/* Top Performing Articles */}
+                    {(() => {
+                      const filtered = analyticsData.topArticles
+                        .filter((a: any) => !articleSearchFilter || a.title?.toLowerCase().includes(articleSearchFilter.toLowerCase()))
+                        .slice()
+                        .sort((a: any, b: any) =>
+                          articleAnalyticsSort === "helpfulPct"
+                            ? (b.helpfulPct ?? -1) - (a.helpfulPct ?? -1)
+                            : b.views - a.views
+                        );
+                      return (
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] overflow-hidden">
+                          <div className="border-b border-zinc-100 px-5 py-4 space-y-3">
+                            <div>
+                              <h3 className="text-sm font-bold text-zinc-950">Top Performing Articles</h3>
+                              <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Most-viewed articles across all categories</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                </svg>
+                                <input
+                                  type="text"
+                                  placeholder="Search articles…"
+                                  value={articleSearchFilter}
+                                  onChange={e => setArticleSearchFilter(e.target.value)}
+                                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-7 pr-3 py-1.5 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg shrink-0">
+                                {(["views", "helpfulPct"] as const).map(s => (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => setArticleAnalyticsSort(s)}
+                                    className={`rounded-md px-2.5 py-1 text-[10px] font-bold transition-all ${articleAnalyticsSort === s ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-800"}`}
+                                  >
+                                    {s === "views" ? "Views" : "Helpful %"}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                              <thead>
+                                <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
+                                  <th className="p-4">Article</th>
+                                  <th className="p-4 text-right">Views</th>
+                                  <th className="p-4 text-right">Helpful %</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-50">
+                                {filtered.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={3} className="p-8 text-center text-zinc-400 text-xs font-medium italic">
+                                      {articleSearchFilter ? `No articles match "${articleSearchFilter}"` : "No article views recorded yet."}
+                                    </td>
+                                  </tr>
+                                ) : filtered.map((a: any, idx: number) => (
+                                  <tr key={a.id} className="hover:bg-zinc-50/50 transition-colors">
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2.5">
+                                        <span className="shrink-0 w-5 h-5 rounded-full bg-zinc-100 text-zinc-500 text-[10px] font-extrabold flex items-center justify-center">{idx + 1}</span>
+                                        <span className="font-semibold text-zinc-900 leading-snug line-clamp-2">{a.title}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-right font-bold text-zinc-950 tabular-nums">{a.views.toLocaleString()}</td>
+                                    <td className="p-4 text-right">
+                                      {a.helpfulPct != null && a.helpfulPct > 0 ? (
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${a.helpfulPct >= 80 ? "bg-green-50 text-green-700" : a.helpfulPct >= 60 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-600"}`}>
+                                          {a.helpfulPct}%
+                                        </span>
+                                      ) : (
+                                        <span className="text-zinc-300 font-bold">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {filtered.length > 0 && (
+                            <div className="border-t border-zinc-100 px-5 py-2.5 flex items-center justify-end">
+                              <span className="text-[10px] text-zinc-400 font-medium">{filtered.length} article{filtered.length !== 1 ? "s" : ""}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
-                    <div className="rounded-xl border border-zinc-200 bg-white shadow-2xs overflow-hidden">
-                      <div className="border-b border-zinc-200 bg-zinc-50/50 p-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Agent Usage Ranking</h3>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-zinc-800 text-left border-collapse">
-                          <thead>
-                            <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase text-[10px] font-bold">
-                              <th className="p-4">Agent Name</th>
-                              <th className="p-4">Views</th>
-                              <th className="p-4">Clicks</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-150">
-                            {analyticsData.topAgents.map((ag: any) => (
-                              <tr key={ag.id} className="hover:bg-zinc-50/50">
-                                <td className="p-4 font-bold text-zinc-950 truncate">
-                                  {ag.name}{" "}
-                                  <span className="text-[10px] text-zinc-400 font-normal">({ag.email})</span>
-                                </td>
-                                <td className="p-4 font-semibold text-zinc-600">{ag.views}</td>
-                                <td className="p-4 font-semibold text-zinc-600">{ag.clicks}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    {/* Agent Usage Ranking */}
+                    {(() => {
+                      const filtered = analyticsData.topAgents
+                        .filter((ag: any) => !agentSearchFilter || ag.name?.toLowerCase().includes(agentSearchFilter.toLowerCase()) || ag.email?.toLowerCase().includes(agentSearchFilter.toLowerCase()))
+                        .slice()
+                        .sort((a: any, b: any) =>
+                          agentAnalyticsSort === "clicks" ? b.clicks - a.clicks : b.views - a.views
+                        );
+                      return (
+                        <div className="rounded-xl border border-zinc-200 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] overflow-hidden">
+                          <div className="border-b border-zinc-100 px-5 py-4 space-y-3">
+                            <div>
+                              <h3 className="text-sm font-bold text-zinc-950">Agent Usage Ranking</h3>
+                              <p className="text-[11px] text-zinc-400 font-medium mt-0.5">Agents ranked by KB engagement — views and macro clicks</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                </svg>
+                                <input
+                                  type="text"
+                                  placeholder="Search agents…"
+                                  value={agentSearchFilter}
+                                  onChange={e => setAgentSearchFilter(e.target.value)}
+                                  className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-7 pr-3 py-1.5 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg shrink-0">
+                                {(["views", "clicks"] as const).map(s => (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => setAgentAnalyticsSort(s)}
+                                    className={`rounded-md px-2.5 py-1 text-[10px] font-bold transition-all ${agentAnalyticsSort === s ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-800"}`}
+                                  >
+                                    {s === "views" ? "Views" : "Macro Clicks"}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                              <thead>
+                                <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-extrabold tracking-wider">
+                                  <th className="p-4">Agent</th>
+                                  <th className="p-4 text-right">Views</th>
+                                  <th className="p-4 text-right">Macro Clicks</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-50">
+                                {filtered.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={3} className="p-8 text-center text-zinc-400 text-xs font-medium italic">
+                                      {agentSearchFilter ? `No agents match "${agentSearchFilter}"` : "No agent activity recorded yet."}
+                                    </td>
+                                  </tr>
+                                ) : filtered.map((ag: any, idx: number) => (
+                                  <tr key={ag.id} className="hover:bg-zinc-50/50 transition-colors">
+                                    <td className="p-4">
+                                      <div className="flex items-center gap-2.5">
+                                        <span className="shrink-0 w-5 h-5 rounded-full bg-zinc-100 text-zinc-500 text-[10px] font-extrabold flex items-center justify-center">{idx + 1}</span>
+                                        <div className="min-w-0">
+                                          <div className="font-semibold text-zinc-900 truncate">{ag.name}</div>
+                                          <div className="text-[10px] text-zinc-400 font-normal truncate">{ag.email}</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-4 text-right font-bold text-zinc-950 tabular-nums">{ag.views.toLocaleString()}</td>
+                                    <td className="p-4 text-right font-bold text-zinc-950 tabular-nums">{ag.clicks.toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {filtered.length > 0 && (
+                            <div className="border-t border-zinc-100 px-5 py-2.5 flex items-center justify-end">
+                              <span className="text-[10px] text-zinc-400 font-medium">{filtered.length} agent{filtered.length !== 1 ? "s" : ""}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </>
               )}
