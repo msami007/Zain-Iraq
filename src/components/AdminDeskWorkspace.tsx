@@ -1751,7 +1751,6 @@ export default function AdminDeskWorkspace({
                             );
                           })()}
                         </thead>
-                        </thead>
                         <tbody className="divide-y divide-zinc-50">
                           {sortedFilteredArticles.length === 0 ? (
                             <tr>
