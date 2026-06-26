@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
       ? parseFloat((avgConfidenceRaw._avg.top_match_score * 100).toFixed(1)) 
       : 0.0;
 
-    // 4. Fetch all article-related audit logs
+    // 4. Fetch all article-related audit logs (actor.role used to segment customer vs agent views)
     const logs = await db.auditLog.findMany({
       where: {
         tenant_id: targetTenantId,
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
         action: { in: ["View Article", "Click Macro", "Use Macro"] },
       },
       include: {
-        actor: { select: { id: true, name: true, email: true } },
+        actor: { select: { id: true, name: true, email: true, role: true } },
       },
     });
 
@@ -172,10 +172,20 @@ export async function GET(req: NextRequest) {
       }
     });
 
+    // Filter logs by audience segment:
+    //   customer = anonymous views (actor_id is null)
+    //   agent    = views by Agent-role users
+    //   all      = no filter
+    const filteredLogs = channelParam === "customer"
+      ? logs.filter((l) => l.actor_id === null)
+      : channelParam === "agent"
+      ? logs.filter((l) => l.actor?.role === "Agent")
+      : logs;
+
     // Track views per article mapping
     const viewsMap: Record<string, number> = {};
     const clicksMap: Record<string, number> = {};
-    logs.forEach((log) => {
+    filteredLogs.forEach((log) => {
       if (log.action === "View Article") {
         viewsMap[log.target_id] = (viewsMap[log.target_id] || 0) + 1;
       } else {
@@ -262,9 +272,10 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // 12. Top Agents by KB Usage
+    // 12. Top Agents by KB Usage (always scoped to agent logs)
+    const agentLogsForStats = logs.filter((l) => l.actor?.role === "Agent");
     const agentStats: Record<string, { id: string; name: string; email: string; views: number; clicks: number }> = {};
-    logs.forEach((log) => {
+    agentLogsForStats.forEach((log) => {
       const actorId = log.actor_id;
       if (log.actor && actorId) {
         if (!agentStats[actorId]) {
@@ -296,7 +307,7 @@ export async function GET(req: NextRequest) {
       dailyTrend[dateStr] = { date: dateStr, views: 0, clicks: 0 };
     }
 
-    logs.forEach((log) => {
+    filteredLogs.forEach((log) => {
       const logDateStr = new Date(log.created_at).toISOString().split("T")[0];
       if (dailyTrend[logDateStr]) {
         if (log.action === "View Article") {
