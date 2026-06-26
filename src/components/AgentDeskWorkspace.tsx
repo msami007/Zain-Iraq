@@ -1602,7 +1602,15 @@ export default function AgentDeskWorkspace({
                   <tbody className="divide-y divide-zinc-100">
                     {filteredCases.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-5 py-10 text-center text-xs text-zinc-400 font-semibold">No cases in this queue.</td>
+                        <td colSpan={5} className="px-5 py-12 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-300">
+                                <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+                              </svg>
+                              <p className="text-xs font-bold text-zinc-500">No cases in this queue</p>
+                              <p className="text-[11px] text-zinc-400">New inbound cases will appear here automatically.</p>
+                            </div>
+                          </td>
                       </tr>
                     ) : (
                       filteredCases.map((c) => {
@@ -2500,7 +2508,7 @@ export default function AgentDeskWorkspace({
               <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Status guide</span>
                 {[
-                  { label: "NEW", color: "bg-red-50 text-red-600 border-red-200", note: "Waiting for admin to pick up" },
+                  { label: "NEW", color: "bg-blue-50 text-blue-700 border-blue-200", note: "Waiting for admin to pick up" },
                   { label: "IN PROGRESS", color: "bg-amber-50 text-amber-700 border-amber-200", note: "Admin is working on it" },
                   { label: "RESOLVED", color: "bg-green-50 text-green-700 border-green-200", note: "Article created & linked" },
                   { label: "DISMISSED", color: "bg-zinc-100 text-zinc-500 border-zinc-200", note: "Not actionable" },
@@ -2575,7 +2583,7 @@ export default function AgentDeskWorkspace({
                   <tbody className="divide-y divide-zinc-100">
                     {myGaps.map((gap) => {
                       const statusConfig: Record<string, { style: string; dot: string }> = {
-                        NEW:         { style: "bg-red-50 text-red-600 border-red-200",     dot: "bg-red-400" },
+                        NEW:         { style: "bg-blue-50 text-blue-700 border-blue-200",   dot: "bg-blue-400" },
                         IN_PROGRESS: { style: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-400" },
                         RESOLVED:    { style: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-400" },
                         DISMISSED:   { style: "bg-zinc-100 text-zinc-500 border-zinc-200",  dot: "bg-zinc-400" },

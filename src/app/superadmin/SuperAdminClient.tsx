@@ -638,7 +638,7 @@ export default function SuperAdminClient({
                       <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.totalGaps.toLocaleString()}</div>
                       {analyticsData.gapsThisWeek != null && (
                         <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-red-500">
-                          <span>▲</span>{analyticsData.gapsThisWeek} new this week
+                          <span>▲</span>+{analyticsData.gapsThisWeek} new this week
                         </div>
                       )}
                     </div>
@@ -664,10 +664,17 @@ export default function SuperAdminClient({
                       <div className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: "linear-gradient(90deg,#d97706,#fbbf24)" }} />
                       <div className="flex items-start justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Avg. Confidence</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <div className="flex items-center gap-1.5">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                          <span title="Average match score across all platform searches.&#10;&#10;Healthy: ≥ 70% — KB covers most common queries.&#10;Moderate: 50–69% — gaps exist; review Top Searches.&#10;Poor: < 50% — significant missing content; add articles for zero-result queries." className="cursor-help flex items-center justify-center rounded-full bg-zinc-100 hover:bg-zinc-200 transition-colors text-zinc-400 hover:text-zinc-600" style={{ width: 16, height: 16 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          </span>
+                        </div>
                       </div>
                       <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{analyticsData.avgConfidence}%</div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold mt-1 text-zinc-400" title="Average search match quality across all queries. Scores below 50% suggest the KB is missing content for common searches. 70%+ is healthy.">Match quality · hover for info</div>
+                      <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${analyticsData.avgConfidence >= 70 ? "text-green-600" : analyticsData.avgConfidence >= 50 ? "text-amber-600" : "text-red-500"}`}>
+                        {analyticsData.avgConfidence >= 70 ? "Healthy — KB covers queries well" : analyticsData.avgConfidence >= 50 ? "Moderate — review top searches" : "Low — add articles for zero-result queries"}
+                      </div>
                     </div>
                     {/* Total Articles */}
                     <div className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]">

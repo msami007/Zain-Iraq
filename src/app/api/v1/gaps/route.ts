@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     // Unauthenticated customer submissions must supply tenant_id in body
     const isCustomer = !session?.user;
     const tenantId = session?.user?.tenant_id || bodyTenantId;
-    const userId = session?.user?.id || null;
+    const userId = session?.user?.id || undefined;
 
     if (!tenantId) {
       return NextResponse.json({ error: "Tenant context required" }, { status: 400 });
@@ -157,9 +157,9 @@ export async function POST(req: NextRequest) {
         channel: mappedChannel,
         status: GapStatus.NEW,
         occurrences: reportedOccurrences,
-        comment: comment || null,
+        comment: comment || undefined,
         source: gapSource,
-        flagged_article_id: flagged_article_id || null,
+        flagged_article_id: flagged_article_id || undefined,
         reported_by: userId,
       },
     });

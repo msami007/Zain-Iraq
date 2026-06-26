@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getTenantDb, prisma } from "@/lib/db";
+import { Channel } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,17 @@ export async function GET(req: NextRequest) {
 
     const db = getTenantDb(targetTenantId);
 
+    // Audience channel segmentation
+    const channelParam = searchParams.get("channel") || "all";
+    const customerChannels: Channel[] = ["default", "chatbot", "whatsapp"];
+    const sqChannelWhere = channelParam === "agent"
+      ? { channel: "agent" as Channel }
+      : channelParam === "customer"
+      ? { channel: { in: customerChannels } }
+      : {};
+    const fbChannelWhere = sqChannelWhere;
+    const gapChannelWhere = sqChannelWhere;
+
     // Date boundaries
     const nowMs = Date.now();
     const todayStart = new Date(nowMs); todayStart.setHours(0, 0, 0, 0);
@@ -104,17 +116,17 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       db.article.count(),
       db.article.count({ where: { created_at: { gte: weekAgo } } }),
-      db.searchQuery.count(),
-      db.searchQuery.count({ where: { created_at: { gte: todayStart } } }),
-      db.searchQuery.count({ where: { created_at: { gte: yesterdayStart, lt: todayStart } } }),
-      db.knowledgeGap.count(),
-      db.knowledgeGap.count({ where: { created_at: { gte: weekAgo } } }),
-      db.articleFeedback.count(),
-      db.articleFeedback.count({ where: { helpful: true } }),
-      db.articleFeedback.count({ where: { created_at: { gte: monthAgo } } }),
-      db.articleFeedback.count({ where: { helpful: true, created_at: { gte: monthAgo } } }),
-      db.articleFeedback.count({ where: { created_at: { gte: twoMonthsAgo, lt: monthAgo } } }),
-      db.articleFeedback.count({ where: { helpful: true, created_at: { gte: twoMonthsAgo, lt: monthAgo } } }),
+      db.searchQuery.count({ where: { ...sqChannelWhere } }),
+      db.searchQuery.count({ where: { ...sqChannelWhere, created_at: { gte: todayStart } } }),
+      db.searchQuery.count({ where: { ...sqChannelWhere, created_at: { gte: yesterdayStart, lt: todayStart } } }),
+      db.knowledgeGap.count({ where: { ...gapChannelWhere } }),
+      db.knowledgeGap.count({ where: { ...gapChannelWhere, created_at: { gte: weekAgo } } }),
+      db.articleFeedback.count({ where: { ...fbChannelWhere } }),
+      db.articleFeedback.count({ where: { ...fbChannelWhere, helpful: true } }),
+      db.articleFeedback.count({ where: { ...fbChannelWhere, created_at: { gte: monthAgo } } }),
+      db.articleFeedback.count({ where: { ...fbChannelWhere, helpful: true, created_at: { gte: monthAgo } } }),
+      db.articleFeedback.count({ where: { ...fbChannelWhere, created_at: { gte: twoMonthsAgo, lt: monthAgo } } }),
+      db.articleFeedback.count({ where: { ...fbChannelWhere, helpful: true, created_at: { gte: twoMonthsAgo, lt: monthAgo } } }),
     ]);
 
     const helpfulRate = totalFeedback > 0 ? parseFloat(((helpfulFeedback / totalFeedback) * 100).toFixed(1)) : 0.0;
@@ -155,7 +167,7 @@ export async function GET(req: NextRequest) {
     const articles = await db.article.findMany({
       include: {
         category: { select: { name: true } },
-        feedback: { select: { helpful: true } }
+        feedback: { select: { helpful: true, channel: true } },
       }
     });
 
@@ -205,20 +217,16 @@ export async function GET(req: NextRequest) {
       date: s.created_at.toISOString()
     }));
 
-    // 9. Articles Needing Attention (Low helpful rate)
+    // 9. Articles Needing Attention (Low helpful rate) — segmented by channel
     const articlesNeedingAttention = articles
       .map(art => {
-        const total = art.feedback.length;
-        const helpful = art.feedback.filter(f => f.helpful).length;
+        const seg = channelParam === "all" ? art.feedback
+          : art.feedback.filter(f => channelParam === "agent" ? f.channel === "agent" : customerChannels.includes(f.channel as any));
+        const total = seg.length;
+        const helpful = seg.filter(f => f.helpful).length;
         const pct = total > 0 ? parseFloat(((helpful / total) * 100).toFixed(1)) : 100.0;
         const views = viewsMap[art.id] || 0;
-        return {
-          id: art.id,
-          title: art.title,
-          views,
-          helpfulPct: pct,
-          totalFeedback: total
-        };
+        return { id: art.id, title: art.title, views, helpfulPct: pct, totalFeedback: total };
       })
       .filter(a => a.totalFeedback > 0 && a.helpfulPct < 50.0)
       .sort((a, b) => a.helpfulPct - b.helpfulPct)
@@ -227,16 +235,13 @@ export async function GET(req: NextRequest) {
     // 10. Top Articles by Views
     const topArticles = articles
       .map(art => {
-        const total = art.feedback.length;
-        const helpful = art.feedback.filter(f => f.helpful).length;
+        const seg = channelParam === "all" ? art.feedback
+          : art.feedback.filter(f => channelParam === "agent" ? f.channel === "agent" : customerChannels.includes(f.channel as any));
+        const total = seg.length;
+        const helpful = seg.filter(f => f.helpful).length;
         const pct = total > 0 ? parseFloat(((helpful / total) * 100).toFixed(1)) : 0.0;
         const views = viewsMap[art.id] || 0;
-        return {
-          id: art.id,
-          title: art.title,
-          views,
-          helpfulPct: pct
-        };
+        return { id: art.id, title: art.title, views, helpfulPct: pct };
       })
       .sort((a, b) => b.views - a.views)
       .slice(0, 5);
@@ -308,8 +313,13 @@ export async function GET(req: NextRequest) {
     let needsAttention: any = null;
 
     const processedArticles = articles.map(art => {
-      const total = art.feedback.length;
-      const helpful = art.feedback.filter(f => f.helpful).length;
+      const segmented = channelParam === "all"
+        ? art.feedback
+        : art.feedback.filter(f => channelParam === "agent"
+            ? f.channel === "agent"
+            : customerChannels.includes(f.channel as any));
+      const total = segmented.length;
+      const helpful = segmented.filter(f => f.helpful).length;
       const unhelpful = total - helpful;
       const pct = total > 0 ? parseFloat(((helpful / total) * 100).toFixed(1)) : 100.0;
       const views = viewsMap[art.id] || 0;
@@ -371,6 +381,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
+      channel: channelParam,
       totalViews,
       totalSearches,
       todaySearches,

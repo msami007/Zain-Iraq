@@ -307,6 +307,7 @@ export default function AdminDeskWorkspace({
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "all">("7d");
+  const [analyticsChannel, setAnalyticsChannel] = useState<"all" | "agent" | "customer">("all");
 
   // Notifications banner state — backed by Announcements API
   type NotifEntry = { id: string; title: string; message: string; uiType: "info" | "warning" | "success" };
@@ -414,10 +415,11 @@ export default function AdminDeskWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (channelOverride?: "all" | "agent" | "customer") => {
     setLoadingAnalytics(true);
+    const ch = channelOverride ?? analyticsChannel;
     try {
-      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&_t=${Date.now()}`, {
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&channel=${ch}&_t=${Date.now()}`, {
         cache: "no-store",
       });
       if (res.ok) {
@@ -728,7 +730,7 @@ export default function AdminDeskWorkspace({
   // Helper to pre-populate slug from title
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (val.trim()) setTitleError(false);
+    if (val.trim()) { setTitleError(false); setFormError(""); }
     if (!editingArticle) {
       setSlug(val.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"));
     }
@@ -1944,8 +1946,9 @@ export default function AdminDeskWorkspace({
                     </div>
 
                     {formError && (
-                      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800">
-                        {formError}
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-800 flex items-start justify-between gap-3">
+                        <span>{formError}</span>
+                        <button type="button" onClick={() => setFormError("")} className="shrink-0 text-red-400 hover:text-red-700 transition-colors leading-none">✕</button>
                       </div>
                     )}
 
@@ -3505,7 +3508,7 @@ export default function AdminDeskWorkspace({
                                   className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
                                     ? "bg-green-50 text-green-700 border-green-200"
                                     : g.status === "NEW"
-                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
                                       : "bg-amber-50 text-amber-700 border-amber-200"
                                     }`}
                                 >
@@ -4040,10 +4043,29 @@ export default function AdminDeskWorkspace({
 
           {currentTab === "dashboard" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                {/* Audience channel toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Analytics:</span>
+                  <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg">
+                    {(["all", "customer", "agent"] as const).map((ch) => (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() => {
+                          setAnalyticsChannel(ch);
+                          fetchAnalytics(ch);
+                        }}
+                        className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${analyticsChannel === ch ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-900"}`}
+                      >
+                        {ch === "all" ? "Total" : ch === "customer" ? "Customer" : "Agent"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={fetchAnalytics}
+                  onClick={() => fetchAnalytics()}
                   disabled={loadingAnalytics}
                   className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
                 >
@@ -4075,6 +4097,8 @@ export default function AdminDeskWorkspace({
                       accentFrom: string;
                       accentTo: string;
                       icon: React.ReactNode;
+                      actionLabel: string;
+                      onAction: () => void;
                     };
                     const cards: KpiCard[] = [
                       {
@@ -4089,6 +4113,8 @@ export default function AdminDeskWorkspace({
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                           </svg>
                         ),
+                        actionLabel: "Manage Articles",
+                        onAction: () => { setActiveTab("articles"); closeEditor(); },
                       },
                       {
                         label: "Searches Today",
@@ -4104,6 +4130,8 @@ export default function AdminDeskWorkspace({
                             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                           </svg>
                         ),
+                        actionLabel: "View Trends",
+                        onAction: () => setActiveTab("analytics"),
                       },
                       {
                         label: "Helpful Rate",
@@ -4120,12 +4148,18 @@ export default function AdminDeskWorkspace({
                             <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
                           </svg>
                         ),
+                        actionLabel: "Fix Unhelpful Articles",
+                        onAction: () => {
+                          setActiveTab("articles");
+                          closeEditor();
+                        },
                       },
                       {
                         label: "Knowledge Gaps",
                         value: (ad?.totalGaps ?? 0).toLocaleString(),
                         delta: ad?.gapsThisWeek != null ? `+${ad.gapsThisWeek} reported this week` : "Live from DB",
                         deltaUp: ad?.gapsThisWeek != null ? true : null,
+                        deltaUpBad: true,
                         accentFrom: "#dc2626",
                         accentTo: "#f87171",
                         icon: (
@@ -4134,6 +4168,8 @@ export default function AdminDeskWorkspace({
                             <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                           </svg>
                         ),
+                        actionLabel: "Review Gaps Queue",
+                        onAction: () => setActiveTab("gaps"),
                       },
                     ];
                     return (
@@ -4141,7 +4177,11 @@ export default function AdminDeskWorkspace({
                         {cards.map((card) => (
                           <div
                             key={card.label}
-                            className="relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] transition-shadow text-left overflow-hidden flex flex-col justify-between h-[120px]"
+                            className="group relative rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.10)] hover:border-zinc-300 transition-all text-left overflow-hidden flex flex-col justify-between h-[130px] cursor-pointer"
+                            onClick={card.onAction}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === "Enter" && card.onAction()}
                           >
                             {/* Gradient accent bar at bottom */}
                             <div
@@ -4155,17 +4195,22 @@ export default function AdminDeskWorkspace({
                             </div>
                             {/* Value */}
                             <div className="text-[2rem] font-extrabold text-zinc-950 leading-none tabular-nums mt-1">{card.value}</div>
-                            {/* Delta */}
-                            {(() => {
-                              const isGood = card.deltaUp === null ? null : (card.deltaUpBad ? !card.deltaUp : card.deltaUp);
-                              return (
-                                <div className={`flex items-center gap-1 text-[11px] font-bold mt-1 ${isGood === true ? "text-green-600" : isGood === false ? "text-red-500" : "text-zinc-400"}`}>
-                                  {card.deltaUp === true && <span>▲</span>}
-                                  {card.deltaUp === false && <span>▼</span>}
-                                  {card.delta}
-                                </div>
-                              );
-                            })()}
+                            {/* Delta + action link */}
+                            <div className="flex items-center justify-between gap-2 mt-1">
+                              {(() => {
+                                const isGood = card.deltaUp === null ? null : (card.deltaUpBad ? !card.deltaUp : card.deltaUp);
+                                return (
+                                  <div className={`flex items-center gap-1 text-[11px] font-bold ${isGood === true ? "text-green-600" : isGood === false ? "text-red-500" : "text-zinc-400"}`}>
+                                    {card.deltaUp === true && <span>▲</span>}
+                                    {card.deltaUp === false && <span>▼</span>}
+                                    {card.delta}
+                                  </div>
+                                );
+                              })()}
+                              <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-700 transition-colors whitespace-nowrap shrink-0">
+                                {card.actionLabel} →
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -4188,7 +4233,7 @@ export default function AdminDeskWorkspace({
                         {/* Top Helpful */}
                         <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between min-h-[140px]">
                           <div className="flex justify-between items-start gap-4">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Top Helpful</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">Top Helpful</span>
                             {topHelpful && (
                               <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {topHelpful.helpfulPct.toFixed(0)}%
@@ -4200,7 +4245,7 @@ export default function AdminDeskWorkspace({
                               {topHelpful?.title || "No helpful feedback logged yet"}
                             </h4>
                           </div>
-                          <div className="text-[11px] text-zinc-455 font-semibold">
+                          <div className="text-[11px] text-zinc-500 font-semibold">
                             {topHelpful ? (
                               `${topHelpful.views.toLocaleString()} views · ${topHelpful.helpfulCount} helpful votes`
                             ) : (
@@ -4212,7 +4257,7 @@ export default function AdminDeskWorkspace({
                         {/* Most Viewed */}
                         <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between min-h-[140px]">
                           <div className="flex justify-between items-start gap-4">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Most Viewed</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-600">Most Viewed</span>
                             {mostViewed && (
                               <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {mostViewed.views.toLocaleString()}
@@ -4224,7 +4269,7 @@ export default function AdminDeskWorkspace({
                               {mostViewed?.title || "No articles found"}
                             </h4>
                           </div>
-                          <div className="text-[11px] text-zinc-455 font-semibold">
+                          <div className="text-[11px] text-zinc-500 font-semibold">
                             {mostViewed ? (
                               `${mostViewed.views.toLocaleString()} views · ${mostViewed.helpfulPct.toFixed(0)}% helpful rate`
                             ) : (
@@ -4234,27 +4279,39 @@ export default function AdminDeskWorkspace({
                         </div>
 
                         {/* Needs Attention */}
-                        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-md text-left border-b-2 border-b-zinc-400 flex flex-col justify-between min-h-[140px]">
+                        <div className="rounded-xl border border-red-100 bg-white p-5 shadow-md text-left border-b-2 border-b-red-400 flex flex-col justify-between min-h-[140px]">
                           <div className="flex justify-between items-start gap-4">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-455">Needs Attention</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-red-600">Needs Attention</span>
                             {needsAttention && (
-                              <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              <span className="bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {needsAttention.helpfulPct.toFixed(0)}% helpful
                               </span>
                             )}
                           </div>
-                          <div className="my-3">
+                          <div className="my-2">
                             <h4 className="text-sm font-bold text-zinc-900 truncate" title={needsAttention?.title || "No data"}>
                               {needsAttention ? needsAttention.title : "All articles performing well!"}
                             </h4>
-                          </div>
-                          <div className="text-[11px] text-zinc-455 font-semibold">
-                            {needsAttention ? (
-                              `${needsAttention.views.toLocaleString()} views · ${needsAttention.unhelpfulCount} unhelpful votes`
-                            ) : (
-                              "No negative feedback received"
+                            {needsAttention && (
+                              <p className="text-[10px] text-zinc-500 mt-0.5">
+                                {needsAttention.views.toLocaleString()} views · {needsAttention.unhelpfulCount} unhelpful votes
+                              </p>
                             )}
                           </div>
+                          {needsAttention ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const art = articles.find(a => a.id === needsAttention.id);
+                                if (art) { setActiveTab("articles"); openEditor(art); }
+                              }}
+                              className="self-start flex items-center gap-1 rounded border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1 text-[10px] font-bold text-red-700 transition-colors"
+                            >
+                              Edit & Fix Article →
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-zinc-500 font-semibold">No negative feedback received</span>
+                          )}
                         </div>
                       </div>
                     );
@@ -4269,7 +4326,7 @@ export default function AdminDeskWorkspace({
                         {/* Top Performing Articles */}
                         <div className="rounded-xl border border-zinc-200 bg-white shadow-md overflow-hidden flex flex-col">
                           <div className="py-3 px-4 border-b border-zinc-100">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Performing Articles</h3>
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">Top Performing Articles</h3>
                           </div>
                           <div className="overflow-x-auto flex-1">
                             {topPerformingArticles.length > 0 ? (
@@ -4325,16 +4382,24 @@ export default function AdminDeskWorkspace({
 
                         {/* Top Search Queries */}
                         <div className="rounded-xl border border-zinc-200 bg-white shadow-md overflow-hidden flex flex-col">
-                          <div className="py-3 px-4 border-b border-zinc-100">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
+                          <div className="py-3 px-4 border-b border-zinc-100 flex items-center justify-between">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">Top Search Queries</h3>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab("gaps")}
+                              className="text-[10px] font-bold text-zinc-400 hover:text-zinc-800 transition-colors"
+                            >
+                              View Gap Queue →
+                            </button>
                           </div>
                           <div className="overflow-x-auto flex-1">
                             {topQueries.length > 0 ? (
                               <table className="w-full text-xs text-zinc-800 text-left border-collapse">
                                 <thead>
-                                  <tr className="border-b border-zinc-100 bg-zinc-50/50 text-zinc-400 uppercase text-[10px] font-bold">
+                                  <tr className="border-b border-zinc-100 bg-zinc-50/50 text-zinc-500 uppercase text-[10px] font-bold">
                                     <th className="py-3.5 px-5">Query</th>
                                     <th className="py-3.5 px-5 text-right">Searches</th>
+                                    <th className="py-3.5 px-5 text-right">Action</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-100">
@@ -4345,6 +4410,15 @@ export default function AdminDeskWorkspace({
                                       </td>
                                       <td className="py-3.5 px-5 text-right font-mono font-bold text-zinc-600">
                                         {q.count}
+                                      </td>
+                                      <td className="py-3.5 px-5 text-right">
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveTab("gaps")}
+                                          className="rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-2 py-0.5 text-[10px] font-bold text-zinc-600 transition-colors"
+                                        >
+                                          Check Gaps →
+                                        </button>
                                       </td>
                                     </tr>
                                   ))}
@@ -4421,7 +4495,7 @@ export default function AdminDeskWorkspace({
                     </button>
                     <button
                       type="button"
-                      onClick={fetchAnalytics}
+                      onClick={() => fetchAnalytics()}
                       disabled={loadingAnalytics}
                       className="flex items-center gap-1.5 rounded border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-[10px] font-bold text-zinc-650 shadow-xs disabled:opacity-50"
                     >

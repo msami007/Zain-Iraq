@@ -109,23 +109,16 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   if (!isAdminViewer) {
     try {
       const db = getTenantDb(article.tenant_id);
-      // For guests the audit log still needs an actor — use the tenant's first user as a system stand-in
-      const actorId = user?.id ?? (await db.user.findFirst({
-        orderBy: { created_at: "asc" },
-        select: { id: true },
-      }))?.id ?? null;
-      if (actorId) {
-        await db.auditLog.create({
-          data: {
-            tenant_id: article.tenant_id,
-            actor_id: actorId,
-            action: "View Article",
-            target_type: "Article",
-            target_id: article.id,
-            target_label: article.title,
-          },
-        });
-      }
+      await db.auditLog.create({
+        data: {
+          tenant_id: article.tenant_id,
+          actor_id: user?.id ?? null,
+          action: "View Article",
+          target_type: "Article",
+          target_id: article.id,
+          target_label: article.title,
+        },
+      });
     } catch {
       // Non-fatal — analytics failure must never break article rendering
     }

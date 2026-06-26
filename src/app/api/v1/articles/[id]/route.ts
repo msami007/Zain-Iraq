@@ -109,7 +109,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       await db.auditLog.create({
         data: {
           tenant_id: tenantId,
-          actor_id: null,
+          actor_id: undefined,
           action: "Article Viewed",
           target_type: "Article",
           target_id: article.id,

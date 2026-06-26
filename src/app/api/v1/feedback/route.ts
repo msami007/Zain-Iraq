@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     await db.auditLog.create({
       data: {
         tenant_id: tenantId,
-        actor_id: session?.user?.id || null,
+        actor_id: session?.user?.id || undefined,
         action: helpful ? "Article Marked Useful" : "Article Marked Unhelpful",
         target_type: "Article",
         target_id: article_id,

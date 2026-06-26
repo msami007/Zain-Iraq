@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
       { title: { contains: cleanQuery, mode: "insensitive" } },
       { slug: { contains: cleanQuery, mode: "insensitive" } },
       { category: { name: { contains: cleanQuery, mode: "insensitive" } } },
+      // Search inside article variant bodies so Arabic and multi-language content is findable
+      { variants: { some: { detailed_steps: { contains: cleanQuery, mode: "insensitive" } } } },
+      { variants: { some: { short_answer: { contains: cleanQuery, mode: "insensitive" } } } },
     ];
 
     // Make query flexible by matching individual words too
@@ -94,7 +97,9 @@ export async function POST(req: NextRequest) {
       searchConditions.push(
         { title: { contains: word, mode: "insensitive" } },
         { slug: { contains: word, mode: "insensitive" } },
-        { category: { name: { contains: word, mode: "insensitive" } } }
+        { category: { name: { contains: word, mode: "insensitive" } } },
+        { variants: { some: { detailed_steps: { contains: word, mode: "insensitive" } } } },
+        { variants: { some: { short_answer: { contains: word, mode: "insensitive" } } } }
       );
     }
 
@@ -129,48 +134,64 @@ export async function POST(req: NextRequest) {
       where: whereClause,
       include: {
         category: true,
+        variants: { select: { detailed_steps: true, short_answer: true } },
       },
     });
 
     const results = articles.map((article) => {
       const titleLower = article.title.toLowerCase();
       const queryLower = cleanQuery.toLowerCase();
+      const categoryLower = article.category?.name.toLowerCase() ?? "";
 
-      let score = 0.1; // Base match score
+      // Collect all searchable text from variants
+      const variantBodies = article.variants
+        .map((v) => `${v.short_answer ?? ""} ${v.detailed_steps ?? ""}`)
+        .join(" ")
+        .toLowerCase();
 
-      // 1. Exact Match: 1.0
+      let score = 0.0;
+
+      // 1. Exact title match: 1.0
       if (titleLower === queryLower) {
         score = 1.0;
-      } 
-      // 2. Starts With: 0.75
+      }
+      // 2. Title starts with query: 0.85
       else if (titleLower.startsWith(queryLower)) {
-        score = 0.75;
-      } 
-      // 3. Contains contiguous full phrase: 0.5
+        score = 0.85;
+      }
+      // 3. Title contains full phrase: 0.65
       else if (titleLower.includes(queryLower)) {
+        score = 0.65;
+      }
+      // 4. Variant body contains full phrase: 0.5
+      else if (variantBodies.includes(queryLower)) {
         score = 0.5;
-      } 
-      // 4. Matches individual words: score proportional to match count
+      }
+      // 5. Word-level matching across title, category, and body
       else if (words.length > 0) {
-        const matchingWords = words.filter((w) =>
-          titleLower.includes(w.toLowerCase()) || 
-          article.category?.name.toLowerCase().includes(w.toLowerCase())
-        );
-        score = 0.1 + (matchingWords.length / words.length) * 0.35; // Maximum word match score is 0.45
+        const titleMatches = words.filter((w) => titleLower.includes(w.toLowerCase())).length;
+        const categoryMatches = words.filter((w) => categoryLower.includes(w.toLowerCase())).length;
+        const bodyMatches = words.filter((w) => variantBodies.includes(w.toLowerCase())).length;
+
+        // Weight title matches highest, body matches contribute too
+        const titleScore = (titleMatches / words.length) * 0.55;
+        const categoryScore = (categoryMatches / words.length) * 0.15;
+        const bodyScore = (bodyMatches / words.length) * 0.25;
+        score = titleScore + categoryScore + bodyScore;
       }
 
       return {
         article_id: article.id,
         title: article.title,
         category: article.category.name,
-        match_score: Number(score.toFixed(3)),
+        match_score: Number(Math.min(score, 1.0).toFixed(3)),
         status: article.status,
         language: article.language,
       };
     });
 
-    // Filter out articles with only the base score (0.1 = no meaningful text match)
-    const filteredResults = results.filter(r => r.match_score > 0.1);
+    // Filter out articles with no meaningful match (score === 0)
+    const filteredResults = results.filter(r => r.match_score > 0);
 
     // Sort results by score desc
     filteredResults.sort((a, b) => b.match_score - a.match_score);
@@ -182,7 +203,7 @@ export async function POST(req: NextRequest) {
         query_text: query,
         language: mappedLanguage,
         channel: mappedChannel,
-        user_id: session?.user?.id || null,
+        user_id: session?.user?.id || undefined,
         results_count: filteredResults.length,
         top_match_score: filteredResults.length > 0 ? filteredResults[0].match_score : 0.0,
       },
@@ -206,7 +227,7 @@ export async function POST(req: NextRequest) {
       let gapId = "";
       let gapTargetId = "";
 
-      const auditActorId = session?.user?.id || null;
+      const auditActorId = session?.user?.id || undefined;
 
       if (existingGap) {
         // Increment occurrences
@@ -238,7 +259,7 @@ export async function POST(req: NextRequest) {
             channel: mappedChannel,
             status: GapStatus.NEW,
             source: "search",
-            reported_by: session?.user?.id || null,
+            reported_by: session?.user?.id || undefined,
           },
         });
         gapId = created.id;
