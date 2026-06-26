@@ -3533,18 +3533,18 @@ export default function AdminDeskWorkspace({
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-zinc-800 text-left border-collapse">
+                  <table className="min-w-[1050px] w-full text-xs text-zinc-800 text-left border-collapse">
                     <thead>
                       <tr className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-400 uppercase text-[10px] font-bold">
-                        <th className="p-4">Search Query / Flag</th>
-                        <th className="p-4">Type</th>
-                        <th className="p-4">Feedback / Comment</th>
-                        <th className="p-4">Hits</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4">Reported By</th>
-                        <th className="p-4">Claimed By</th>
-                        <th className="p-4">Date/Time</th>
-                        <th className="p-4 text-right">Actions</th>
+                        <th className="p-4 w-52">Search Query / Flag</th>
+                        <th className="p-4 w-28">Type</th>
+                        <th className="p-4 w-44">Feedback / Comment</th>
+                        <th className="p-4 w-12">Hits</th>
+                        <th className="p-4 w-24">Status</th>
+                        <th className="p-4 w-36">Reported By</th>
+                        <th className="p-4 w-32">Claimed By</th>
+                        <th className="p-4 w-36 whitespace-nowrap">Date/Time</th>
+                        <th className="p-4 text-right w-44 whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-50">
@@ -3563,35 +3563,35 @@ export default function AdminDeskWorkspace({
                           })
                           .map((g) => (
                             <tr key={g.id} className="hover:bg-zinc-50 transition-colors align-top">
-                              <td className="p-4 max-w-xs">
-                                <p className="font-bold text-zinc-955 italic truncate">"{g.query_text}"</p>
+                              <td className="p-4 w-52">
+                                <p className="font-bold text-zinc-955 italic truncate max-w-[180px]" title={g.query_text}>"{g.query_text}"</p>
                                 {g.flagged_article && (
-                                  <p className="text-[10px] text-red-600 font-semibold mt-0.5">
+                                  <p className="text-[10px] text-red-600 font-semibold mt-0.5 truncate max-w-[180px]" title={g.flagged_article.title}>
                                     📄 Flagged: {g.flagged_article.title}
                                   </p>
                                 )}
                               </td>
 
-                              <td className="p-4">
+                              <td className="p-4 w-28">
                                 {g.source === "search" ? (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200">Search Query</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap">Search Query</span>
                                 ) : g.source === "article_flag" ? (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200">Article Flag</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-red-50 text-red-700 border-red-200 whitespace-nowrap">Article Flag</span>
                                 ) : g.source === "customer" ? (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200">Customer</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-zinc-50 text-zinc-500 border-zinc-200 whitespace-nowrap">Customer</span>
                                 ) : (
-                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200">Knowledge Gap</span>
+                                  <span className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">Knowledge Gap</span>
                                 )}
                               </td>
 
-                              <td className="p-4 max-w-xs">
+                              <td className="p-4 w-44">
                                 {g.comment ? (
-                                  <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-3">"{g.comment}"</p>
+                                  <p className="text-[10px] text-zinc-700 font-medium italic leading-relaxed line-clamp-2 max-w-[160px]">"{g.comment}"</p>
                                 ) : (
                                   <span className="text-[10px] text-zinc-300">—</span>
                                 )}
                               </td>
-                              <td className="p-4 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
+                              <td className="p-4 w-12 font-mono font-bold text-zinc-600">{g.occurrences}x</td>
                               <td className="p-4">
                                 <span
                                   className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${g.status === "RESOLVED"
@@ -3604,16 +3604,16 @@ export default function AdminDeskWorkspace({
                                   {g.status}
                                 </span>
                               </td>
-                              <td className="p-4 text-zinc-500 font-medium">
-                                <p>{g.reporter?.name || "Customer / Guest"}</p>
-                                {g.reporter?.email && <p className="text-[9px] text-zinc-400">{g.reporter.email}</p>}
+                              <td className="p-4 w-36 text-zinc-500 font-medium">
+                                <p className="truncate max-w-[120px]" title={g.reporter?.name || "Customer / Guest"}>{g.reporter?.name || "Customer / Guest"}</p>
+                                {g.reporter?.email && <p className="text-[9px] text-zinc-400 truncate max-w-[120px]">{g.reporter.email}</p>}
                               </td>
-                              <td className="p-4 text-zinc-500 font-medium">{g.claimer?.name || "Unassigned"}</td>
-                              <td className="p-4 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
+                              <td className="p-4 w-32 text-zinc-500 font-medium truncate max-w-[110px]">{g.claimer?.name || "Unassigned"}</td>
+                              <td className="p-4 w-36 text-zinc-450 font-mono text-[10px] whitespace-nowrap">
                                 {new Date(g.created_at).toLocaleString()}
                               </td>
-                              <td className="p-4 text-right">
-                                <div className="flex flex-wrap gap-2 justify-end items-center">
+                              <td className="p-4 w-44 text-right">
+                                <div className="flex flex-nowrap gap-2 justify-end items-center">
                                   {g.status === "NEW" && (
                                     <>
                                       <button
