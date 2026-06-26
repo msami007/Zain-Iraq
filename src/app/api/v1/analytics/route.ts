@@ -143,8 +143,9 @@ export async function GET(req: NextRequest) {
       ? parseFloat((helpfulRateThisMonth - helpfulRateLastMonth).toFixed(1))
       : null;
 
-    // 3. Fetch search average confidence (match score)
+    // 3. Fetch search average confidence (match score) — scoped to selected channel
     const avgConfidenceRaw = await db.searchQuery.aggregate({
+      where: { ...sqChannelWhere },
       _avg: { top_match_score: true }
     });
     const avgConfidence = avgConfidenceRaw._avg.top_match_score 
@@ -206,8 +207,9 @@ export async function GET(req: NextRequest) {
     });
     const contentBreakdown = Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
 
-    // 8. Recent Searches
+    // 8. Recent Searches — scoped to selected channel
     const recentSearchesRaw = await db.searchQuery.findMany({
+      where: { ...sqChannelWhere },
       orderBy: { created_at: "desc" },
       take: 5
     });
@@ -246,8 +248,8 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.views - a.views)
       .slice(0, 5);
 
-    // 11. Top Search Queries
-    const searchLogs = await db.searchQuery.findMany({ select: { query_text: true } });
+    // 11. Top Search Queries — scoped to selected channel
+    const searchLogs = await db.searchQuery.findMany({ where: { ...sqChannelWhere }, select: { query_text: true } });
     const queryCounts: Record<string, number> = {};
     searchLogs.forEach(q => {
       const text = q.query_text.trim();

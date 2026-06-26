@@ -68,12 +68,14 @@ export default function SuperAdminClient({
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsWindow, setAnalyticsWindow] = useState<"7d" | "30d" | "90d" | "all">("all");
+  const [analyticsChannel, setAnalyticsChannel] = useState<"all" | "agent" | "customer">("all");
   const [categorySortAsc, setCategorySortAsc] = useState(false);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (channelOverride?: "all" | "agent" | "customer") => {
+    const ch = channelOverride ?? analyticsChannel;
     setLoadingAnalytics(true);
     try {
-      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&_t=${Date.now()}`, {
+      const res = await fetch(`/api/v1/analytics?tenant_id=${tenantId}&channel=${ch}&_t=${Date.now()}`, {
         cache: "no-store",
       });
       if (res.ok) {
@@ -574,17 +576,31 @@ export default function SuperAdminClient({
               Scope: Platform Super Admin
             </span>
             {activeTab === "dashboard" && (
-              <button
-                type="button"
-                onClick={fetchAnalytics}
-                disabled={loadingAnalytics}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
-                  <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                </svg>
-                {loadingAnalytics ? "Refreshing…" : "Refresh"}
-              </button>
+              <>
+                <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg">
+                  {(["all", "customer", "agent"] as const).map((ch) => (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => { setAnalyticsChannel(ch); fetchAnalytics(ch); }}
+                      className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${analyticsChannel === ch ? "bg-white text-zinc-950 shadow-xs" : "text-zinc-500 hover:text-zinc-900"}`}
+                    >
+                      {ch === "all" ? "All" : ch === "customer" ? "Customer" : "Agent"}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchAnalytics()}
+                  disabled={loadingAnalytics}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 px-3 py-1.5 text-xs font-bold text-zinc-700 shadow-xs transition-all disabled:opacity-50"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={loadingAnalytics ? "animate-spin" : ""}>
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                  {loadingAnalytics ? "Refreshing…" : "Refresh"}
+                </button>
+              </>
             )}
           </div>
         </header>
@@ -798,7 +814,14 @@ export default function SuperAdminClient({
                     {/* ROW 2 — RIGHT: Recent Searches */}
                     <div className="rounded-xl border border-zinc-200 bg-white shadow-md flex flex-col overflow-hidden">
                       <div className="px-6 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Recent Searches</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Recent Searches</h3>
+                          {analyticsChannel !== "all" && (
+                            <span className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
+                              {analyticsChannel === "customer" ? "Customer" : "Agent"} only
+                            </span>
+                          )}
+                        </div>
                         <span className="inline-flex items-center justify-center h-4 px-1.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
                           {analyticsData.totalGaps} gaps
                         </span>
@@ -843,8 +866,13 @@ export default function SuperAdminClient({
 
                     {/* ROW 3 — LEFT: Top Search Queries */}
                     <div className="rounded-xl border border-zinc-200 bg-white shadow-md flex flex-col overflow-hidden">
-                      <div className="px-6 pt-5 pb-3 flex-shrink-0">
+                      <div className="px-6 pt-5 pb-3 flex-shrink-0 flex items-center gap-2">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-455">Top Search Queries</h3>
+                        {analyticsChannel !== "all" && (
+                          <span className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
+                            {analyticsChannel === "customer" ? "Customer" : "Agent"} only
+                          </span>
+                        )}
                       </div>
                       <div className="flex-1 overflow-x-auto">
                         {analyticsData.topSearchQueries && analyticsData.topSearchQueries.length > 0 ? (

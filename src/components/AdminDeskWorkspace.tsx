@@ -4383,7 +4383,14 @@ export default function AdminDeskWorkspace({
                         {/* Top Search Queries */}
                         <div className="rounded-xl border border-zinc-200 bg-white shadow-md overflow-hidden flex flex-col">
                           <div className="py-3 px-4 border-b border-zinc-100 flex items-center justify-between">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">Top Search Queries</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-600">Top Search Queries</h3>
+                              {analyticsChannel !== "all" && (
+                                <span className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
+                                  {analyticsChannel === "customer" ? "Customer" : "Agent"} only
+                                </span>
+                              )}
+                            </div>
                             <button
                               type="button"
                               onClick={() => setActiveTab("gaps")}
